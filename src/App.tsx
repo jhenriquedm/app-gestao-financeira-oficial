@@ -1,0 +1,1018 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Transaction, 
+  Category, 
+  Budget, 
+  SavingsGoal, 
+  DebtInstallment,
+  MonthlySummary,
+  FinancialHealthStatus 
+} from './types';
+import { DEFAULT_CATEGORIES, PARCELAS_CATEGORIES, getInitialData } from './data/initialData';
+import { MobileFrame } from './components/MobileFrame';
+import { MobileHeader } from './components/MobileHeader';
+import { MobileBottomNav, AppNavTab } from './components/MobileBottomNav';
+import { SummaryCards } from './components/SummaryCards';
+import { FinancialCharts } from './components/FinancialCharts';
+import { TransactionList } from './components/TransactionList';
+import { TransactionModal } from './components/TransactionModal';
+import { BudgetsSection } from './components/BudgetsSection';
+import { SavingsGoalsSection } from './components/SavingsGoalsSection';
+import { ExportImportModal } from './components/ExportImportModal';
+import { FixedExpensesSection } from './components/FixedExpensesSection';
+import { InstallmentsSection } from './components/InstallmentsSection';
+import { InstallmentModal } from './components/InstallmentModal';
+import { NewLaunchSheet } from './components/NewLaunchSheet';
+import { ConfirmDeleteModal } from './components/ConfirmDeleteModal';
+import { CategoryManagerModal } from './components/CategoryManagerModal';
+import { OfflineIndicator } from './components/OfflineIndicator';
+import { getComputedInstallment } from './utils/installmentHelpers';
+import { getTransactionsForMonth } from './utils/transactionHelpers';
+import { formatMonthYear } from './utils/formatters';
+import { Receipt, Target, PiggyBank } from 'lucide-react';
+
+const STORAGE_KEYS = {
+  TRANSACTIONS: 'gf_transactions_v2',
+  INSTALLMENTS: 'gf_installments_v2',
+  CATEGORIES: 'gf_categories_v2',
+  PARCEL_CATEGORIES: 'gf_parcel_categories_v2',
+  BUDGETS: 'gf_budgets_v2',
+  GOALS: 'gf_goals_v2',
+  PRIVACY: 'gf_privacy_v2',
+};
+
+const START_YEAR_MONTH = '2026-10';
+
+const OLD_CATEGORY_MAP: Record<string, string> = {
+  'Moradia & Aluguel': 'Moradia',
+  'Alimentação & Mercado': 'Alimentação',
+  'Educação & Faculdades': 'Educação',
+  'Obrigações MEI / Tributos': 'Obrigações profissionais',
+  'Investimentos & Patrimônio': 'Investimentos/patrimônio',
+  'Investimentos': 'Investimentos/patrimônio',
+  'Contas & Assinaturas': 'Assinaturas',
+  'Transporte & Manutenção': 'Transporte',
+  'Saúde & Farmácia': 'Saúde',
+  'Lazer & Entretenimento': 'Lazer',
+};
+
+const sanitizeCategories = (saved: Category[]): Category[] => {
+  const result: Category[] = [];
+  saved.forEach((c) => {
+    if (c.name === 'Empréstimos & Dívidas' || c.name === 'Outras Despesas') return;
+    const cleanName = OLD_CATEGORY_MAP[c.name] || c.name;
+    if (!result.some((item) => item.name.toLowerCase() === cleanName.toLowerCase() && item.type === c.type)) {
+      result.push({
+        ...c,
+        name: cleanName,
+      });
+    }
+  });
+
+  // Guarantee all 9 required expense categories exist
+  DEFAULT_CATEGORIES.forEach((def) => {
+    if (!result.some((c) => c.name.toLowerCase() === def.name.toLowerCase())) {
+      result.push(def);
+    }
+  });
+
+  return result;
+};
+
+export const App: React.FC = () => {
+  // Categories state
+  const [categories, setCategories] = useState<Category[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return sanitizeCategories(parsed);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return DEFAULT_CATEGORIES;
+  });
+
+  // Parcel Categories state
+  const [parcelCategories, setParcelCategories] = useState<string[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.PARCEL_CATEGORIES);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return PARCELAS_CATEGORIES;
+  });
+
+  // Transactions state - remove any records prior to October 2026
+  const [transactions, setTransactions] = useState<Transaction[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((t: Transaction) => t.date >= `${START_YEAR_MONTH}-01`);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return getInitialData().initialTransactions.filter((t) => t.date >= `${START_YEAR_MONTH}-01`);
+  });
+
+  // Debt Installments state (Parcelas & Empréstimos)
+  const [installments, setInstallments] = useState<DebtInstallment[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.INSTALLMENTS);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return getInitialData().initialInstallments;
+  });
+
+  // Budgets state
+  const [budgets, setBudgets] = useState<Budget[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.BUDGETS);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return getInitialData().initialBudgets;
+  });
+
+  // Savings Goals state
+  const [goals, setGoals] = useState<SavingsGoal[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.GOALS);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return getInitialData().initialGoals;
+  });
+
+  // Balance privacy state (Eye icon)
+  const [isBalanceHidden, setIsBalanceHidden] = useState<boolean>(() => {
+    return localStorage.getItem(STORAGE_KEYS.PRIVACY) === 'true';
+  });
+
+  // Dark mode state
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem('gf_theme_dark');
+    if (saved !== null) return saved === 'true';
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('gf_theme_dark', String(isDarkMode));
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
+
+  const handleToggleDarkMode = () => {
+    setIsDarkMode((prev) => !prev);
+  };
+
+  // Delete confirmation modal state (non-blocking)
+  const [deleteModalState, setDeleteModalState] = useState<{
+    isOpen: boolean;
+    id: string;
+    title: string;
+    description: string;
+    type: 'transaction' | 'installment' | 'goal' | 'budget';
+  }>({
+    isOpen: false,
+    id: '',
+    title: '',
+    description: '',
+    type: 'transaction',
+  });
+
+  // Contador de meses deve começar a partir de Outubro de 2026, conforme solicitado
+  const [currentYearMonth, setCurrentYearMonth] = useState<string>('2026-10');
+
+  // Active Bottom Tab
+  const [activeTab, setActiveTab] = useState<AppNavTab>('overview');
+
+  // Secondary sub-tab when viewing planning/history (extrato, orçamentos, metas)
+  const [planningSubTab, setPlanningSubTab] = useState<'transactions' | 'budgets' | 'goals'>('transactions');
+
+  // Modals state
+  const [isNewLaunchSheetOpen, setIsNewLaunchSheetOpen] = useState(false);
+  const [isTxModalOpen, setIsTxModalOpen] = useState(false);
+  const [txModalInitialType, setTxModalInitialType] = useState<'income' | 'expense'>('expense');
+  const [txModalIsFixedDefault, setTxModalIsFixedDefault] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+
+  const [isInstallmentModalOpen, setIsInstallmentModalOpen] = useState(false);
+  const [editingInstallment, setEditingInstallment] = useState<DebtInstallment | null>(null);
+
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+
+  // Sync to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
+  }, [transactions]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.INSTALLMENTS, JSON.stringify(installments));
+  }, [installments]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
+  }, [categories]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.PARCEL_CATEGORIES, JSON.stringify(parcelCategories));
+  }, [parcelCategories]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify(budgets));
+  }, [budgets]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.GOALS, JSON.stringify(goals));
+  }, [goals]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.PRIVACY, String(isBalanceHidden));
+  }, [isBalanceHidden]);
+
+  // Keep planningSubTab in sync if activeTab is changed from header shortcuts
+  useEffect(() => {
+    if (activeTab === 'budgets' || activeTab === 'goals' || activeTab === 'transactions') {
+      setPlanningSubTab(activeTab);
+    }
+  }, [activeTab]);
+
+  // Computed transactions for current month:
+  // Ensures fixed expenses persist into all subsequent months!
+  const currentMonthTransactions = useMemo(() => {
+    return getTransactionsForMonth(transactions, currentYearMonth);
+  }, [transactions, currentYearMonth]);
+
+  // Overall total balance (all time completed transactions)
+  const overallBalance = useMemo(() => {
+    return transactions
+      .filter((t) => t.status === 'completed')
+      .reduce((sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount), 0);
+  }, [transactions]);
+
+  // Summary for currently selected month incorporating Fixed Expenses, Variable Expenses and Installments
+  const monthlySummary = useMemo<MonthlySummary>(() => {
+    let totalIncome = 0;
+    let fixedExpenses = 0;
+    let variableExpenses = 0;
+    let pendingIncome = 0;
+    let pendingExpense = 0;
+    let totalPaidExpenses = 0;
+
+    currentMonthTransactions.forEach((t) => {
+      if (t.type === 'income') {
+        totalIncome += t.amount;
+        if (t.status === 'pending') pendingIncome += t.amount;
+      } else {
+        if (t.isFixed) {
+          fixedExpenses += t.amount;
+        } else {
+          variableExpenses += t.amount;
+        }
+
+        if (t.status === 'completed') {
+          totalPaidExpenses += t.amount;
+        } else {
+          pendingExpense += t.amount;
+        }
+      }
+    });
+
+    // Active installments relevant for this competence (auto-progression and completion-aware)
+    const activeInstallments = installments
+      .map((i) => getComputedInstallment(i, currentYearMonth))
+      .filter((ci) => ci.isActive);
+
+    const installmentsAmount = activeInstallments.reduce((sum, ci) => sum + ci.installment.monthlyAmount, 0);
+    const paidInstallments = activeInstallments
+      .filter((ci) => ci.status === 'completed')
+      .reduce((sum, ci) => sum + ci.installment.monthlyAmount, 0);
+    const pendingInstallments = installmentsAmount - paidInstallments;
+
+    const totalExpense = fixedExpenses + variableExpenses + installmentsAmount;
+    const totalCompromissos = totalExpense;
+    const totalPaid = totalPaidExpenses + paidInstallments;
+    const totalPending = pendingExpense + pendingInstallments;
+    const balance = totalIncome - totalCompromissos;
+    const savingsRate = totalIncome > 0 ? (balance / totalIncome) * 100 : 0;
+    const incomeCommitmentPercentage = totalIncome > 0 ? (totalCompromissos / totalIncome) * 100 : 0;
+    const paidPercentage = totalCompromissos > 0 ? (totalPaid / totalCompromissos) * 100 : 0;
+
+    let healthStatus: FinancialHealthStatus = 'SAUDÁVEL';
+    if (balance < 0) {
+      healthStatus = 'NEGATIVO';
+    } else if (incomeCommitmentPercentage > 85) {
+      healthStatus = 'CRÍTICO';
+    } else if (incomeCommitmentPercentage > 70) {
+      healthStatus = 'ATENÇÃO';
+    } else {
+      healthStatus = 'SAUDÁVEL';
+    }
+
+    return {
+      month: currentYearMonth,
+      totalIncome,
+      totalExpense,
+      fixedExpenses,
+      variableExpenses,
+      installmentsAmount,
+      totalCompromissos,
+      totalPaid,
+      totalPending,
+      balance,
+      savingsRate,
+      incomeCommitmentPercentage,
+      paidPercentage,
+      healthStatus,
+      pendingIncome,
+      pendingExpense: totalPending,
+    };
+  }, [currentMonthTransactions, installments, currentYearMonth]);
+
+  // Pending count in current month for dock badge
+  const pendingCount = useMemo(() => {
+    const txPending = currentMonthTransactions.filter((t) => t.status === 'pending').length;
+    const instPending = installments
+      .map((i) => getComputedInstallment(i, currentYearMonth))
+      .filter((ci) => ci.isActive && ci.status === 'pending').length;
+    return txPending + instPending;
+  }, [currentMonthTransactions, installments, currentYearMonth]);
+
+  // Handlers for Transactions
+  const handleOpenNewTransaction = (type?: 'income' | 'expense', isFixed: boolean = false) => {
+    setEditingTransaction(null);
+    setTxModalInitialType(type || 'expense');
+    setTxModalIsFixedDefault(isFixed);
+    setIsTxModalOpen(true);
+  };
+
+  const handleEditTransaction = (tx: Transaction) => {
+    setEditingTransaction(tx);
+    setTxModalInitialType(tx.type);
+    setTxModalIsFixedDefault(!!tx.isFixed);
+    setIsTxModalOpen(true);
+  };
+
+  const handleSaveTransaction = (
+    txData: Omit<Transaction, 'id' | 'createdAt'>,
+    existingId?: string
+  ) => {
+    if (existingId) {
+      setTransactions((prev) =>
+        prev.map((t) => (t.id === existingId ? { ...t, ...txData } : t))
+      );
+    } else {
+      const newTx: Transaction = {
+        ...txData,
+        id: `tx-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        startMonthYear: txData.isFixed ? (txData.startMonthYear || currentYearMonth) : undefined,
+        createdAt: Date.now(),
+      };
+      setTransactions((prev) => [newTx, ...prev]);
+    }
+  };
+
+  const handleRequestDeleteTransaction = (id: string) => {
+    const tx = transactions.find((t) => t.id === id);
+    const isFixed = tx?.isFixed;
+    setDeleteModalState({
+      isOpen: true,
+      id,
+      title: isFixed ? 'Excluir Despesa Fixa' : 'Excluir Movimentação',
+      description: isFixed
+        ? `Deseja excluir "${tx?.description || 'esta despesa fixa'}"? Ela deixará de constar em ${formatMonthYear(currentYearMonth)} e em todos os meses subsequentes.`
+        : `Tem certeza que deseja excluir "${tx?.description || 'este lançamento'}"?`,
+      type: 'transaction',
+    });
+  };
+
+  const handleRequestDeleteInstallment = (id: string) => {
+    const inst = installments.find((i) => i.id === id);
+    setDeleteModalState({
+      isOpen: true,
+      id,
+      title: 'Excluir Parcela',
+      description: `Deseja excluir "${inst?.description || 'esta parcela'}"? Ela não será mais lançada a partir de ${formatMonthYear(currentYearMonth)} e nos meses seguintes.`,
+      type: 'installment',
+    });
+  };
+
+  const handleRequestDeleteGoal = (id: string) => {
+    const goal = goals.find((g) => g.id === id);
+    setDeleteModalState({
+      isOpen: true,
+      id,
+      title: 'Excluir Meta',
+      description: `Tem certeza que deseja excluir o objetivo "${goal?.title || 'esta meta'}"?`,
+      type: 'goal',
+    });
+  };
+
+  const handleRequestDeleteBudget = (id: string) => {
+    const b = budgets.find((item) => item.id === id);
+    const cat = categories.find((c) => c.id === b?.categoryId);
+    setDeleteModalState({
+      isOpen: true,
+      id,
+      title: 'Excluir Teto de Gastos',
+      description: `Deseja remover o teto de gastos da categoria "${cat?.name || 'selecionada'}"?`,
+      type: 'budget',
+    });
+  };
+
+  // Propagate deletions to all subsequent months as requested:
+  // "Ao Excluir uma despesa fixa ou uma parcela no mês atual, os meses subsequentes devem ser atualizados também, seguindo o mês atual"
+  const handleConfirmDelete = () => {
+    const { id, type } = deleteModalState;
+    if (type === 'transaction') {
+      setTransactions((prev) =>
+        prev
+          .map((t) => {
+            if (t.id === id) {
+              if (t.isFixed) {
+                // Se a despesa foi criada exatamente no mês atual ou posterior, remove ou marca deletedFromMonthYear
+                const startMonth = t.startMonthYear || t.date.slice(0, 7);
+                if (currentYearMonth <= startMonth) {
+                  return null; // Removida completamente
+                }
+                // Despesa fixa: cancelada a partir deste mês (e meses subsequentes)
+                return { ...t, deletedFromMonthYear: currentYearMonth };
+              }
+              // Transação variável: remove
+              return null;
+            }
+            return t;
+          })
+          .filter(Boolean) as Transaction[]
+      );
+    } else if (type === 'installment') {
+      setInstallments((prev) =>
+        prev.map((inst) => {
+          if (inst.id === id) {
+            // Parcela: cancelada a partir deste mês (e meses subsequentes)
+            return { ...inst, deletedFromMonthYear: currentYearMonth };
+          }
+          return inst;
+        })
+      );
+    } else if (type === 'goal') {
+      setGoals((prev) => prev.filter((g) => g.id !== id));
+    } else if (type === 'budget') {
+      setBudgets((prev) => prev.filter((b) => b.id !== id));
+    }
+    setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+  };
+
+  const handleToggleStatus = (id: string) => {
+    setTransactions((prev) =>
+      prev.map((t) => {
+        if (t.id !== id) return t;
+        const currentStatus = t.paidMonths?.includes(currentYearMonth)
+          ? 'completed'
+          : currentYearMonth === (t.startMonthYear || t.date.slice(0, 7))
+          ? t.status
+          : 'pending';
+        const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
+
+        const updatedPaidMonths = newStatus === 'completed'
+          ? Array.from(new Set([...(t.paidMonths || []), currentYearMonth]))
+          : (t.paidMonths || []).filter((m) => m !== currentYearMonth);
+
+        return {
+          ...t,
+          status: currentYearMonth === (t.startMonthYear || t.date.slice(0, 7)) ? newStatus : t.status,
+          paidMonths: updatedPaidMonths,
+        };
+      })
+    );
+  };
+
+  // Fixed Expenses bulk toggles
+  const handleMarkAllFixedPaid = () => {
+    setTransactions((prev) =>
+      prev.map((t) => {
+        if (!t.isFixed || (t.deletedFromMonthYear && currentYearMonth >= t.deletedFromMonthYear)) return t;
+        const baseMonth = t.startMonthYear || t.date.slice(0, 7);
+        if (currentYearMonth < baseMonth) return t;
+        return {
+          ...t,
+          status: currentYearMonth === baseMonth ? 'completed' : t.status,
+          paidMonths: Array.from(new Set([...(t.paidMonths || []), currentYearMonth])),
+        };
+      })
+    );
+  };
+
+  const handleMarkAllFixedPending = () => {
+    setTransactions((prev) =>
+      prev.map((t) => {
+        if (!t.isFixed) return t;
+        const baseMonth = t.startMonthYear || t.date.slice(0, 7);
+        return {
+          ...t,
+          status: currentYearMonth === baseMonth ? 'pending' : t.status,
+          paidMonths: (t.paidMonths || []).filter((m) => m !== currentYearMonth),
+        };
+      })
+    );
+  };
+
+  // Handlers for Debt Installments
+  const handleOpenNewInstallment = () => {
+    setEditingInstallment(null);
+    setIsInstallmentModalOpen(true);
+  };
+
+  const handleEditInstallment = (item: DebtInstallment) => {
+    setEditingInstallment(item);
+    setIsInstallmentModalOpen(true);
+  };
+
+  const handleSaveInstallment = (
+    data: Omit<DebtInstallment, 'id' | 'createdAt'>,
+    existingId?: string
+  ) => {
+    if (existingId) {
+      setInstallments((prev) =>
+        prev.map((item) => (item.id === existingId ? { ...item, ...data } : item))
+      );
+    } else {
+      const newItem: DebtInstallment = {
+        ...data,
+        id: `inst-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        competence: currentYearMonth,
+        createdAt: Date.now(),
+      };
+      setInstallments((prev) => [newItem, ...prev]);
+    }
+  };
+
+  const handleToggleInstallmentStatus = (id: string) => {
+    setInstallments((prev) =>
+      prev.map((inst) => {
+        if (inst.id !== id) return inst;
+        const isPaidInMonth = inst.paidMonths?.includes(currentYearMonth) || (currentYearMonth === inst.competence && inst.status === 'completed');
+        const nextStatus = isPaidInMonth ? 'pending' : 'completed';
+        const updatedPaidMonths = nextStatus === 'completed'
+          ? Array.from(new Set([...(inst.paidMonths || []), currentYearMonth]))
+          : (inst.paidMonths || []).filter((m) => m !== currentYearMonth);
+
+        return {
+          ...inst,
+          status: currentYearMonth === inst.competence ? nextStatus : inst.status,
+          paidMonths: updatedPaidMonths,
+        };
+      })
+    );
+  };
+
+  const handleAdvanceInstallment = (id: string) => {
+    setInstallments((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const nextInstallment = Math.min(item.totalInstallments, item.currentInstallment + 1);
+        return {
+          ...item,
+          currentInstallment: nextInstallment,
+          status: 'completed',
+        };
+      })
+    );
+  };
+
+  // Selection from NewLaunchSheet
+  const handleSelectNewLaunchType = (type: 'fixed' | 'installment' | 'income' | 'variable') => {
+    switch (type) {
+      case 'fixed':
+        handleOpenNewTransaction('expense', true);
+        break;
+      case 'installment':
+        handleOpenNewInstallment();
+        break;
+      case 'income':
+        handleOpenNewTransaction('income', false);
+        break;
+      case 'variable':
+        handleOpenNewTransaction('expense', false);
+        break;
+    }
+  };
+
+  // Handlers for Budgets (Teto)
+  const handleSaveBudget = (budget: Budget) => {
+    setBudgets((prev) => {
+      const exists = prev.some((b) => b.id === budget.id);
+      if (exists) {
+        return prev.map((b) => (b.id === budget.id ? budget : b));
+      }
+      return [...prev, budget];
+    });
+  };
+
+  // Handlers for Savings Goals (Metas)
+  const handleAddGoal = (goalData: Omit<SavingsGoal, 'id'>) => {
+    const newGoal: SavingsGoal = {
+      ...goalData,
+      id: `goal-${Date.now()}`,
+    };
+    setGoals((prev) => [...prev, newGoal]);
+  };
+
+  const handleEditGoal = (updatedGoal: SavingsGoal) => {
+    setGoals((prev) => prev.map((g) => (g.id === updatedGoal.id ? updatedGoal : g)));
+  };
+
+  const handleUpdateGoalAmount = (goalId: string, addedAmount: number) => {
+    setGoals((prev) =>
+      prev.map((g) =>
+        g.id === goalId
+          ? { ...g, currentAmount: Math.max(0, g.currentAmount + addedAmount) }
+          : g
+      )
+    );
+  };
+
+  // Category Manager Handlers (Despesas, Parcelas, Receitas)
+  const handleAddCategory = (cat: Omit<Category, 'id'>) => {
+    const newCat: Category = {
+      ...cat,
+      id: `cat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    };
+    setCategories((prev) => [...prev, newCat]);
+  };
+
+  const handleEditCategory = (id: string, updated: Partial<Category>) => {
+    setCategories((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, ...updated } : c))
+    );
+  };
+
+  const handleDeleteCategory = (id: string) => {
+    const cat = categories.find((c) => c.id === id);
+    const catName = cat ? cat.name : id;
+    const isUsed =
+      transactions.some((t) => t.categoryId === id || t.categoryId === catName) ||
+      budgets.some((b) => b.categoryId === id) ||
+      installments.some((i) => i.category === catName || i.category === id);
+    if (isUsed) return;
+    setCategories((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const handleAddParcelCategory = (name: string) => {
+    if (!parcelCategories.includes(name)) {
+      setParcelCategories((prev) => [...prev, name]);
+    }
+  };
+
+  const handleEditParcelCategory = (oldName: string, newName: string) => {
+    setParcelCategories((prev) =>
+      prev.map((cat) => (cat === oldName ? newName : cat))
+    );
+    setInstallments((prev) =>
+      prev.map((inst) =>
+        inst.category === oldName ? { ...inst, category: newName } : inst
+      )
+    );
+  };
+
+  const handleDeleteParcelCategory = (name: string) => {
+    const isUsed =
+      installments.some((i) => i.category === name) ||
+      transactions.some((t) => t.categoryId === name);
+    if (isUsed) return;
+    setParcelCategories((prev) => prev.filter((cat) => cat !== name));
+  };
+
+  const handleImportData = (data: {
+    transactions?: Transaction[];
+    categories?: Category[];
+    budgets?: Budget[];
+    goals?: SavingsGoal[];
+    installments?: DebtInstallment[];
+  }) => {
+    if (data.transactions) setTransactions(data.transactions);
+    if (data.categories) setCategories(data.categories);
+    if (data.budgets) setBudgets(data.budgets);
+    if (data.goals) setGoals(data.goals);
+    if (data.installments) setInstallments(data.installments);
+  };
+
+  return (
+    <MobileFrame activeTab={activeTab}>
+      
+      {/* Mobile App Header with Month Selector Dropdown, Dark Mode & Categories */}
+      <MobileHeader
+        currentYearMonth={currentYearMonth}
+        onMonthChange={setCurrentYearMonth}
+        summary={monthlySummary}
+        overallBalance={overallBalance}
+        isBalanceHidden={isBalanceHidden}
+        onToggleBalancePrivacy={() => setIsBalanceHidden((prev) => !prev)}
+        isDarkMode={isDarkMode}
+        onToggleDarkMode={handleToggleDarkMode}
+        onOpenCategoryManager={() => setIsCategoryModalOpen(true)}
+        onOpenNewTransaction={() => setIsNewLaunchSheetOpen(true)}
+        onOpenExportImport={() => setIsExportModalOpen(true)}
+        onNavigateTab={(tab) => {
+          setActiveTab(tab);
+          const scrollEl = document.getElementById('smartphone-content-scroll') || document.getElementById('smartphone-screen');
+          if (scrollEl) scrollEl.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+      />
+
+      {/* Main Mobile Screen Viewport */}
+      <div id="mobile-viewport-content" className="flex-1 px-3.5 py-4 space-y-4 max-w-full overflow-x-hidden">
+        
+        {/* Tab 1: Início (Dashboard / Resumo) */}
+        {activeTab === 'overview' && (
+          <div id="view-mobile-overview" className="space-y-4 animate-in fade-in duration-200">
+            {/* Executive Indicator Cards with Financial Diagnosis */}
+            <SummaryCards 
+              summary={monthlySummary} 
+              overallBalance={overallBalance} 
+              isBalanceHidden={isBalanceHidden}
+              onNavigateToFixed={() => setActiveTab('fixed')}
+              onNavigateToInstallments={() => setActiveTab('installments')}
+            />
+
+            {/* Financial Charts (Evolution & Categories) */}
+            <FinancialCharts
+              transactions={currentMonthTransactions}
+              categories={categories}
+              currentYearMonth={currentYearMonth}
+            />
+
+            {/* Recent Transactions List with Quick Actions */}
+            <div className="pt-1">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
+                  Movimentações no Mês
+                </span>
+                <button
+                  onClick={() => setActiveTab('transactions')}
+                  className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 transition-colors"
+                >
+                  Ver Extrato Completo →
+                </button>
+              </div>
+
+              <TransactionList
+                transactions={currentMonthTransactions}
+                categories={categories}
+                currentYearMonth={currentYearMonth}
+                onEdit={handleEditTransaction}
+                onDelete={handleRequestDeleteTransaction}
+                onToggleStatus={handleToggleStatus}
+                onOpenNewTransaction={() => setIsNewLaunchSheetOpen(true)}
+                isBalanceHidden={isBalanceHidden}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Tab 2: Despesas Fixas (Moradia, Alimentação, Educação, Assinaturas, etc.) */}
+        {activeTab === 'fixed' && (
+          <div id="view-mobile-fixed-expenses" className="space-y-4 animate-in fade-in duration-200">
+            <FixedExpensesSection
+              transactions={currentMonthTransactions}
+              categories={categories}
+              currentYearMonth={currentYearMonth}
+              onOpenAddModal={() => handleOpenNewTransaction('expense', true)}
+              onEdit={handleEditTransaction}
+              onDelete={handleRequestDeleteTransaction}
+              onToggleStatus={handleToggleStatus}
+              onMarkAllFixedPaid={handleMarkAllFixedPaid}
+              onMarkAllFixedPending={handleMarkAllFixedPending}
+              isBalanceHidden={isBalanceHidden}
+            />
+          </div>
+        )}
+
+        {/* Tab 3: Parcelas e Dívidas (Contratos, Empréstimos, Renegociações) */}
+        {activeTab === 'installments' && (
+          <div id="view-mobile-installments" className="space-y-4 animate-in fade-in duration-200">
+            <InstallmentsSection
+              installments={installments}
+              currentYearMonth={currentYearMonth}
+              onOpenAddModal={handleOpenNewInstallment}
+              onEdit={handleEditInstallment}
+              onDelete={handleRequestDeleteInstallment}
+              onToggleStatus={handleToggleInstallmentStatus}
+              onAdvanceInstallment={handleAdvanceInstallment}
+              isBalanceHidden={isBalanceHidden}
+            />
+          </div>
+        )}
+
+        {/* Tab 4: Extrato / Tetos / Metas */}
+        {(activeTab === 'transactions' || activeTab === 'budgets' || activeTab === 'goals') && (
+          <div id="view-mobile-planning-hub" className="space-y-4 animate-in fade-in duration-200">
+            
+            {/* Segmented Sub-Tab Switcher (Extrato / Tetos / Metas) */}
+            <div className="bg-neutral-200/80 dark:bg-neutral-800/80 p-1 rounded-2xl flex items-center gap-1 shadow-inner transition-colors">
+              <button
+                id="subtab-transactions"
+                onClick={() => setPlanningSubTab('transactions')}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  planningSubTab === 'transactions'
+                    ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs'
+                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'
+                }`}
+              >
+                <Receipt className="w-3.5 h-3.5" />
+                <span>Extrato</span>
+              </button>
+
+              <button
+                id="subtab-budgets"
+                onClick={() => setPlanningSubTab('budgets')}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  planningSubTab === 'budgets'
+                    ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs'
+                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'
+                }`}
+              >
+                <Target className="w-3.5 h-3.5" />
+                <span>Tetos</span>
+              </button>
+
+              <button
+                id="subtab-goals"
+                onClick={() => setPlanningSubTab('goals')}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  planningSubTab === 'goals'
+                    ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs'
+                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'
+                }`}
+              >
+                <PiggyBank className="w-3.5 h-3.5" />
+                <span>Metas</span>
+              </button>
+            </div>
+
+            {/* Sub-view Content */}
+            {planningSubTab === 'transactions' && (
+              <div className="space-y-4">
+                <TransactionList
+                  transactions={currentMonthTransactions}
+                  categories={categories}
+                  currentYearMonth={currentYearMonth}
+                  onEdit={handleEditTransaction}
+                  onDelete={handleRequestDeleteTransaction}
+                  onToggleStatus={handleToggleStatus}
+                  onOpenNewTransaction={() => setIsNewLaunchSheetOpen(true)}
+                  isBalanceHidden={isBalanceHidden}
+                />
+              </div>
+            )}
+
+            {planningSubTab === 'budgets' && (
+              <div className="space-y-4">
+                <BudgetsSection
+                  budgets={budgets}
+                  categories={categories}
+                  transactions={currentMonthTransactions}
+                  currentYearMonth={currentYearMonth}
+                  onSaveBudget={handleSaveBudget}
+                  onDeleteBudget={handleRequestDeleteBudget}
+                />
+              </div>
+            )}
+
+            {planningSubTab === 'goals' && (
+              <div className="space-y-4">
+                <SavingsGoalsSection
+                  goals={goals}
+                  onAddGoal={handleAddGoal}
+                  onEditGoal={handleEditGoal}
+                  onUpdateGoalAmount={handleUpdateGoalAmount}
+                  onDeleteGoal={handleRequestDeleteGoal}
+                />
+              </div>
+            )}
+
+          </div>
+        )}
+
+      </div>
+
+      {/* Fixed Mobile Bottom Tab Bar with Center FAB */}
+      <MobileBottomNav
+        activeTab={activeTab}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          const scrollEl = document.getElementById('smartphone-content-scroll') || document.getElementById('smartphone-screen');
+          if (scrollEl) scrollEl.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onOpenNewTransaction={() => setIsNewLaunchSheetOpen(true)}
+        pendingCount={pendingCount}
+      />
+
+      {/* Bottom Sheet Menu: Choose what to add (Fixa, Parcela, Renda, Variável) */}
+      <NewLaunchSheet
+        isOpen={isNewLaunchSheetOpen}
+        onClose={() => setIsNewLaunchSheetOpen(false)}
+        onSelectFixedExpense={() => handleSelectNewLaunchType('fixed')}
+        onSelectInstallment={() => handleSelectNewLaunchType('installment')}
+        onSelectIncome={() => handleSelectNewLaunchType('income')}
+        onSelectVariableExpense={() => handleSelectNewLaunchType('variable')}
+      />
+
+      {/* Mobile Modal: Transaction Form (Income / Expense / Fixed) */}
+      <TransactionModal
+        isOpen={isTxModalOpen}
+        onClose={() => {
+          setIsTxModalOpen(false);
+          setEditingTransaction(null);
+        }}
+        onSave={handleSaveTransaction}
+        categories={categories}
+        initialData={editingTransaction}
+        initialType={txModalInitialType}
+        isFixedDefault={txModalIsFixedDefault}
+      />
+
+      {/* Mobile Modal: Debt Installment Form */}
+      <InstallmentModal
+        isOpen={isInstallmentModalOpen}
+        onClose={() => {
+          setIsInstallmentModalOpen(false);
+          setEditingInstallment(null);
+        }}
+        onSave={handleSaveInstallment}
+        initialData={editingInstallment}
+        competence={currentYearMonth}
+        parcelCategories={parcelCategories}
+      />
+
+      {/* Modal: Category Manager (Fixed, Installments, Income) */}
+      <CategoryManagerModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+        categories={categories}
+        parcelCategories={parcelCategories}
+        transactions={transactions}
+        installments={installments}
+        budgets={budgets}
+        onAddCategory={handleAddCategory}
+        onEditCategory={handleEditCategory}
+        onDeleteCategory={handleDeleteCategory}
+        onAddParcelCategory={handleAddParcelCategory}
+        onEditParcelCategory={handleEditParcelCategory}
+        onDeleteParcelCategory={handleDeleteParcelCategory}
+      />
+
+      {/* Mobile Bottom Sheet: Export / Import Modal */}
+      <ExportImportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        transactions={transactions}
+        categories={categories}
+        budgets={budgets}
+        goals={goals}
+        installments={installments}
+        onImportData={handleImportData}
+      />
+
+      {/* Reusable Delete Confirmation Dialog (non-blocking) */}
+      <ConfirmDeleteModal
+        isOpen={deleteModalState.isOpen}
+        title={deleteModalState.title}
+        description={deleteModalState.description}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteModalState((prev) => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* PWA Offline Toast */}
+      <OfflineIndicator />
+
+    </MobileFrame>
+  );
+};
+
+export default App;

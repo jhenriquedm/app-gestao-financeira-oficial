@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#047857"/>
+      <stop offset="50%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Background rounded squircle -->
+  <rect width="512" height="512" rx="115" fill="url(#emeraldGrad)"/>
+
+  <!-- Subtle inner border -->
+  <rect x="8" y="8" width="496" height="496" rx="108" fill="none" stroke="#ffffff" stroke-opacity="0.15" stroke-width="4"/>
+
+  <!-- Card sticking out -->
+  <rect x="140" y="140" width="232" height="110" rx="18" fill="#ecfdf5" opacity="0.95" filter="url(#shadow)"/>
+  <rect x="160" y="165" width="60" height="12" rx="6" fill="#059669" opacity="0.6"/>
+
+  <!-- Wallet Body -->
+  <rect x="110" y="200" width="292" height="190" rx="28" fill="#ffffff" filter="url(#shadow)"/>
+
+  <!-- Clasp / Tab -->
+  <path d="M330 250 H402 C420 250 420 340 402 340 H330 Z" fill="#f3f4f6"/>
+  <circle cx="380" cy="295" r="14" fill="url(#goldGrad)"/>
+
+  <!-- Upward Trend Badge in Corner -->
+  <circle cx="390" cy="130" r="54" fill="url(#goldGrad)" filter="url(#shadow)"/>
+  <path d="M372 148 L408 112 M408 112 H385 M408 112 V135" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

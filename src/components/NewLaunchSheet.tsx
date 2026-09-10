@@ -1,0 +1,153 @@
+import React from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { X, Building2, CreditCard, ArrowUpRight, Plus } from 'lucide-react';
+
+interface NewLaunchSheetProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSelectFixedExpense: () => void;
+  onSelectInstallment: () => void;
+  onSelectIncome: () => void;
+  onSelectVariableExpense: () => void;
+}
+
+export const NewLaunchSheet: React.FC<NewLaunchSheetProps> = ({
+  isOpen,
+  onClose,
+  onSelectFixedExpense,
+  onSelectInstallment,
+  onSelectIncome,
+  onSelectVariableExpense,
+}) => {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div
+          id="sheet-backdrop-new-launch"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) onClose();
+          }}
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-xs"
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 100 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 100 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            id="sheet-card-new-launch"
+            className="bg-white rounded-t-[28px] w-full shadow-2xl border-t border-neutral-200 overflow-hidden flex flex-col p-4 pb-6 space-y-3"
+          >
+            {/* Mobile Drag Handle */}
+            <div className="w-10 h-1 bg-neutral-300 rounded-full mx-auto shrink-0 mb-1" />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-neutral-900">Novo Lançamento</h3>
+                <p className="text-[11px] text-neutral-500">Escolha o que deseja registrar</p>
+              </div>
+              <button
+                onClick={onClose}
+                className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 hover:bg-neutral-200 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2.5 pt-1">
+              {/* Opção 1: Despesa Fixa (Aluguel, Moradia, Contas) */}
+              <button
+                onClick={() => {
+                  onClose();
+                  onSelectFixedExpense();
+                }}
+                className="flex items-center gap-3 p-3 rounded-2xl border border-indigo-100 bg-indigo-50/40 hover:bg-indigo-50 active:scale-[0.99] transition-all text-left cursor-pointer"
+              >
+                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-indigo-600/20">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-neutral-900">Despesa Fixa / Recorrente</span>
+                    <span className="px-1.5 py-0.2 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded">
+                      Mensal
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-neutral-500 truncate">
+                    Aluguel, internet, feira fixa, faculdade, condomínio
+                  </p>
+                </div>
+              </button>
+
+              {/* Opção 2: Parcela / Dívida (Empréstimos, Financiamentos) */}
+              <button
+                onClick={() => {
+                  onClose();
+                  onSelectInstallment();
+                }}
+                className="flex items-center gap-3 p-3 rounded-2xl border border-amber-100 bg-amber-50/40 hover:bg-amber-50 active:scale-[0.99] transition-all text-left cursor-pointer"
+              >
+                <div className="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-amber-600/20">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-neutral-900">Parcela / Dívida Parcelada</span>
+                    <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 text-[10px] font-bold rounded">
+                      Prestações
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-neutral-500 truncate">
+                    Empréstimo consignado, compras em 10x, acordo do cartão
+                  </p>
+                </div>
+              </button>
+
+              {/* Opção 3: Renda / Salário */}
+              <button
+                onClick={() => {
+                  onClose();
+                  onSelectIncome();
+                }}
+                className="flex items-center gap-3 p-3 rounded-2xl border border-emerald-100 bg-emerald-50/40 hover:bg-emerald-50 active:scale-[0.99] transition-all text-left cursor-pointer"
+              >
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-emerald-600/20">
+                  <ArrowUpRight className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-neutral-900">Renda / Entrada Financeira</span>
+                    <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded">
+                      Receita
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-neutral-500 truncate">
+                    Salário, freelance, rendimento de investimento, PIX recebido
+                  </p>
+                </div>
+              </button>
+
+              {/* Opção 4: Despesa Variável / Dia a dia */}
+              <button
+                onClick={() => {
+                  onClose();
+                  onSelectVariableExpense();
+                }}
+                className="flex items-center gap-3 p-3 rounded-2xl border border-neutral-200 bg-white hover:bg-neutral-50 active:scale-[0.99] transition-all text-left cursor-pointer"
+              >
+                <div className="w-10 h-10 rounded-xl bg-neutral-800 text-white flex items-center justify-center shrink-0">
+                  <Plus className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-bold text-neutral-900">Gasto Avulso / Variável</span>
+                  <p className="text-[11px] text-neutral-500 truncate">
+                    Combustível, restaurante, farmácia, compras do dia a dia
+                  </p>
+                </div>
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+};

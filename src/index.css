@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  body {
+    @apply font-sans antialiased selection:bg-emerald-500 selection:text-white;
+  }
+
+  input, select, textarea {
+    color: inherit;
+  }
+
+  .dark option {
+    color: #f1f5f9;
+    background-color: #171717;
+  }
+
+  option {
+    color: #0f172a;
+    background-color: #ffffff;
+  }
+}
+
+/* Hide scrollbar for clean mobile experience while preserving scrollability */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Smooth mobile tap highlights */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
