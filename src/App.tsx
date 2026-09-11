@@ -747,11 +747,11 @@ export const App: React.FC = () => {
       />
 
       {/* Main Mobile Screen Viewport */}
-      <div id="mobile-viewport-content" className="flex-1 px-3.5 py-4 space-y-4 max-w-full overflow-x-hidden">
+      <div id="mobile-viewport-content" className="flex-1 px-3 py-2.5 space-y-3 max-w-full overflow-x-hidden">
         
         {/* Tab 1: Início (Dashboard / Resumo) */}
         {activeTab === 'overview' && (
-          <div id="view-mobile-overview" className="space-y-4 animate-in fade-in duration-200">
+          <div id="view-mobile-overview" className="space-y-3 animate-in fade-in duration-200">
             {/* Executive Indicator Cards with Financial Diagnosis */}
             <SummaryCards 
               summary={monthlySummary} 
@@ -769,9 +769,9 @@ export const App: React.FC = () => {
             />
 
             {/* Recent Transactions List with Quick Actions */}
-            <div className="pt-1">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
+            <div className="pt-0.5">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
                   Movimentações no Mês
                 </span>
                 <button
@@ -798,7 +798,7 @@ export const App: React.FC = () => {
 
         {/* Tab 2: Despesas Fixas (Moradia, Alimentação, Educação, Assinaturas, etc.) */}
         {activeTab === 'fixed' && (
-          <div id="view-mobile-fixed-expenses" className="space-y-4 animate-in fade-in duration-200">
+          <div id="view-mobile-fixed-expenses" className="space-y-3 animate-in fade-in duration-200">
             <FixedExpensesSection
               transactions={currentMonthTransactions}
               categories={categories}
@@ -816,7 +816,7 @@ export const App: React.FC = () => {
 
         {/* Tab 3: Parcelas e Dívidas (Contratos, Empréstimos, Renegociações) */}
         {activeTab === 'installments' && (
-          <div id="view-mobile-installments" className="space-y-4 animate-in fade-in duration-200">
+          <div id="view-mobile-installments" className="space-y-3 animate-in fade-in duration-200">
             <InstallmentsSection
               installments={installments}
               currentYearMonth={currentYearMonth}
@@ -832,7 +832,7 @@ export const App: React.FC = () => {
 
         {/* Tab 4: Extrato / Tetos / Metas */}
         {(activeTab === 'transactions' || activeTab === 'budgets' || activeTab === 'goals') && (
-          <div id="view-mobile-planning-hub" className="space-y-4 animate-in fade-in duration-200">
+          <div id="view-mobile-planning-hub" className="space-y-3 animate-in fade-in duration-200">
             
             {/* Segmented Sub-Tab Switcher (Extrato / Tetos / Metas) */}
             <div className="bg-neutral-200/80 dark:bg-neutral-800/80 p-1 rounded-2xl flex items-center gap-1 shadow-inner transition-colors">

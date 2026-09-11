@@ -22,13 +22,16 @@
   }
 }
 
-/* Hide scrollbar for clean mobile experience while preserving scrollability */
+/* Hide scrollbar utility - completely invisible scrollbar preserving scroll behavior */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
+  width: 0px;
+  height: 0px;
+  background: transparent;
 }
 .no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
 
 /* Custom styled scrollbars for list containers */
@@ -37,8 +40,8 @@
   scrollbar-color: rgba(156, 163, 175, 0.4) transparent;
 }
 .custom-scrollbar::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;

@@ -139,33 +139,33 @@ export const FinancialCharts: React.FC<FinancialChartsProps> = ({
         {(mobileTab === 'monthly' || mobileTab === 'both') && (
           <div 
             id="chart-monthly-comparison" 
-            className="w-full bg-white rounded-2xl p-4 border border-neutral-200/90 shadow-2xs flex flex-col justify-between"
+            className="w-full bg-white rounded-xl p-3 border border-neutral-200/90 shadow-2xs flex flex-col justify-between"
           >
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-2">
               <div>
-                <h3 className="text-sm font-semibold text-neutral-900 flex items-center gap-1.5">
-                  <BarChart3 className="w-4 h-4 text-emerald-600" />
+                <h3 className="text-xs sm:text-sm font-semibold text-neutral-900 flex items-center gap-1.5">
+                  <BarChart3 className="w-3.5 h-3.5 text-emerald-600" />
                   Evolução: Receitas vs Despesas
                 </h3>
-                <p className="text-[11px] text-neutral-500">
+                <p className="text-[10px] text-neutral-500">
                   Histórico dos últimos 6 meses
                 </p>
               </div>
             </div>
 
-            <div className="h-56 w-full">
+            <div className="h-44 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyData} margin={{ top: 8, right: 8, left: -22, bottom: 0 }}>
+                <BarChart data={monthlyData} margin={{ top: 6, right: 6, left: -24, bottom: 0 }}>
                   <XAxis 
                     dataKey="name" 
                     tickLine={false} 
                     axisLine={{ stroke: '#e5e7eb' }} 
-                    tick={{ fontSize: 11, fill: '#6b7280' }} 
+                    tick={{ fontSize: 10, fill: '#6b7280' }} 
                   />
                   <YAxis 
                     tickLine={false} 
                     axisLine={{ stroke: '#e5e7eb' }} 
-                    tick={{ fontSize: 10, fill: '#6b7280' }}
+                    tick={{ fontSize: 9.5, fill: '#6b7280' }}
                     tickFormatter={(val) => `R$${val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}`}
                   />
                   <Tooltip 
@@ -174,18 +174,18 @@ export const FinancialCharts: React.FC<FinancialChartsProps> = ({
                       ''
                     ]}
                     contentStyle={{ 
-                      borderRadius: '12px', 
+                      borderRadius: '10px', 
                       border: '1px solid #e5e7eb', 
                       boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                      fontSize: '12px'
+                      fontSize: '11px'
                     }} 
                   />
                   <Legend 
-                    wrapperStyle={{ fontSize: '11px', paddingTop: '6px' }} 
+                    wrapperStyle={{ fontSize: '10px', paddingTop: '4px' }} 
                     iconType="circle"
                   />
-                  <Bar dataKey="Receitas" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={22} />
-                  <Bar dataKey="Despesas" fill="#f43f5e" radius={[4, 4, 0, 0]} maxBarSize={22} />
+                  <Bar dataKey="Receitas" fill="#10b981" radius={[3, 3, 0, 0]} maxBarSize={18} />
+                  <Bar dataKey="Despesas" fill="#f43f5e" radius={[3, 3, 0, 0]} maxBarSize={18} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -196,15 +196,15 @@ export const FinancialCharts: React.FC<FinancialChartsProps> = ({
         {(mobileTab === 'categories' || mobileTab === 'both') && (
           <div 
             id="chart-category-distribution" 
-            className="w-full bg-white rounded-2xl p-4 border border-neutral-200/90 shadow-2xs flex flex-col justify-between"
+            className="w-full bg-white rounded-xl p-3 border border-neutral-200/90 shadow-2xs flex flex-col justify-between"
           >
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-1.5">
               <div>
-                <h3 className="text-sm font-semibold text-neutral-900 flex items-center gap-1.5">
-                  <PieIcon className="w-4 h-4 text-rose-600" />
+                <h3 className="text-xs sm:text-sm font-semibold text-neutral-900 flex items-center gap-1.5">
+                  <PieIcon className="w-3.5 h-3.5 text-rose-600" />
                   Despesas por Categoria
                 </h3>
-                <p className="text-[11px] text-neutral-500">
+                <p className="text-[10px] text-neutral-500">
                   Distribuição no mês selecionado
                 </p>
               </div>
@@ -213,15 +213,15 @@ export const FinancialCharts: React.FC<FinancialChartsProps> = ({
             {categoryExpenseData.length > 0 ? (
               <div className="flex flex-col items-center">
                 {/* Donut Chart - Full Width Centered */}
-                <div className="h-44 w-full flex items-center justify-center">
+                <div className="h-38 w-full flex items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={categoryExpenseData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={42}
-                        outerRadius={68}
+                        innerRadius={36}
+                        outerRadius={58}
                         paddingAngle={3}
                         dataKey="value"
                       >
@@ -235,10 +235,10 @@ export const FinancialCharts: React.FC<FinancialChartsProps> = ({
                           item?.payload?.name || ''
                         ]}
                         contentStyle={{ 
-                          borderRadius: '12px', 
+                          borderRadius: '10px', 
                           border: '1px solid #e5e7eb', 
                           boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                          fontSize: '12px'
+                          fontSize: '11px'
                         }} 
                       />
                     </PieChart>
@@ -246,7 +246,7 @@ export const FinancialCharts: React.FC<FinancialChartsProps> = ({
                 </div>
 
                 {/* Category breakdown list - Full Width, Beautiful & Responsive */}
-                <div className="w-full space-y-2.5 pt-3 border-t border-neutral-100">
+                <div className="w-full space-y-2 pt-2 border-t border-neutral-100">
                   {categoryExpenseData.slice(0, 6).map((cat) => (
                     <div key={cat.id} className="space-y-1">
                       <div className="flex items-center justify-between text-xs">

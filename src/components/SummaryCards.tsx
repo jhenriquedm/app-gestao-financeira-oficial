@@ -69,56 +69,56 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
   const currentStatus = statusConfig[summary.healthStatus || 'SAUDÁVEL'];
 
   return (
-    <div id="summary-indicator-dashboard" className="space-y-3">
+    <div id="summary-indicator-dashboard" className="space-y-2.5">
       
       {/* Executive Card de Saúde Financeira e Comprometimento */}
       <div 
         id="card-executive-health"
-        className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm relative overflow-hidden transition-colors"
+        className="bg-white dark:bg-neutral-900 rounded-xl p-3 border border-neutral-200 dark:border-neutral-800 shadow-xs relative overflow-hidden transition-colors"
       >
         {/* Top Header: Badge de Saúde Financeira */}
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
               Diagnóstico Mensal
             </span>
           </div>
 
           <div 
             id="badge-health-status" 
-            className={`px-2.5 py-1 rounded-full border text-xs font-bold flex items-center gap-1.5 shadow-2xs ${currentStatus.bg} ${currentStatus.text}`}
+            className={`px-2 py-0.5 rounded-full border text-[10.5px] font-bold flex items-center gap-1.5 shadow-2xs ${currentStatus.bg} ${currentStatus.text}`}
           >
-            <span className={`w-2 h-2 rounded-full animate-pulse ${currentStatus.dot}`} />
+            <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${currentStatus.dot}`} />
             <span>{currentStatus.label}</span>
           </div>
         </div>
 
         {/* 3 Pillars: Renda Prevista | Comprometido | Saldo Livre */}
-        <div className="grid grid-cols-3 gap-2 py-2 border-y border-neutral-100 dark:border-neutral-800 text-center">
-          <div className="px-1">
-            <span className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-tight block truncate">
+        <div className="grid grid-cols-3 gap-1.5 py-1.5 border-y border-neutral-100 dark:border-neutral-800 text-center">
+          <div className="px-0.5">
+            <span className="text-[9.5px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-tight block truncate">
               Renda Prevista
             </span>
-            <span className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400 block mt-0.5 truncate">
+            <span className="text-xs sm:text-[13px] font-black text-emerald-600 dark:text-emerald-400 block mt-0.5 truncate leading-tight">
               {displayVal(summary.totalIncome)}
             </span>
           </div>
 
-          <div className="px-1 border-x border-neutral-100 dark:border-neutral-800">
-            <span className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-tight block truncate">
+          <div className="px-0.5 border-x border-neutral-100 dark:border-neutral-800">
+            <span className="text-[9.5px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-tight block truncate">
               Comprometido
             </span>
-            <span className="text-xs sm:text-sm font-black text-rose-600 dark:text-rose-400 block mt-0.5 truncate">
+            <span className="text-xs sm:text-[13px] font-black text-rose-600 dark:text-rose-400 block mt-0.5 truncate leading-tight">
               {displayVal(summary.totalCompromissos || summary.totalExpense)}
             </span>
           </div>
 
-          <div className="px-1">
-            <span className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-tight block truncate">
+          <div className="px-0.5">
+            <span className="text-[9.5px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-tight block truncate">
               Saldo Livre
             </span>
             <span 
-              className={`text-xs sm:text-sm font-black block mt-0.5 truncate ${
+              className={`text-xs sm:text-[13px] font-black block mt-0.5 truncate leading-tight ${
                 summary.balance >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-rose-600 dark:text-rose-400'
               }`}
             >
@@ -128,22 +128,22 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
         </div>
 
         {/* Barra de Progresso de Quitação do Mês */}
-        <div className="mt-3 space-y-1.5">
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="font-semibold text-neutral-600 dark:text-neutral-400">Progresso de Quitação do Mês</span>
+        <div className="mt-2 space-y-1">
+          <div className="flex items-center justify-between text-[10.5px]">
+            <span className="font-semibold text-neutral-600 dark:text-neutral-400">Progresso de Quitação</span>
             <span className="font-bold text-neutral-900 dark:text-neutral-100">
               {summary.paidPercentage?.toFixed(0) || 0}% quitado
             </span>
           </div>
 
-          <div className="w-full bg-neutral-100 dark:bg-neutral-800 h-2 rounded-full overflow-hidden">
+          <div className="w-full bg-neutral-100 dark:bg-neutral-800 h-1.5 rounded-full overflow-hidden">
             <div 
               className="bg-emerald-500 h-full rounded-full transition-all duration-500"
               style={{ width: `${Math.min(100, Math.max(0, summary.paidPercentage || 0))}%` }}
             />
           </div>
 
-          <div className="flex items-center justify-between text-[10.5px] text-neutral-400 dark:text-neutral-500 pt-0.5">
+          <div className="flex items-center justify-between text-[10px] text-neutral-400 dark:text-neutral-500">
             <span>
               Pago: <strong className="text-emerald-700 dark:text-emerald-400">{displayVal(summary.totalPaid || 0)}</strong>
             </span>
@@ -154,39 +154,39 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
         </div>
 
         {/* Informative Sub-chips: Despesas Fixas, Parcelas e Comprometimento */}
-        <div className="grid grid-cols-3 gap-1.5 mt-3 pt-2.5 border-t border-neutral-100 dark:border-neutral-800">
+        <div className="grid grid-cols-3 gap-1.5 mt-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
           <button
             onClick={onNavigateToFixed}
-            className="p-1.5 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/40 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 border border-indigo-100/70 dark:border-indigo-900/60 text-left transition-colors cursor-pointer"
+            className="p-1 rounded-lg bg-indigo-50/60 dark:bg-indigo-950/40 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 border border-indigo-100/70 dark:border-indigo-900/60 text-left transition-colors cursor-pointer"
           >
-            <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-700 dark:text-indigo-300">
-              <Building2 className="w-3 h-3 shrink-0" />
+            <div className="flex items-center gap-1 text-[9.5px] font-bold text-indigo-700 dark:text-indigo-300">
+              <Building2 className="w-2.5 h-2.5 shrink-0" />
               <span className="truncate">Fixas</span>
             </div>
-            <div className="text-xs font-black text-neutral-900 dark:text-neutral-100 mt-0.5 truncate">
+            <div className="text-[11px] font-black text-neutral-900 dark:text-neutral-100 mt-0.5 truncate leading-tight">
               {displayVal(summary.fixedExpenses || 0)}
             </div>
           </button>
 
           <button
             onClick={onNavigateToInstallments}
-            className="p-1.5 rounded-xl bg-amber-50/60 dark:bg-amber-950/40 hover:bg-amber-50 dark:hover:bg-amber-900/50 border border-amber-100/70 dark:border-amber-900/60 text-left transition-colors cursor-pointer"
+            className="p-1 rounded-lg bg-amber-50/60 dark:bg-amber-950/40 hover:bg-amber-50 dark:hover:bg-amber-900/50 border border-amber-100/70 dark:border-amber-900/60 text-left transition-colors cursor-pointer"
           >
-            <div className="flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-300">
-              <CreditCard className="w-3 h-3 shrink-0" />
+            <div className="flex items-center gap-1 text-[9.5px] font-bold text-amber-700 dark:text-amber-300">
+              <CreditCard className="w-2.5 h-2.5 shrink-0" />
               <span className="truncate">Parcelas</span>
             </div>
-            <div className="text-xs font-black text-neutral-900 dark:text-neutral-100 mt-0.5 truncate">
+            <div className="text-[11px] font-black text-neutral-900 dark:text-neutral-100 mt-0.5 truncate leading-tight">
               {displayVal(summary.installmentsAmount || 0)}
             </div>
           </button>
 
-          <div className="p-1.5 rounded-xl bg-neutral-50 dark:bg-neutral-800/80 border border-neutral-200/70 dark:border-neutral-700/60 text-left">
-            <div className="flex items-center gap-1 text-[10px] font-bold text-neutral-600 dark:text-neutral-400">
-              <Percent className="w-3 h-3 shrink-0" />
+          <div className="p-1 rounded-lg bg-neutral-50 dark:bg-neutral-800/80 border border-neutral-200/70 dark:border-neutral-700/60 text-left">
+            <div className="flex items-center gap-1 text-[9.5px] font-bold text-neutral-600 dark:text-neutral-400">
+              <Percent className="w-2.5 h-2.5 shrink-0" />
               <span className="truncate">Compromisso</span>
             </div>
-            <div className="text-xs font-black text-neutral-900 dark:text-neutral-100 mt-0.5 truncate">
+            <div className="text-[11px] font-black text-neutral-900 dark:text-neutral-100 mt-0.5 truncate leading-tight">
               {summary.incomeCommitmentPercentage?.toFixed(0) || 0}%
             </div>
           </div>
@@ -195,26 +195,26 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
       </div>
 
       {/* Grid de 2 Cards Secundários (Saldo em Caixa e Poupança) */}
-      <div id="summary-subcards-container" className="grid grid-cols-2 gap-2.5">
+      <div id="summary-subcards-container" className="grid grid-cols-2 gap-2">
         
         {/* Saldo Total Acumulado */}
         <div 
           id="card-balance" 
-          className="bg-white dark:bg-neutral-900 rounded-2xl p-3 border border-neutral-200/90 dark:border-neutral-800 shadow-2xs hover:border-neutral-300 transition-all flex flex-col justify-between"
+          className="bg-white dark:bg-neutral-900 rounded-xl p-2.5 border border-neutral-200/90 dark:border-neutral-800 shadow-2xs hover:border-neutral-300 transition-all flex flex-col justify-between"
         >
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-tight">
+          <div className="flex items-center justify-between mb-0.5">
+            <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-tight">
               Saldo em Caixa
             </span>
-            <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-              <Wallet className="w-3.5 h-3.5" />
+            <div className="w-5 h-5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+              <Wallet className="w-3 h-3" />
             </div>
           </div>
           <div>
-            <div id="val-overall-balance" className="text-sm sm:text-base font-bold tracking-tight text-neutral-900 dark:text-neutral-100 truncate">
+            <div id="val-overall-balance" className="text-xs sm:text-sm font-bold tracking-tight text-neutral-900 dark:text-neutral-100 truncate">
               {displayVal(overallBalance)}
             </div>
-            <div className="mt-0.5 flex items-center gap-1 text-[10.5px]">
+            <div className="mt-0.5 flex items-center gap-1 text-[9.5px]">
               <span className={`font-semibold ${summary.balance >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
                 {isBalanceHidden ? '••••' : `${summary.balance >= 0 ? '+' : ''}${formatCurrency(summary.balance)}`}
               </span>
@@ -226,21 +226,21 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
         {/* Economia / Taxa de Poupança */}
         <div 
           id="card-savings" 
-          className="bg-white dark:bg-neutral-900 rounded-2xl p-3 border border-neutral-200/90 dark:border-neutral-800 shadow-2xs hover:border-neutral-300 transition-all flex flex-col justify-between"
+          className="bg-white dark:bg-neutral-900 rounded-xl p-2.5 border border-neutral-200/90 dark:border-neutral-800 shadow-2xs hover:border-neutral-300 transition-all flex flex-col justify-between"
         >
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-tight">
+          <div className="flex items-center justify-between mb-0.5">
+            <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-tight">
               Taxa de Poupança
             </span>
-            <div className="w-6 h-6 rounded-lg bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
-              <PiggyBank className="w-3.5 h-3.5" />
+            <div className="w-5 h-5 rounded-md bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
+              <PiggyBank className="w-3 h-3" />
             </div>
           </div>
           <div>
-            <div id="val-savings-rate" className={`text-sm sm:text-base font-bold tracking-tight ${summary.savingsRate >= 20 ? 'text-teal-700 dark:text-teal-400' : summary.savingsRate > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400'}`}>
+            <div id="val-savings-rate" className={`text-xs sm:text-sm font-bold tracking-tight ${summary.savingsRate >= 20 ? 'text-teal-700 dark:text-teal-400' : summary.savingsRate > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400'}`}>
               {isBalanceHidden ? '••%' : `${summary.savingsRate.toFixed(0)}%`}
             </div>
-            <div className="mt-0.5 text-[10.5px] text-neutral-500 dark:text-neutral-400 truncate">
+            <div className="mt-0.5 text-[9.5px] text-neutral-500 dark:text-neutral-400 truncate">
               {summary.savingsRate >= 20 ? (
                 <span className="text-emerald-700 dark:text-emerald-400 font-medium">Meta 20%+ atingida</span>
               ) : summary.savingsRate > 0 ? (

@@ -55,9 +55,9 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({
   }, []);
 
   const deviceDimensions = {
-    iphone: { width: '393px', height: '844px', radius: 'rounded-[48px]', bezel: 'p-3', name: 'iPhone 16 Pro' },
-    galaxy: { width: '412px', height: '880px', radius: 'rounded-[44px]', bezel: 'p-3', name: 'Galaxy S24' },
-    compact: { width: '375px', height: '760px', radius: 'rounded-[40px]', bezel: 'p-2.5', name: 'Mobile Compacto' },
+    iphone: { width: '396px', height: 'min(810px, calc(100vh - 70px))', radius: 'rounded-[42px]', bezel: 'p-2.5', name: 'iPhone 16 Pro' },
+    galaxy: { width: '412px', height: 'min(820px, calc(100vh - 70px))', radius: 'rounded-[38px]', bezel: 'p-2.5', name: 'Galaxy S24' },
+    compact: { width: '370px', height: 'min(700px, calc(100vh - 70px))', radius: 'rounded-[34px]', bezel: 'p-2', name: 'Mobile Compacto' },
     fullscreen: { width: '100%', height: '100%', radius: 'rounded-none', bezel: 'p-0', name: 'Tela Cheia' },
   };
 
@@ -150,7 +150,7 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({
         
         {devicePreset === 'fullscreen' ? (
           /* Fullscreen Mobile View (e.g. when embedded on actual phone or toggled) */
-          <div className="w-full max-w-md mx-auto min-h-screen bg-neutral-100 dark:bg-neutral-950 flex flex-col shadow-2xl relative overflow-hidden isolate transform-gpu transition-colors">
+          <div className="w-full max-w-md mx-auto min-h-screen bg-neutral-100 dark:bg-neutral-950 flex flex-col shadow-2xl relative overflow-y-auto no-scrollbar isolate transform-gpu transition-colors">
             {children}
           </div>
         ) : (
@@ -175,7 +175,7 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({
               {/* Native Mobile Status Bar */}
               <div 
                 id="mobile-status-bar" 
-                className="w-full bg-neutral-900 text-white px-6 pt-2.5 pb-1 flex items-center justify-between z-40 shrink-0 select-none text-[12px] font-semibold tracking-tight"
+                className="w-full bg-neutral-900 text-white px-5 pt-2 pb-1 flex items-center justify-between z-40 shrink-0 select-none text-[11px] font-semibold tracking-tight"
               >
                 {/* Left: Clock */}
                 <span>{currentTime}</span>
@@ -183,9 +183,9 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({
                 {/* Center: Dynamic Island / Camera Notch */}
                 <div 
                   id="mobile-dynamic-island"
-                  className="w-24 h-5 bg-black rounded-full flex items-center justify-end px-2 gap-1.5 shadow-xs transition-all hover:w-28 cursor-default"
+                  className="w-20 h-4.5 bg-black rounded-full flex items-center justify-end px-2 gap-1.5 shadow-xs transition-all hover:w-24 cursor-default"
                 >
-                  <div className="w-2.5 h-2.5 rounded-full bg-neutral-950 border border-neutral-800 flex items-center justify-center">
+                  <div className="w-2 h-2 rounded-full bg-neutral-950 border border-neutral-800 flex items-center justify-center">
                     <div className="w-1 h-1 rounded-full bg-blue-950/80" />
                   </div>
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" title="Microfone ativo" />
@@ -193,16 +193,16 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({
 
                 {/* Right: Cellular, Wifi, Battery */}
                 <div className="flex items-center gap-1.5 text-neutral-300">
-                  <Signal className="w-3.5 h-3.5" />
-                  <Wifi className="w-3.5 h-3.5" />
+                  <Signal className="w-3 h-3" />
+                  <Wifi className="w-3 h-3" />
                   <div className="flex items-center gap-0.5">
-                    <span className="text-[10px] text-neutral-300">98%</span>
-                    <Battery className="w-4 h-4 text-emerald-400" />
+                    <span className="text-[9.5px] text-neutral-300">98%</span>
+                    <Battery className="w-3.5 h-3.5 text-emerald-400" />
                   </div>
                 </div>
               </div>
 
-              {/* Children (App Content with dedicated scroll) */}
+              {/* Children (App Content with invisible native scroll) */}
               <div id="smartphone-content-scroll" className="flex-1 flex flex-col relative overflow-y-auto no-scrollbar">
                 {children}
               </div>
@@ -210,9 +210,9 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({
               {/* Home Indicator Bar (Swipe Bar) */}
               <div 
                 id="mobile-home-indicator" 
-                className="w-full bg-white/95 pb-2 pt-1 flex justify-center items-center shrink-0 z-30 pointer-events-none"
+                className="w-full bg-white/95 dark:bg-neutral-900/95 pb-1.5 pt-0.5 flex justify-center items-center shrink-0 z-30 pointer-events-none transition-colors"
               >
-                <div className="w-32 h-1 bg-neutral-300 rounded-full" />
+                <div className="w-28 h-1 bg-neutral-300 dark:bg-neutral-700 rounded-full" />
               </div>
 
             </div>
