@@ -21,7 +21,6 @@ import {
 import { formatCurrency, formatMonthYear } from '../utils/formatters';
 import { MonthlySummary } from '../types';
 import { AppNavTab } from './MobileBottomNav';
-import { PWAInstallButton } from './PWAInstallButton';
 
 interface MobileHeaderProps {
   activeTab: AppNavTab;
@@ -209,8 +208,6 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
           >
             <Download className="w-3.5 h-3.5" />
           </button>
-
-          <PWAInstallButton compact />
         </div>
       </div>
 
