@@ -9,6 +9,7 @@ import {
   FinancialHealthStatus 
 } from './types';
 import { DEFAULT_CATEGORIES, PARCELAS_CATEGORIES, getInitialData } from './data/initialData';
+import { initLocalDatabase, dbOperations } from './db/localDatabase';
 import { MobileFrame } from './components/MobileFrame';
 import { MobileHeader } from './components/MobileHeader';
 import { MobileBottomNav, AppNavTab } from './components/MobileBottomNav';
@@ -31,163 +32,122 @@ import { getTransactionsForMonth } from './utils/transactionHelpers';
 import { formatMonthYear } from './utils/formatters';
 import { Receipt, Target, PiggyBank } from 'lucide-react';
 
-const STORAGE_KEYS = {
-  TRANSACTIONS: 'gf_transactions_v2',
-  INSTALLMENTS: 'gf_installments_v2',
-  CATEGORIES: 'gf_categories_v2',
-  PARCEL_CATEGORIES: 'gf_parcel_categories_v2',
-  BUDGETS: 'gf_budgets_v2',
-  GOALS: 'gf_goals_v2',
-  PRIVACY: 'gf_privacy_v2',
-};
-
 const START_YEAR_MONTH = '2026-10';
 
-const OLD_CATEGORY_MAP: Record<string, string> = {
-  'Moradia & Aluguel': 'Moradia',
-  'Alimentação & Mercado': 'Alimentação',
-  'Educação & Faculdades': 'Educação',
-  'Obrigações MEI / Tributos': 'Obrigações profissionais',
-  'Investimentos & Patrimônio': 'Investimentos/patrimônio',
-  'Investimentos': 'Investimentos/patrimônio',
-  'Contas & Assinaturas': 'Assinaturas',
-  'Transporte & Manutenção': 'Transporte',
-  'Saúde & Farmácia': 'Saúde',
-  'Lazer & Entretenimento': 'Lazer',
-};
-
-const sanitizeCategories = (saved: Category[]): Category[] => {
-  const result: Category[] = [];
-  saved.forEach((c) => {
-    if (c.name === 'Empréstimos & Dívidas' || c.name === 'Outras Despesas') return;
-    const cleanName = OLD_CATEGORY_MAP[c.name] || c.name;
-    if (!result.some((item) => item.name.toLowerCase() === cleanName.toLowerCase() && item.type === c.type)) {
-      result.push({
-        ...c,
-        name: cleanName,
-      });
-    }
-  });
-
-  // Guarantee all 9 required expense categories exist
-  DEFAULT_CATEGORIES.forEach((def) => {
-    if (!result.some((c) => c.name.toLowerCase() === def.name.toLowerCase())) {
-      result.push(def);
-    }
-  });
-
-  return result;
-};
-
 export const App: React.FC = () => {
-  // Categories state
-  const [categories, setCategories] = useState<Category[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return sanitizeCategories(parsed);
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return DEFAULT_CATEGORIES;
-  });
+  const [isDbLoaded, setIsDbLoaded] = useState<boolean>(false);
 
-  // Parcel Categories state
-  const [parcelCategories, setParcelCategories] = useState<string[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.PARCEL_CATEGORIES);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return PARCELAS_CATEGORIES;
-  });
+  // Core database-backed states
+  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
+  const [parcelCategories, setParcelCategories] = useState<string[]>(PARCELAS_CATEGORIES);
+  const [transactions, setTransactions] = useState<Transaction[]>(() => getInitialData().initialTransactions);
+  const [installments, setInstallments] = useState<DebtInstallment[]>(() => getInitialData().initialInstallments);
+  const [budgets, setBudgets] = useState<Budget[]>(() => getInitialData().initialBudgets);
+  const [goals, setGoals] = useState<SavingsGoal[]>(() => getInitialData().initialGoals);
 
-  // Transactions state - remove any records prior to October 2026
-  const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.filter((t: Transaction) => t.date >= `${START_YEAR_MONTH}-01`);
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return getInitialData().initialTransactions.filter((t) => t.date >= `${START_YEAR_MONTH}-01`);
-  });
-
-  // Debt Installments state (Parcelas & Empréstimos)
-  const [installments, setInstallments] = useState<DebtInstallment[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.INSTALLMENTS);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return getInitialData().initialInstallments;
-  });
-
-  // Budgets state
-  const [budgets, setBudgets] = useState<Budget[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.BUDGETS);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return getInitialData().initialBudgets;
-  });
-
-  // Savings Goals state
-  const [goals, setGoals] = useState<SavingsGoal[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.GOALS);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return getInitialData().initialGoals;
-  });
-
-  // Balance privacy state (Eye icon)
-  const [isBalanceHidden, setIsBalanceHidden] = useState<boolean>(() => {
-    return localStorage.getItem(STORAGE_KEYS.PRIVACY) === 'true';
-  });
-
-  // Dark mode state
+  // Settings states
+  const [isBalanceHidden, setIsBalanceHidden] = useState<boolean>(false);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    const saved = localStorage.getItem('gf_theme_dark');
-    if (saved !== null) return saved === 'true';
     return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
+  // Month competence
+  const [currentYearMonth, setCurrentYearMonth] = useState<string>('2026-10');
+
+  // Load from Dexie Local Database on mount
   useEffect(() => {
-    localStorage.setItem('gf_theme_dark', String(isDarkMode));
+    let isMounted = true;
+    async function loadData() {
+      try {
+        const data = await initLocalDatabase();
+        if (!isMounted) return;
+        
+        if (data.categories && data.categories.length > 0) setCategories(data.categories);
+        if (data.transactions) setTransactions(data.transactions.filter(t => t.date >= `${START_YEAR_MONTH}-01`));
+        if (data.installments) setInstallments(data.installments);
+        if (data.budgets) setBudgets(data.budgets);
+        if (data.savingsGoals) setGoals(data.savingsGoals);
+        
+        if (data.settings) {
+          if (data.settings.isDarkMode !== undefined) setIsDarkMode(Boolean(data.settings.isDarkMode));
+          if (data.settings.isBalanceHidden !== undefined) setIsBalanceHidden(Boolean(data.settings.isBalanceHidden));
+          if (data.settings.currentYearMonth) setCurrentYearMonth(String(data.settings.currentYearMonth));
+        }
+      } catch (err) {
+        console.error('Error loading local database:', err);
+      } finally {
+        if (isMounted) setIsDbLoaded(true);
+      }
+    }
+
+    loadData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Theme synchronization
+  useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [isDarkMode]);
+    if (isDbLoaded) {
+      dbOperations.setSetting('isDarkMode', isDarkMode).catch(console.error);
+    }
+  }, [isDarkMode, isDbLoaded]);
 
   const handleToggleDarkMode = () => {
     setIsDarkMode((prev) => !prev);
   };
+
+  const handleToggleBalancePrivacy = () => {
+    setIsBalanceHidden((prev) => {
+      const nextVal = !prev;
+      if (isDbLoaded) {
+        dbOperations.setSetting('isBalanceHidden', nextVal).catch(console.error);
+      }
+      return nextVal;
+    });
+  };
+
+  // Sync state mutations to Dexie Local Database
+  useEffect(() => {
+    if (isDbLoaded) {
+      dbOperations.saveTransactions(transactions).catch(console.error);
+    }
+  }, [transactions, isDbLoaded]);
+
+  useEffect(() => {
+    if (isDbLoaded) {
+      dbOperations.saveInstallments(installments).catch(console.error);
+    }
+  }, [installments, isDbLoaded]);
+
+  useEffect(() => {
+    if (isDbLoaded) {
+      dbOperations.saveCategories(categories).catch(console.error);
+    }
+  }, [categories, isDbLoaded]);
+
+  useEffect(() => {
+    if (isDbLoaded) {
+      dbOperations.saveBudgets(budgets).catch(console.error);
+    }
+  }, [budgets, isDbLoaded]);
+
+  useEffect(() => {
+    if (isDbLoaded) {
+      dbOperations.saveGoals(goals).catch(console.error);
+    }
+  }, [goals, isDbLoaded]);
+
+  useEffect(() => {
+    if (isDbLoaded) {
+      dbOperations.setSetting('currentYearMonth', currentYearMonth).catch(console.error);
+    }
+  }, [currentYearMonth, isDbLoaded]);
 
   // Delete confirmation modal state (non-blocking)
   const [deleteModalState, setDeleteModalState] = useState<{
@@ -203,9 +163,6 @@ export const App: React.FC = () => {
     description: '',
     type: 'transaction',
   });
-
-  // Contador de meses deve começar a partir de Outubro de 2026, conforme solicitado
-  const [currentYearMonth, setCurrentYearMonth] = useState<string>('2026-10');
 
   // Active Bottom Tab
   const [activeTab, setActiveTab] = useState<AppNavTab>('overview');
@@ -225,35 +182,6 @@ export const App: React.FC = () => {
 
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-
-  // Sync to localStorage
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
-  }, [transactions]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.INSTALLMENTS, JSON.stringify(installments));
-  }, [installments]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
-  }, [categories]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.PARCEL_CATEGORIES, JSON.stringify(parcelCategories));
-  }, [parcelCategories]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify(budgets));
-  }, [budgets]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.GOALS, JSON.stringify(goals));
-  }, [goals]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.PRIVACY, String(isBalanceHidden));
-  }, [isBalanceHidden]);
 
   // Keep planningSubTab in sync if activeTab is changed from header shortcuts
   useEffect(() => {
@@ -458,12 +386,14 @@ export const App: React.FC = () => {
                 // Se a despesa foi criada exatamente no mês atual ou posterior, remove ou marca deletedFromMonthYear
                 const startMonth = t.startMonthYear || t.date.slice(0, 7);
                 if (currentYearMonth <= startMonth) {
+                  dbOperations.deleteTransaction(id).catch(console.error);
                   return null; // Removida completamente
                 }
                 // Despesa fixa: cancelada a partir deste mês (e meses subsequentes)
                 return { ...t, deletedFromMonthYear: currentYearMonth };
               }
               // Transação variável: remove
+              dbOperations.deleteTransaction(id).catch(console.error);
               return null;
             }
             return t;
@@ -481,8 +411,10 @@ export const App: React.FC = () => {
         })
       );
     } else if (type === 'goal') {
+      dbOperations.deleteGoal(id).catch(console.error);
       setGoals((prev) => prev.filter((g) => g.id !== id));
     } else if (type === 'budget') {
+      dbOperations.deleteBudget(id).catch(console.error);
       setBudgets((prev) => prev.filter((b) => b.id !== id));
     }
     setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
@@ -733,7 +665,7 @@ export const App: React.FC = () => {
         summary={monthlySummary}
         overallBalance={overallBalance}
         isBalanceHidden={isBalanceHidden}
-        onToggleBalancePrivacy={() => setIsBalanceHidden((prev) => !prev)}
+        onToggleBalancePrivacy={handleToggleBalancePrivacy}
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
         onOpenCategoryManager={() => setIsCategoryModalOpen(true)}
