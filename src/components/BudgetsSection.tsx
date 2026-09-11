@@ -335,7 +335,7 @@ export const BudgetsSection: React.FC<BudgetsSectionProps> = ({
       )}
 
       {/* Category Budgets List */}
-      <div id="budgets-grid" className="flex flex-col gap-3">
+      <div id="budgets-grid" className="flex flex-col gap-3 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
         {budgets.length === 0 ? (
           <div className="p-6 text-center rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 bg-neutral-50/50 dark:bg-neutral-800/30">
             <Target className="w-8 h-8 text-neutral-400 mx-auto mb-2 opacity-60" />

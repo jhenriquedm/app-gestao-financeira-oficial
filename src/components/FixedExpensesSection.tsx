@@ -199,7 +199,8 @@ export const FixedExpensesSection: React.FC<FixedExpensesSectionProps> = ({
             </button>
           </div>
         ) : (
-          fixedExpenses.map((exp) => {
+          <div id="fixed-expenses-scroll" className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
+            {fixedExpenses.map((exp) => {
             const isPaid = exp.status === 'completed';
             const category = categoryMap.get(exp.categoryId);
 
@@ -298,7 +299,8 @@ export const FixedExpensesSection: React.FC<FixedExpensesSectionProps> = ({
                 </div>
               </div>
             );
-          })
+          })}
+          </div>
         )}
       </div>
     </div>

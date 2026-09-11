@@ -235,7 +235,7 @@ export const SavingsGoalsSection: React.FC<SavingsGoalsSectionProps> = ({
       )}
 
       {/* Goals Grid */}
-      <div id="goals-grid" className="flex flex-col gap-3">
+      <div id="goals-grid" className="flex flex-col gap-3 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
         {goals.length > 0 ? (
           goals.map((goal) => {
             const isEditing = editingGoalId === goal.id;

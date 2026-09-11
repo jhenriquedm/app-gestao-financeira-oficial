@@ -203,7 +203,8 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
             </button>
           </div>
         ) : (
-          sortedList.map(({ installment: inst, current, total, remaining, status, progressPercent }) => {
+          <div id="installments-cards-scroll" className="space-y-2.5 max-h-[520px] overflow-y-auto pr-1 custom-scrollbar">
+            {sortedList.map(({ installment: inst, current, total, remaining, status, progressPercent }) => {
             const isPaid = status === 'completed';
             const remainingAmount = remaining * inst.monthlyAmount;
 
@@ -362,7 +363,8 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
                 </div>
               </div>
             );
-          })
+          })}
+          </div>
         )}
       </div>
     </div>

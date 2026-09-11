@@ -254,7 +254,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
       </div>
 
       {/* Transaction Items List */}
-      <div id="tx-items-list" className="divide-y divide-neutral-100 dark:divide-neutral-800/80">
+      <div id="tx-items-list" className="divide-y divide-neutral-100 dark:divide-neutral-800/80 max-h-[500px] overflow-y-auto custom-scrollbar">
         {sortedTransactions.length > 0 ? (
           sortedTransactions.map((tx) => {
             const cat = categoryMap.get(tx.categoryId);
