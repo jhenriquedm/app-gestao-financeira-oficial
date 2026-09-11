@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { 
   Eye, 
   EyeOff, 
@@ -16,12 +16,26 @@ import {
   Tag,
   Calendar,
   X,
-  Check,
   LogOut
 } from 'lucide-react';
 import { formatCurrency, formatMonthYear, formatMonthYearShort, getCurrentYearMonth } from '../utils/formatters';
 import { MonthlySummary, User } from '../types';
 import { AppNavTab } from './MobileBottomNav';
+
+const MONTHS_LIST = [
+  { value: 1, name: 'Janeiro', short: 'Jan' },
+  { value: 2, name: 'Fevereiro', short: 'Fev' },
+  { value: 3, name: 'Março', short: 'Mar' },
+  { value: 4, name: 'Abril', short: 'Abr' },
+  { value: 5, name: 'Maio', short: 'Mai' },
+  { value: 6, name: 'Junho', short: 'Jun' },
+  { value: 7, name: 'Julho', short: 'Jul' },
+  { value: 8, name: 'Agosto', short: 'Ago' },
+  { value: 9, name: 'Setembro', short: 'Set' },
+  { value: 10, name: 'Outubro', short: 'Out' },
+  { value: 11, name: 'Novembro', short: 'Nov' },
+  { value: 12, name: 'Dezembro', short: 'Dez' },
+];
 
 interface MobileHeaderProps {
   user?: User | null;
@@ -62,32 +76,14 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   const [year, month] = currentYearMonth.split('-').map(Number);
   const systemCurrentMonth = getCurrentYearMonth();
 
-  // Dynamically generate the window of months: 12 months in the past + current month + 12 months ahead (total 25 months)
-  const availableMonths = useMemo(() => {
-    const list: { ym: string; label: string; isCurrent: boolean }[] = [];
-    const [currY, currM] = systemCurrentMonth.split('-').map(Number);
-    // From -12 months (past history) to +12 months (future projection)
-    for (let i = -12; i <= 12; i++) {
-      let targetMonth = currM + i;
-      let targetYear = currY;
-      while (targetMonth < 1) {
-        targetMonth += 12;
-        targetYear -= 1;
-      }
-      while (targetMonth > 12) {
-        targetMonth -= 12;
-        targetYear += 1;
-      }
-      const ym = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
-      const isCurrent = i === 0;
-      list.push({
-        ym,
-        label: `${formatMonthYear(ym)}${isCurrent ? ' (Mês Atual)' : ''}`,
-        isCurrent,
-      });
-    }
-    return list;
-  }, [systemCurrentMonth]);
+  const [pickerYear, setPickerYear] = useState<number>(year);
+  const [pickerMonth, setPickerMonth] = useState<number>(month);
+
+  const handleOpenMonthPicker = () => {
+    setPickerYear(year);
+    setPickerMonth(month);
+    setIsMonthPickerOpen(true);
+  };
 
   const handlePrevMonth = () => {
     let newYear = year;
@@ -163,7 +159,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
 
               <button
                 id="header-sub-open-month-list"
-                onClick={() => setIsMonthPickerOpen(true)}
+                onClick={handleOpenMonthPicker}
                 className="flex items-center gap-1 text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 px-1 py-0.5 rounded-full hover:bg-neutral-700/60 transition-colors cursor-pointer"
                 title="Clique para selecionar o mês"
               >
@@ -271,7 +267,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
               {/* Clickable Month Label to open full list */}
               <button
                 id="btn-open-month-list"
-                onClick={() => setIsMonthPickerOpen(true)}
+                onClick={handleOpenMonthPicker}
                 className="flex items-center gap-1 text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 px-1 py-0.5 rounded-full hover:bg-neutral-800 transition-colors cursor-pointer"
                 title="Clique para selecionar o mês na lista"
               >
@@ -414,51 +410,147 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
       {/* Month Selection Modal / Sheet */}
       {isMonthPickerOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-sm max-h-[80vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-sm flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800 bg-neutral-950/60">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-emerald-400" />
                 <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-                  Selecionar Mês
+                  Selecionar Mês e Ano
                 </h4>
               </div>
               <button
+                type="button"
                 onClick={() => setIsMonthPickerOpen(false)}
-                className="text-neutral-400 hover:text-white"
+                className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
-              {availableMonths.map((item) => {
-                const isSelected = item.ym === currentYearMonth;
-                return (
+            <div className="p-4 space-y-3.5">
+              {/* Filtro / Controle de Ano com botões e digitação livre */}
+              <div>
+                <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">
+                  Ano
+                </label>
+                <div className="flex items-center justify-between bg-neutral-950/90 p-1.5 rounded-xl border border-neutral-800">
                   <button
-                    key={item.ym}
+                    type="button"
+                    onClick={() => setPickerYear((prev) => prev - 1)}
+                    className="w-9 h-9 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                    title="Ano anterior"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      id="input-picker-year"
+                      type="number"
+                      value={pickerYear}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val)) {
+                          setPickerYear(val);
+                        }
+                      }}
+                      className="w-24 text-center font-black text-lg bg-transparent text-emerald-400 focus:outline-none"
+                      placeholder="2026"
+                      min={2000}
+                      max={2100}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPickerYear((prev) => prev + 1)}
+                    className="w-9 h-9 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                    title="Próximo ano"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Filtro / Seleção de Mês - Grade dos 12 meses */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+                    Mês ({pickerYear})
+                  </label>
+                  <button
+                    type="button"
                     onClick={() => {
-                      onMonthChange(item.ym);
+                      const [sysY, sysM] = systemCurrentMonth.split('-').map(Number);
+                      setPickerYear(sysY);
+                      setPickerMonth(sysM);
+                      onMonthChange(systemCurrentMonth);
                       setIsMonthPickerOpen(false);
                     }}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-emerald-600 text-white font-bold shadow-xs'
-                        : 'bg-neutral-800/60 text-neutral-300 hover:bg-neutral-800 hover:text-white'
-                    }`}
+                    className="text-[10.5px] font-semibold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer underline"
                   >
-                    <span>{item.label}</span>
-                    {isSelected && <Check className="w-4 h-4 text-white" />}
+                    Ir para Mês Atual
                   </button>
-                );
-              })}
+                </div>
+
+                <div className="grid grid-cols-3 gap-1.5 max-h-[42vh] overflow-y-auto pr-0.5">
+                  {MONTHS_LIST.map((m) => {
+                    const ym = `${pickerYear}-${String(m.value).padStart(2, '0')}`;
+                    const isSelected = ym === currentYearMonth;
+                    const isCurrentSystemMonth = ym === systemCurrentMonth;
+                    const isPickerActive = pickerMonth === m.value;
+
+                    return (
+                      <button
+                        key={m.value}
+                        type="button"
+                        onClick={() => {
+                          setPickerMonth(m.value);
+                          const targetYm = `${pickerYear}-${String(m.value).padStart(2, '0')}`;
+                          onMonthChange(targetYm);
+                          setIsMonthPickerOpen(false);
+                        }}
+                        className={`p-2.5 rounded-xl text-xs font-semibold flex flex-col items-center justify-center transition-all cursor-pointer relative ${
+                          isSelected
+                            ? 'bg-emerald-600 text-white shadow-xs font-bold ring-2 ring-emerald-400/40'
+                            : isPickerActive
+                            ? 'bg-neutral-800 text-emerald-400 border border-emerald-500/50'
+                            : 'bg-neutral-950/80 text-neutral-300 hover:bg-neutral-800 hover:text-white border border-neutral-800/80'
+                        }`}
+                      >
+                        <span className="text-xs">{m.name}</span>
+                        {isCurrentSystemMonth && (
+                          <span className="text-[8.5px] mt-0.5 px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-medium">
+                            Atual
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
-            <div className="p-2.5 border-t border-neutral-800 bg-neutral-950/60 flex justify-end">
+            <div className="p-3 border-t border-neutral-800 bg-neutral-950/60 flex items-center justify-between gap-2">
               <button
-                onClick={() => setIsMonthPickerOpen(false)}
-                className="px-3 py-1 text-xs text-neutral-400 hover:text-white"
+                type="button"
+                onClick={() => {
+                  const [sysY, sysM] = systemCurrentMonth.split('-').map(Number);
+                  setPickerYear(sysY);
+                  setPickerMonth(sysM);
+                }}
+                className="px-3 py-1.5 text-xs text-neutral-400 hover:text-white rounded-lg bg-neutral-800/50 hover:bg-neutral-800 transition-colors cursor-pointer"
               >
-                Fechar
+                Resetar Ano
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const targetYm = `${pickerYear}-${String(pickerMonth).padStart(2, '0')}`;
+                  onMonthChange(targetYm);
+                  setIsMonthPickerOpen(false);
+                }}
+                className="px-4 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg transition-colors cursor-pointer shadow-xs"
+              >
+                Confirmar
               </button>
             </div>
           </div>
