@@ -996,6 +996,8 @@ export const App: React.FC = () => {
         budgets={budgets}
         goals={goals}
         installments={installments}
+        currentYearMonth={currentYearMonth}
+        monthTransactions={currentMonthTransactions}
         onImportData={handleImportData}
       />
 

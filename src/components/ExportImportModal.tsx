@@ -1,8 +1,9 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, FileSpreadsheet, Download, Upload, AlertTriangle, Check } from 'lucide-react';
 import { Transaction, Category, Budget, SavingsGoal, DebtInstallment } from '../types';
 import { downloadCSV, downloadJSON } from '../utils/formatters';
+import { getComputedInstallment } from '../utils/installmentHelpers';
 
 interface ExportImportModalProps {
   isOpen: boolean;
@@ -12,6 +13,8 @@ interface ExportImportModalProps {
   budgets: Budget[];
   goals: SavingsGoal[];
   installments?: DebtInstallment[];
+  currentYearMonth?: string;
+  monthTransactions?: Transaction[];
   onImportData: (data: {
     transactions?: Transaction[];
     categories?: Category[];
@@ -29,28 +32,77 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
   budgets,
   goals,
   installments = [],
+  currentYearMonth,
+  monthTransactions,
   onImportData,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // Clear feedback whenever the modal opens or closes
+  useEffect(() => {
+    if (isOpen) {
+      setFeedback(null);
+    }
+  }, [isOpen]);
+
+  // Auto-dismiss feedback message after 4.5 seconds
+  useEffect(() => {
+    if (!feedback) return;
+    const timer = setTimeout(() => {
+      setFeedback(null);
+    }, 4500);
+    return () => clearTimeout(timer);
+  }, [feedback]);
+
+  const handleClose = () => {
+    setFeedback(null);
+    onClose();
+  };
+
+  // Month to use for CSV: currentYearMonth if provided, else today's month
+  const activeMonth = currentYearMonth || new Date().toISOString().slice(0, 7);
+
+  // Transactions to export to CSV: monthTransactions or transactions of activeMonth
+  const csvTransactions = monthTransactions || transactions.filter(t => t.date.startsWith(activeMonth));
+
+  // Active installments for this specific month
+  const activeInstallmentsCount = installments
+    .map(i => getComputedInstallment(i, activeMonth))
+    .filter(ci => ci.isActive).length;
+
+  const totalMonthlyItems = csvTransactions.length + activeInstallmentsCount;
+
   const handleExportCSV = () => {
-    downloadCSV(transactions, categories);
-    setFeedback({ type: 'success', message: 'Relatório CSV exportado com sucesso!' });
+    downloadCSV(csvTransactions, categories, activeMonth, installments);
+    setFeedback({ 
+      type: 'success', 
+      message: `Relatório CSV do mês ${activeMonth} (${totalMonthlyItems} lançamentos: avulsas, fixas e parcelas) exportado com sucesso!` 
+    });
   };
 
   const handleExportJSON = () => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const backupTransactions = transactions.filter(t => t.date <= todayStr);
+
     const backup = {
-      version: '1.2',
+      version: '1.3',
       exportedAt: new Date().toISOString(),
-      transactions,
+      coverage: {
+        upToDate: todayStr,
+        upToMonth: activeMonth,
+      },
+      transactions: backupTransactions,
       categories,
       budgets,
       goals,
       installments,
     };
-    downloadJSON(backup, `backup-gestao-financeira-${new Date().toISOString().slice(0, 10)}.json`);
-    setFeedback({ type: 'success', message: 'Arquivo de backup JSON gerado com sucesso!' });
+    downloadJSON(backup, `backup-gestao-financeira-ate-${todayStr}.json`);
+    setFeedback({ 
+      type: 'success', 
+      message: `Backup JSON gerado com sucesso contendo todos os dados até ${todayStr} (${backupTransactions.length} transações)!` 
+    });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,7 +122,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
         } else {
           setFeedback({ type: 'error', message: 'Formato de arquivo JSON inválido para este aplicativo.' });
         }
-      } catch (err) {
+      } catch {
         setFeedback({ type: 'error', message: 'Erro ao analisar o arquivo JSON selecionado.' });
       }
     };
@@ -84,7 +136,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
         <div 
           id="modal-backdrop-export" 
           onClick={(e) => {
-            if (e.target === e.currentTarget) onClose();
+            if (e.target === e.currentTarget) handleClose();
           }}
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-xs"
         >
@@ -106,7 +158,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
               </h3>
               <button
                 id="btn-close-export-modal"
-                onClick={onClose}
+                onClick={handleClose}
                 className="p-1 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -115,18 +167,31 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
 
             {/* Content */}
             <div className="p-4 overflow-y-auto space-y-3.5 text-xs flex-1">
-              {feedback && (
-                <div
-                  className={`p-3 rounded-xl flex items-center gap-2 font-medium ${
-                    feedback.type === 'success'
-                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                      : 'bg-rose-50 text-rose-800 border border-rose-200'
-                  }`}
-                >
-                  {feedback.type === 'success' ? <Check className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
-                  <span>{feedback.message}</span>
-                </div>
-              )}
+              <AnimatePresence>
+                {feedback && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    className={`p-3 rounded-xl flex items-center justify-between gap-2 font-medium ${
+                      feedback.type === 'success'
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                        : 'bg-rose-50 text-rose-800 border border-rose-200'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 flex-1">
+                      {feedback.type === 'success' ? <Check className="w-4 h-4 shrink-0 text-emerald-600" /> : <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />}
+                      <span className="leading-snug">{feedback.message}</span>
+                    </div>
+                    <button 
+                      onClick={() => setFeedback(null)}
+                      className="p-0.5 text-neutral-400 hover:text-neutral-700 rounded transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Export options */}
               <div className="space-y-2.5">
@@ -144,8 +209,8 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                       <FileSpreadsheet className="w-4 h-4" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-neutral-900 text-xs">Planilha CSV</h4>
-                      <p className="text-[11px] text-neutral-500">Compatível com Excel, Google Planilhas</p>
+                      <h4 className="font-semibold text-neutral-900 text-xs">Planilha CSV do Mês ({activeMonth})</h4>
+                      <p className="text-[11px] text-neutral-500">Exporta {totalMonthlyItems} lançamentos (despesas avulsas, fixas e parcelas)</p>
                     </div>
                   </div>
                   <Download className="w-4 h-4 text-neutral-400" />
@@ -161,8 +226,8 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                       <Download className="w-4 h-4" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-neutral-900 text-xs">Backup Completo (JSON)</h4>
-                      <p className="text-[11px] text-neutral-500">Salva transações, orçamentos e metas</p>
+                      <h4 className="font-semibold text-neutral-900 text-xs">Backup Histórico (JSON)</h4>
+                      <p className="text-[11px] text-neutral-500">Salva todos os dados históricos acumulados até hoje</p>
                     </div>
                   </div>
                   <Download className="w-4 h-4 text-neutral-400" />

@@ -1,4 +1,5 @@
-import { PaymentMethod, Transaction, Category } from '../types';
+import { PaymentMethod, Transaction, Category, DebtInstallment } from '../types';
+import { getComputedInstallment } from './installmentHelpers';
 
 export const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('pt-BR', {
@@ -35,19 +36,94 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   other: 'Outro',
 };
 
-export const downloadCSV = (transactions: Transaction[], categories: Category[]) => {
+export const downloadCSV = (
+  transactions: Transaction[],
+  categories: Category[],
+  currentMonthYear?: string,
+  installments?: DebtInstallment[]
+) => {
   const categoryMap = new Map(categories.map(c => [c.id, c.name]));
   
+  // Filter by target month if specified
+  const filteredTx = currentMonthYear 
+    ? transactions.filter(t => t.date.startsWith(currentMonthYear))
+    : transactions;
+
+  interface ExportRow {
+    date: string;
+    type: string;
+    description: string;
+    category: string;
+    amount: number;
+    paymentMethod: string;
+    status: string;
+    notes: string;
+  }
+
+  const exportRows: ExportRow[] = [];
+
+  // Add standard/avulsas and fixed transactions
+  filteredTx.forEach(t => {
+    let typeLabel = '';
+    if (t.type === 'income') {
+      typeLabel = t.isFixed ? 'Receita Fixa' : 'Receita';
+    } else {
+      typeLabel = t.isFixed ? 'Despesa Fixa' : 'Despesa Avulsa';
+    }
+
+    exportRows.push({
+      date: t.date,
+      type: typeLabel,
+      description: t.description || '',
+      category: categoryMap.get(t.categoryId) || 'Sem Categoria',
+      amount: t.amount,
+      paymentMethod: PAYMENT_METHOD_LABELS[t.paymentMethod] || t.paymentMethod,
+      status: t.status === 'completed' ? 'Concluído' : 'Pendente',
+      notes: t.notes || (t.isFixed ? 'Recorrente Mensal' : 'Despesa Avulsa'),
+    });
+  });
+
+  // Add active installments if provided
+  if (installments && installments.length > 0) {
+    const targetMonth = currentMonthYear || new Date().toISOString().slice(0, 7);
+    const [y, m] = targetMonth.split('-').map(Number);
+    const daysInMonth = new Date(y, m, 0).getDate();
+
+    installments.forEach(inst => {
+      const ci = getComputedInstallment(inst, targetMonth);
+      if (ci.isActive) {
+        const safeDay = Math.min(daysInMonth, Math.max(1, inst.dueDay || 5));
+        const dateStr = `${targetMonth}-${String(safeDay).padStart(2, '0')}`;
+        
+        exportRows.push({
+          date: dateStr,
+          type: 'Despesa Parcelada',
+          description: `${inst.description} (Parcela ${ci.current}/${ci.total})`,
+          category: inst.category || 'Parcelamento',
+          amount: inst.monthlyAmount,
+          paymentMethod: inst.origin || 'Cartão de Crédito',
+          status: ci.status === 'completed' ? 'Concluído' : 'Pendente',
+          notes: inst.notes 
+            ? `${inst.notes} | Parcela ${ci.current} de ${ci.total} (Restam ${ci.remaining})`
+            : `Parcela ${ci.current} de ${ci.total} (Restam ${ci.remaining})`,
+        });
+      }
+    });
+  }
+
+  // Sort all rows by date descending
+  exportRows.sort((a, b) => b.date.localeCompare(a.date));
+
   const headers = ['Data', 'Tipo', 'Descrição', 'Categoria', 'Valor (R$)', 'Forma de Pagamento', 'Status', 'Observações'];
-  const rows = transactions.map(t => [
-    t.date,
-    t.type === 'income' ? 'Receita' : 'Despesa',
-    `"${(t.description || '').replace(/"/g, '""')}"`,
-    `"${(categoryMap.get(t.categoryId) || 'Sem Categoria').replace(/"/g, '""')}"`,
-    t.amount.toFixed(2).replace('.', ','),
-    `"${PAYMENT_METHOD_LABELS[t.paymentMethod] || t.paymentMethod}"`,
-    t.status === 'completed' ? 'Concluído' : 'Pendente',
-    `"${(t.notes || '').replace(/"/g, '""')}"`
+  const rows = exportRows.map(r => [
+    r.date,
+    r.type,
+    `"${r.description.replace(/"/g, '""')}"`,
+    `"${r.category.replace(/"/g, '""')}"`,
+    r.amount.toFixed(2).replace('.', ','),
+    `"${r.paymentMethod.replace(/"/g, '""')}"`,
+    r.status,
+    `"${r.notes.replace(/"/g, '""')}"`
   ]);
 
   const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\r\n');
@@ -55,7 +131,8 @@ export const downloadCSV = (transactions: Transaction[], categories: Category[])
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.setAttribute('href', url);
-  link.setAttribute('download', `gestao-financeira-transacoes-${new Date().toISOString().slice(0, 10)}.csv`);
+  const fileSuffix = currentMonthYear ? `-${currentMonthYear}` : `-${new Date().toISOString().slice(0, 10)}`;
+  link.setAttribute('download', `gestao-financeira${fileSuffix}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
