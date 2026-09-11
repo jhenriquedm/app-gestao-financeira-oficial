@@ -21,10 +21,24 @@ export const MONTH_NAMES = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
+export const getCurrentYearMonth = (): string => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+};
+
 export const formatMonthYear = (yearMonthStr: string): string => {
   const [year, month] = yearMonthStr.split('-');
   const monthIdx = parseInt(month, 10) - 1;
   return `${MONTH_NAMES[monthIdx] || month} de ${year}`;
+};
+
+export const formatMonthYearShort = (yearMonthStr: string): string => {
+  const [year, month] = yearMonthStr.split('-');
+  const monthIdx = parseInt(month, 10) - 1;
+  const shortNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+  return `${shortNames[monthIdx] || month}/${year.slice(2)}`;
 };
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {

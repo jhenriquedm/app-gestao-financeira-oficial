@@ -9,7 +9,6 @@ import {
   FinancialHealthStatus,
   User 
 } from './types';
-import { DEFAULT_CATEGORIES, PARCELAS_CATEGORIES } from './data/initialData';
 import { authOperations, loadUserData, dbOperations } from './db/localDatabase';
 import { AuthScreen } from './components/AuthScreen';
 import { MobileFrame } from './components/MobileFrame';
@@ -31,18 +30,16 @@ import { CategoryManagerModal } from './components/CategoryManagerModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { getComputedInstallment } from './utils/installmentHelpers';
 import { getTransactionsForMonth } from './utils/transactionHelpers';
-import { formatMonthYear } from './utils/formatters';
+import { formatMonthYear, getCurrentYearMonth } from './utils/formatters';
 import { Receipt, Target, PiggyBank } from 'lucide-react';
-
-const START_YEAR_MONTH = '2026-10';
 
 export const App: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // Core database-backed states
-  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
-  const [parcelCategories, setParcelCategories] = useState<string[]>(PARCELAS_CATEGORIES);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [parcelCategories, setParcelCategories] = useState<string[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [installments, setInstallments] = useState<DebtInstallment[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -55,7 +52,7 @@ export const App: React.FC = () => {
   });
 
   // Month competence
-  const [currentYearMonth, setCurrentYearMonth] = useState<string>('2026-10');
+  const [currentYearMonth, setCurrentYearMonth] = useState<string>(() => getCurrentYearMonth());
 
   // Check active session and load user data on mount
   useEffect(() => {
@@ -70,11 +67,12 @@ export const App: React.FC = () => {
           const data = await loadUserData(activeUser.id);
           if (!isMounted) return;
 
-          if (data.categories && data.categories.length > 0) setCategories(data.categories);
-          if (data.transactions) setTransactions(data.transactions.filter(t => t.date >= `${START_YEAR_MONTH}-01`));
-          if (data.installments) setInstallments(data.installments);
-          if (data.budgets) setBudgets(data.budgets);
-          if (data.savingsGoals) setGoals(data.savingsGoals);
+          setCategories(data.categories || []);
+          setParcelCategories(data.parcelCategories || []);
+          setTransactions(data.transactions || []);
+          setInstallments(data.installments || []);
+          setBudgets(data.budgets || []);
+          setGoals(data.savingsGoals || []);
 
           if (data.settings) {
             if (data.settings.isDarkMode !== undefined) setIsDarkMode(Boolean(data.settings.isDarkMode));
@@ -99,11 +97,12 @@ export const App: React.FC = () => {
     setCurrentUser(user);
     try {
       const data = await loadUserData(user.id);
-      setCategories(data.categories.length > 0 ? data.categories : DEFAULT_CATEGORIES.map(c => ({ ...c, userId: user.id })));
-      setTransactions(data.transactions.filter(t => t.date >= `${START_YEAR_MONTH}-01`));
-      setInstallments(data.installments);
-      setBudgets(data.budgets);
-      setGoals(data.savingsGoals);
+      setCategories(data.categories || []);
+      setParcelCategories(data.parcelCategories || []);
+      setTransactions(data.transactions || []);
+      setInstallments(data.installments || []);
+      setBudgets(data.budgets || []);
+      setGoals(data.savingsGoals || []);
 
       if (data.settings) {
         if (data.settings.isDarkMode !== undefined) setIsDarkMode(Boolean(data.settings.isDarkMode));
@@ -119,6 +118,12 @@ export const App: React.FC = () => {
   const handleLogout = async () => {
     await authOperations.logout();
     setCurrentUser(null);
+    setCategories([]);
+    setParcelCategories([]);
+    setTransactions([]);
+    setInstallments([]);
+    setBudgets([]);
+    setGoals([]);
   };
 
   // Theme synchronization
@@ -165,6 +170,12 @@ export const App: React.FC = () => {
       dbOperations.saveCategories(categories, currentUser.id).catch(console.error);
     }
   }, [categories, currentUser]);
+
+  useEffect(() => {
+    if (currentUser) {
+      dbOperations.saveParcelCategories(parcelCategories, currentUser.id).catch(console.error);
+    }
+  }, [parcelCategories, currentUser]);
 
   useEffect(() => {
     if (currentUser) {
@@ -217,6 +228,12 @@ export const App: React.FC = () => {
 
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [categoryModalInitialTab, setCategoryModalInitialTab] = useState<'fixed' | 'parcelas' | 'income'>('fixed');
+
+  const handleOpenCategoryManager = (tab: 'fixed' | 'parcelas' | 'income' = 'fixed') => {
+    setCategoryModalInitialTab(tab);
+    setIsCategoryModalOpen(true);
+  };
 
   // Keep planningSubTab in sync if activeTab is changed from header shortcuts
   useEffect(() => {
@@ -718,7 +735,7 @@ export const App: React.FC = () => {
         onToggleBalancePrivacy={handleToggleBalancePrivacy}
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
-        onOpenCategoryManager={() => setIsCategoryModalOpen(true)}
+        onOpenCategoryManager={() => handleOpenCategoryManager('fixed')}
         onOpenNewTransaction={() => setIsNewLaunchSheetOpen(true)}
         onOpenExportImport={() => setIsExportModalOpen(true)}
         onNavigateTab={(tab) => {
@@ -883,6 +900,7 @@ export const App: React.FC = () => {
                   currentYearMonth={currentYearMonth}
                   onSaveBudget={handleSaveBudget}
                   onDeleteBudget={handleRequestDeleteBudget}
+                  onOpenCategoryManager={handleOpenCategoryManager}
                 />
               </div>
             )}
@@ -938,6 +956,7 @@ export const App: React.FC = () => {
         initialData={editingTransaction}
         initialType={txModalInitialType}
         isFixedDefault={txModalIsFixedDefault}
+        onOpenCategoryManager={handleOpenCategoryManager}
       />
 
       {/* Mobile Modal: Debt Installment Form */}
@@ -951,6 +970,7 @@ export const App: React.FC = () => {
         initialData={editingInstallment}
         competence={currentYearMonth}
         parcelCategories={parcelCategories}
+        onOpenCategoryManager={handleOpenCategoryManager}
       />
 
       {/* Modal: Category Manager (Fixed, Installments, Income) */}
@@ -959,6 +979,7 @@ export const App: React.FC = () => {
         onClose={() => setIsCategoryModalOpen(false)}
         categories={categories}
         parcelCategories={parcelCategories}
+        initialTab={categoryModalInitialTab}
         transactions={transactions}
         installments={installments}
         budgets={budgets}

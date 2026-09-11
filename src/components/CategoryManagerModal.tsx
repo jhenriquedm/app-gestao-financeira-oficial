@@ -14,12 +14,14 @@ import {
 } from 'lucide-react';
 import { Category, Transaction, DebtInstallment, Budget } from '../types';
 import { CategoryIcon } from './CategoryIcon';
+import { sanitizeNameInput } from '../utils/textSanitizer';
 
 interface CategoryManagerModalProps {
   isOpen: boolean;
   onClose: () => void;
   categories: Category[];
   parcelCategories: string[];
+  initialTab?: 'fixed' | 'parcelas' | 'income';
   transactions?: Transaction[];
   installments?: DebtInstallment[];
   budgets?: Budget[];
@@ -40,10 +42,10 @@ const PRESET_COLORS = [
 ];
 
 const PRESET_ICONS = [
-  'Home', 'Utensils', 'GraduationCap', 'FileText', 'TrendingUp',
-  'Tv', 'Car', 'HeartPulse', 'Coffee', 'ShoppingBag',
-  'Briefcase', 'RotateCcw', 'Mic', 'CreditCard', 'ShieldCheck',
-  'Tag', 'Layers'
+  'DollarSign', 'Coins', 'Briefcase', 'Wallet', 'PiggyBank', 'Landmark',
+  'TrendingUp', 'CreditCard', 'Home', 'Utensils', 'Car',
+  'HeartPulse', 'GraduationCap', 'Coffee', 'Tv', 'ShoppingBag',
+  'ShieldCheck', 'Plane', 'Laptop', 'PlusCircle', 'Tag'
 ];
 
 const MAX_CATEGORY_NAME_LENGTH = 25;
@@ -55,6 +57,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   onClose,
   categories,
   parcelCategories,
+  initialTab = 'fixed',
   transactions = [],
   installments = [],
   budgets = [],
@@ -65,7 +68,13 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   onEditParcelCategory,
   onDeleteParcelCategory,
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('fixed');
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
+
+  React.useEffect(() => {
+    if (isOpen && initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
   
   // Add category state
   const [isAdding, setIsAdding] = useState(false);
@@ -386,7 +395,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                   placeholder="Ex: Farmácia, Manutenção..."
                   value={newName}
                   onChange={(e) => {
-                    setNewName(e.target.value);
+                    setNewName(sanitizeNameInput(e.target.value));
                     setAddError('');
                   }}
                   className="w-full px-3 py-1.5 text-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-300 dark:border-neutral-700 rounded-lg focus:outline-hidden"
@@ -457,99 +466,121 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
           {/* List of Items in Alphabetical Order */}
           <div className="space-y-2">
             {activeTab === 'parcelas' ? (
-              sortedParcelCategories.map((name) => {
-                const isEditing = editingParcelName === name;
-                const usage = getParcelUsage(name);
-                const isLinked = usage.total > 0;
+              sortedParcelCategories.length === 0 ? (
+                <div className="text-center py-6 px-4 bg-neutral-50/50 dark:bg-neutral-800/30 rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-500">
+                  <CreditCard className="w-7 h-7 mx-auto text-neutral-400 mb-2 opacity-60" />
+                  <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                    Nenhuma categoria de parcelas
+                  </p>
+                  <p className="text-[11px] text-neutral-400 mt-0.5">
+                    Clique em "+ Nova Categoria" acima para criar.
+                  </p>
+                </div>
+              ) : (
+                sortedParcelCategories.map((name) => {
+                  const isEditing = editingParcelName === name;
+                  const usage = getParcelUsage(name);
+                  const isLinked = usage.total > 0;
 
-                return (
-                  <div
-                    key={name}
-                    className="flex items-center justify-between p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-800/40 hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60 transition-colors"
-                  >
-                    {isEditing ? (
-                      <div className="flex flex-col gap-1.5 flex-1 mr-2">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            maxLength={MAX_CATEGORY_NAME_LENGTH}
-                            value={editParcelInput}
-                            onChange={(e) => {
-                              setEditParcelInput(e.target.value);
-                              setEditParcelError('');
-                            }}
-                            className="flex-1 px-2.5 py-1 text-xs bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white border border-emerald-500 rounded-lg focus:outline-hidden"
-                            autoFocus
-                          />
-                          <span className="text-[10px] text-neutral-400 font-medium">
-                            {editParcelInput.length}/{MAX_CATEGORY_NAME_LENGTH}
-                          </span>
-                          <button
-                            onClick={() => handleSaveEditParcel(name)}
-                            className="p-1 bg-emerald-600 text-white rounded-md cursor-pointer hover:bg-emerald-700"
-                            title="Salvar alteração"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => setEditingParcelName(null)}
-                            className="p-1 text-neutral-500 hover:text-neutral-700 dark:hover:text-white cursor-pointer"
-                            title="Cancelar"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                        {editParcelError && (
-                          <span className="text-[10px] text-rose-500 font-medium">
-                            {editParcelError}
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                          <CreditCard className="w-3.5 h-3.5" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 truncate">
-                              {name}
+                  return (
+                    <div
+                      key={name}
+                      className="flex items-center justify-between p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-800/40 hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60 transition-colors"
+                    >
+                      {isEditing ? (
+                        <div className="flex flex-col gap-1.5 flex-1 mr-2">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              maxLength={MAX_CATEGORY_NAME_LENGTH}
+                              value={editParcelInput}
+                              onChange={(e) => {
+                                setEditParcelInput(sanitizeNameInput(e.target.value));
+                                setEditParcelError('');
+                              }}
+                              className="flex-1 px-2.5 py-1 text-xs bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white border border-emerald-500 rounded-lg focus:outline-hidden"
+                              autoFocus
+                            />
+                            <span className="text-[10px] text-neutral-400 font-medium">
+                              {editParcelInput.length}/{MAX_CATEGORY_NAME_LENGTH}
                             </span>
-                            {isLinked && (
-                              <span className="inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.2 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60">
-                                <Lock className="w-2.5 h-2.5" /> {usage.total} registro(s)
+                            <button
+                              onClick={() => handleSaveEditParcel(name)}
+                              className="p-1 bg-emerald-600 text-white rounded-md cursor-pointer hover:bg-emerald-700"
+                              title="Salvar alteração"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setEditingParcelName(null)}
+                              className="p-1 text-neutral-500 hover:text-neutral-700 dark:hover:text-white cursor-pointer"
+                              title="Cancelar"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          {editParcelError && (
+                            <span className="text-[10px] text-rose-500 font-medium">
+                              {editParcelError}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                            <CreditCard className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 truncate">
+                                {name}
                               </span>
-                            )}
+                              {isLinked && (
+                                <span className="inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.2 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60">
+                                  <Lock className="w-2.5 h-2.5" /> {usage.total} registro(s)
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {!isEditing && (
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          onClick={() => handleStartEditParcel(name)}
-                          title="Editar categoria"
-                          className="p-1.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-colors cursor-pointer"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => attemptDeleteParcelCategory(name)}
-                          title={isLinked ? `Bloqueada: vinculada a ${usage.detailsText}` : "Excluir categoria"}
-                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                            isLinked 
-                              ? 'text-neutral-300 dark:text-neutral-600 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30' 
-                              : 'text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30'
-                          }`}
-                        >
-                          {isLinked ? <Lock className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })
+                      {!isEditing && (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => handleStartEditParcel(name)}
+                            title="Editar categoria"
+                            className="p-1.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => attemptDeleteParcelCategory(name)}
+                            title={isLinked ? `Bloqueada: vinculada a ${usage.detailsText}` : "Excluir categoria"}
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                              isLinked 
+                                ? 'text-neutral-300 dark:text-neutral-600 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30' 
+                                : 'text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30'
+                            }`}
+                          >
+                            {isLinked ? <Lock className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )
+            ) : (activeTab === 'fixed' ? sortedExpenseCategories : sortedIncomeCategories).length === 0 ? (
+              <div className="text-center py-6 px-4 bg-neutral-50/50 dark:bg-neutral-800/30 rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-500">
+                <Tag className="w-7 h-7 mx-auto text-neutral-400 mb-2 opacity-60" />
+                <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                  Nenhuma categoria de {activeTab === 'fixed' ? 'despesa' : 'receita'}
+                </p>
+                <p className="text-[11px] text-neutral-400 mt-0.5">
+                  Clique em "+ Nova Categoria" acima para criar.
+                </p>
+              </div>
             ) : (
               (activeTab === 'fixed' ? sortedExpenseCategories : sortedIncomeCategories).map((cat) => {
                 const isEditing = editingId === cat.id;
@@ -569,7 +600,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                             maxLength={MAX_CATEGORY_NAME_LENGTH}
                             value={editName}
                             onChange={(e) => {
-                              setEditName(e.target.value);
+                              setEditName(sanitizeNameInput(e.target.value));
                               setEditError('');
                             }}
                             className="flex-1 px-2.5 py-1 text-xs bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white border border-emerald-500 rounded-lg focus:outline-hidden"

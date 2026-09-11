@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { User } from '../types';
 import { authOperations } from '../db/localDatabase';
+import { sanitizePersonName } from '../utils/textSanitizer';
 
 interface AuthScreenProps {
   onLoginSuccess: (user: User) => void;
@@ -65,11 +66,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     return password !== confirmPassword;
   }, [password, confirmPassword]);
 
-  // Special characters filter for 'Nome completo' (only letters with accents and spaces allowed)
+  // Special characters filter and sentence-case for 'Nome completo'
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value;
-    // Strip everything except letters (including Portuguese accents) and spaces
-    const cleanValue = rawValue.replace(/[^a-zA-ZÀ-ÿ\s]/g, '');
+    const cleanValue = sanitizePersonName(e.target.value);
     setName(cleanValue);
     if (errorMessage) setErrorMessage(null);
   };
@@ -159,10 +158,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       if (mode === 'register') {
         const result = await authOperations.register(name, cleanEmail, cleanPassword);
         if (result.success && result.user) {
-          setSuccessMessage('Conta criada com sucesso! Carregando seu painel...');
-          setTimeout(() => {
-            onLoginSuccess(result.user!);
-          }, 600);
+          setSuccessMessage('Cadastro realizado com sucesso! Faça login com seu e-mail e senha para acessar.');
+          setMode('login');
+          setName('');
+          setPassword('');
+          setConfirmPassword('');
+          setTouchedEmail(false);
+          setTouchedConfirmPassword(false);
         } else {
           setErrorMessage(result.error || 'Não foi possível realizar o cadastro.');
         }

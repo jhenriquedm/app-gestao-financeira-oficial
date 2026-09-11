@@ -13,6 +13,7 @@ import {
 import { Transaction, Category, TransactionType, TransactionStatus } from '../types';
 import { formatCurrency, formatDate, PAYMENT_METHOD_LABELS } from '../utils/formatters';
 import { CategoryIcon } from './CategoryIcon';
+import { sanitizeTextInput } from '../utils/textSanitizer';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -144,7 +145,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
             maxLength={50}
             placeholder="Buscar por descrição ou categoria..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(sanitizeTextInput(e.target.value))}
             className="w-full pl-9 pr-8 py-2 text-xs font-medium text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-800/90 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:bg-white dark:focus:bg-neutral-800 focus:border-emerald-500 focus:outline-hidden transition-all placeholder:text-neutral-400"
           />
           {searchTerm && (

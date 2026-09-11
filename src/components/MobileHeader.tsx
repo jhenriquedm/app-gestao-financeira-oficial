@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Eye, 
   EyeOff, 
@@ -19,7 +19,7 @@ import {
   Check,
   LogOut
 } from 'lucide-react';
-import { formatCurrency, formatMonthYear } from '../utils/formatters';
+import { formatCurrency, formatMonthYear, formatMonthYearShort, getCurrentYearMonth } from '../utils/formatters';
 import { MonthlySummary, User } from '../types';
 import { AppNavTab } from './MobileBottomNav';
 
@@ -41,24 +41,6 @@ interface MobileHeaderProps {
   onNavigateTab: (tab: AppNavTab) => void;
 }
 
-const AVAILABLE_MONTHS = [
-  { ym: '2026-10', label: 'Outubro de 2026 (Início)' },
-  { ym: '2026-11', label: 'Novembro de 2026' },
-  { ym: '2026-12', label: 'Dezembro de 2026' },
-  { ym: '2027-01', label: 'Janeiro de 2027' },
-  { ym: '2027-02', label: 'Fevereiro de 2027' },
-  { ym: '2027-03', label: 'Março de 2027' },
-  { ym: '2027-04', label: 'Abril de 2027' },
-  { ym: '2027-05', label: 'Maio de 2027' },
-  { ym: '2027-06', label: 'Junho de 2027' },
-  { ym: '2027-07', label: 'Julho de 2027' },
-  { ym: '2027-08', label: 'Agosto de 2027' },
-  { ym: '2027-09', label: 'Setembro de 2027' },
-  { ym: '2027-10', label: 'Outubro de 2027' },
-  { ym: '2027-11', label: 'Novembro de 2027' },
-  { ym: '2027-12', label: 'Dezembro de 2027' },
-];
-
 export const MobileHeader: React.FC<MobileHeaderProps> = ({
   user,
   onLogout,
@@ -66,7 +48,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   currentYearMonth,
   onMonthChange,
   summary,
-  overallBalance,
+  overallBalance: _overallBalance,
   isBalanceHidden,
   onToggleBalancePrivacy,
   isDarkMode = false,
@@ -78,18 +60,41 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
 }) => {
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [year, month] = currentYearMonth.split('-').map(Number);
+  const systemCurrentMonth = getCurrentYearMonth();
+
+  // Dynamically generate the window of 13 months: current month + 12 months ahead (e.g. Setembro/2026 até Setembro/2027)
+  const availableMonths = useMemo(() => {
+    const list: { ym: string; label: string; isCurrent: boolean }[] = [];
+    const [currY, currM] = systemCurrentMonth.split('-').map(Number);
+    for (let i = 0; i <= 12; i++) {
+      let targetMonth = currM + i;
+      let targetYear = currY;
+      while (targetMonth > 12) {
+        targetMonth -= 12;
+        targetYear += 1;
+      }
+      const ym = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
+      const isCurrent = i === 0;
+      list.push({
+        ym,
+        label: `${formatMonthYear(ym)}${isCurrent ? ' (Mês Atual)' : ''}`,
+        isCurrent,
+      });
+    }
+    return list;
+  }, [systemCurrentMonth]);
 
   const handlePrevMonth = () => {
-    if (currentYearMonth <= '2026-10') return;
+    if (currentYearMonth <= systemCurrentMonth) return;
     let newYear = year;
     let newMonth = month - 1;
     if (newMonth < 1) {
       newMonth = 12;
       newYear -= 1;
     }
-    const newYm = `${newYear}-${String(newMonth).padStart(2, '0')}`;
-    if (newYm >= '2026-10') {
-      onMonthChange(newYm);
+    const targetYm = `${newYear}-${String(newMonth).padStart(2, '0')}`;
+    if (targetYm >= systemCurrentMonth) {
+      onMonthChange(targetYm);
     }
   };
 
@@ -104,10 +109,10 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   };
 
   const handleCurrentMonth = () => {
-    onMonthChange('2026-10');
+    onMonthChange(systemCurrentMonth);
   };
 
-  const isBaseMonth = currentYearMonth === '2026-10';
+  const isCurrentMonth = currentYearMonth === systemCurrentMonth;
   const isOverview = activeTab === 'overview';
 
   const firstName = user?.name ? user.name.split(' ')[0] : 'Usuário';
@@ -120,40 +125,41 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
     : 'U';
 
   return (
-    <div id="mobile-header-root" className="bg-neutral-900 text-white pt-2.5 pb-2.5 px-3.5 rounded-b-2xl shadow-md transition-all duration-200">
+    <div id="mobile-header-root" className="bg-neutral-900 text-white pt-2.5 pb-2.5 px-3 rounded-b-2xl shadow-md transition-all duration-200">
       
       {/* Top Bar: User Greeting & Quick Settings */}
-      <div className={`flex items-center justify-between gap-2 ${isOverview ? 'mb-2.5' : 'mb-0'}`}>
-        <div className="flex items-center gap-2">
-          <div className="w-7.5 h-7.5 rounded-full bg-emerald-600 text-white font-bold text-[11px] flex items-center justify-center ring-2 ring-emerald-400/30 shadow-xs">
+      <div className={`flex items-center justify-between gap-1.5 min-w-0 ${isOverview ? 'mb-2.5' : 'mb-0'}`}>
+        <div className="flex items-center gap-2 min-w-0 shrink">
+          <div className="w-7.5 h-7.5 rounded-full bg-emerald-600 text-white font-bold text-[11px] flex items-center justify-center ring-2 ring-emerald-400/30 shadow-xs shrink-0">
             {initials}
           </div>
-          <div>
-            <div className="flex items-center gap-1">
-              <span className="text-xs font-bold text-neutral-200">Olá, {firstName}</span>
-              <span className="text-xs">👋</span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1 min-w-0">
+              <span className="text-xs font-bold text-neutral-200 truncate">Olá, {firstName}</span>
+              <span className="text-xs shrink-0">👋</span>
             </div>
-            <p className="text-[9.5px] text-neutral-400 leading-tight truncate max-w-[110px] sm:max-w-none">
+            <p className="text-[9.5px] text-neutral-400 leading-tight truncate max-w-[85px] xs:max-w-[120px] sm:max-w-none">
               {user?.email || 'Finanças Pessoais'}
             </p>
           </div>
         </div>
 
         {/* Action icons & Month Navigator (when not on overview) */}
-        <div className="flex items-center gap-0.5">
-          {/* Month selector pill in top bar when not in Overview */}
+        <div className="flex items-center gap-0.5 shrink-0">
+          {/* Compact Month selector pill in top bar when not in Overview */}
           {!isOverview && (
-            <div className="flex items-center bg-neutral-800/90 rounded-full px-1.5 py-0.5 border border-neutral-700/80 mr-0.5">
+            <div className="flex items-center bg-neutral-800/90 rounded-full px-1 py-0.5 border border-neutral-700/80 mr-0.5 shrink-0">
               <button
                 id="header-sub-prev-month"
                 onClick={handlePrevMonth}
-                disabled={currentYearMonth <= '2026-10'}
+                disabled={currentYearMonth <= systemCurrentMonth}
                 className={`p-1 rounded-full transition-colors ${
-                  currentYearMonth <= '2026-10'
+                  currentYearMonth <= systemCurrentMonth
                     ? 'text-neutral-600 opacity-30 cursor-not-allowed'
                     : 'text-neutral-400 hover:text-white cursor-pointer'
                 }`}
-                title={currentYearMonth <= '2026-10' ? 'Início: Outubro de 2026' : 'Mês anterior'}
+                title={currentYearMonth <= systemCurrentMonth ? 'Mês atual é o limite inicial' : 'Mês anterior'}
+                aria-label="Mês anterior"
               >
                 <ChevronLeft className="w-3 h-3" />
               </button>
@@ -164,8 +170,10 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                 className="flex items-center gap-1 text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 px-1 py-0.5 rounded-full hover:bg-neutral-700/60 transition-colors cursor-pointer"
                 title="Clique para selecionar o mês"
               >
-                <Calendar className="w-2.5 h-2.5 text-emerald-400" />
-                <span className="truncate max-w-[85px] sm:max-w-none">{formatMonthYear(currentYearMonth)}</span>
+                <Calendar className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                <span className="truncate max-w-[70px] xs:max-w-[95px] sm:max-w-none">
+                  {formatMonthYearShort(currentYearMonth)}
+                </span>
               </button>
 
               <button
@@ -173,6 +181,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                 onClick={handleNextMonth}
                 className="p-1 text-neutral-400 hover:text-white transition-colors cursor-pointer"
                 title="Próximo mês"
+                aria-label="Próximo mês"
               >
                 <ChevronRight className="w-3 h-3" />
               </button>
@@ -195,7 +204,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
             <button
               id="btn-mobile-categories"
               onClick={onOpenCategoryManager}
-              title="Gerenciar Categorias (Despesas, Parcelas, Receitas)"
+              title="Gerenciar Categorias"
               aria-label="Gerenciar Categorias"
               className="p-1.5 text-neutral-300 hover:text-emerald-400 hover:bg-neutral-800 rounded-full transition-colors cursor-pointer"
             >
@@ -247,7 +256,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
         >
           <div className="flex items-center justify-between mb-0.5">
             <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Wallet className="w-3 h-3 text-emerald-400" /> Saldo em Caixa
+              <Wallet className="w-3 h-3 text-emerald-400" /> Saldo no Mês
             </span>
 
             {/* Month Navigator pill with dropdown selection */}
@@ -255,13 +264,14 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
               <button
                 id="mobile-btn-prev-month"
                 onClick={handlePrevMonth}
-                disabled={currentYearMonth <= '2026-10'}
+                disabled={currentYearMonth <= systemCurrentMonth}
                 className={`p-0.5 rounded-full transition-colors ${
-                  currentYearMonth <= '2026-10'
+                  currentYearMonth <= systemCurrentMonth
                     ? 'text-neutral-600 opacity-30 cursor-not-allowed'
                     : 'text-neutral-400 hover:text-white cursor-pointer'
                 }`}
-                title={currentYearMonth <= '2026-10' ? 'Início do contador: Outubro de 2026' : 'Mês anterior'}
+                title={currentYearMonth <= systemCurrentMonth ? 'Mês atual é o limite inicial' : 'Mês anterior'}
+                aria-label="Mês anterior"
               >
                 <ChevronLeft className="w-3 h-3" />
               </button>
@@ -282,6 +292,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                 onClick={handleNextMonth}
                 className="p-0.5 text-neutral-400 hover:text-white transition-colors cursor-pointer"
                 title="Próximo mês"
+                aria-label="Próximo mês"
               >
                 <ChevronRight className="w-3 h-3" />
               </button>
@@ -293,17 +304,17 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
             <div 
               id="mobile-val-overall-balance" 
               className={`text-xl font-black tracking-tight ${
-                overallBalance < 0 ? 'text-rose-400' : 'text-white'
+                summary.balance < 0 ? 'text-rose-400' : 'text-white'
               }`}
             >
-              {isBalanceHidden ? 'R$ ••••••' : formatCurrency(overallBalance)}
+              {isBalanceHidden ? 'R$ ••••••' : formatCurrency(summary.balance)}
             </div>
-            {!isBaseMonth && (
+            {!isCurrentMonth && (
               <button
                 onClick={handleCurrentMonth}
-                className="text-[9.5px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-1.5 py-0.5 rounded-full hover:bg-emerald-900/60 transition-colors cursor-pointer"
+                className="text-[9.5px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full hover:bg-emerald-900/60 transition-colors cursor-pointer"
               >
-                Outubro 2026
+                Ir para Mês Atual
               </button>
             )}
           </div>
@@ -428,7 +439,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
             </div>
 
             <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
-              {AVAILABLE_MONTHS.map((item) => {
+              {availableMonths.map((item) => {
                 const isSelected = item.ym === currentYearMonth;
                 return (
                   <button

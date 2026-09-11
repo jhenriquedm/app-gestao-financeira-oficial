@@ -22,7 +22,7 @@ interface SummaryCardsProps {
 
 export const SummaryCards: React.FC<SummaryCardsProps> = ({ 
   summary, 
-  overallBalance,
+  overallBalance: _overallBalance,
   isBalanceHidden = false,
   onNavigateToFixed,
   onNavigateToInstallments
@@ -197,28 +197,27 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
       {/* Grid de 2 Cards Secundários (Saldo em Caixa e Poupança) */}
       <div id="summary-subcards-container" className="grid grid-cols-2 gap-2">
         
-        {/* Saldo Total Acumulado */}
+        {/* Saldo Livre no Mês */}
         <div 
           id="card-balance" 
           className="bg-white dark:bg-neutral-900 rounded-xl p-2.5 border border-neutral-200/90 dark:border-neutral-800 shadow-2xs hover:border-neutral-300 transition-all flex flex-col justify-between"
         >
           <div className="flex items-center justify-between mb-0.5">
             <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-tight">
-              Saldo em Caixa
+              Saldo no Mês
             </span>
             <div className="w-5 h-5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
               <Wallet className="w-3 h-3" />
             </div>
           </div>
           <div>
-            <div id="val-overall-balance" className="text-xs sm:text-sm font-bold tracking-tight text-neutral-900 dark:text-neutral-100 truncate">
-              {displayVal(overallBalance)}
+            <div id="val-overall-balance" className={`text-xs sm:text-sm font-bold tracking-tight truncate ${summary.balance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-neutral-900 dark:text-neutral-100'}`}>
+              {displayVal(summary.balance)}
             </div>
             <div className="mt-0.5 flex items-center gap-1 text-[9.5px]">
               <span className={`font-semibold ${summary.balance >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
-                {isBalanceHidden ? '••••' : `${summary.balance >= 0 ? '+' : ''}${formatCurrency(summary.balance)}`}
+                {isBalanceHidden ? '••••' : `${summary.balance >= 0 ? 'Livre: +' : 'Déficit: '}${formatCurrency(summary.balance)}`}
               </span>
-              <span className="text-neutral-400 dark:text-neutral-500">no mês</span>
             </div>
           </div>
         </div>

@@ -35,19 +35,19 @@ export const NewLaunchSheet: React.FC<NewLaunchSheetProps> = ({
             exit={{ opacity: 0, y: 100 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
             id="sheet-card-new-launch"
-            className="bg-white rounded-t-[28px] w-full shadow-2xl border-t border-neutral-200 overflow-hidden flex flex-col p-4 pb-6 space-y-3"
+            className="bg-white dark:bg-neutral-900 rounded-t-[28px] w-full shadow-2xl border-t border-neutral-200 dark:border-neutral-800 overflow-hidden flex flex-col p-4 pb-6 space-y-3"
           >
             {/* Mobile Drag Handle */}
-            <div className="w-10 h-1 bg-neutral-300 rounded-full mx-auto shrink-0 mb-1" />
+            <div className="w-10 h-1 bg-neutral-300 dark:bg-neutral-700 rounded-full mx-auto shrink-0 mb-1" />
 
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-neutral-900">Novo Lançamento</h3>
-                <p className="text-[11px] text-neutral-500">Escolha o que deseja registrar</p>
+                <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">Novo Lançamento</h3>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400">Escolha o que deseja registrar</p>
               </div>
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 hover:bg-neutral-200 transition-colors"
+                className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -60,19 +60,19 @@ export const NewLaunchSheet: React.FC<NewLaunchSheetProps> = ({
                   onClose();
                   onSelectFixedExpense();
                 }}
-                className="flex items-center gap-3 p-3 rounded-2xl border border-indigo-100 bg-indigo-50/40 hover:bg-indigo-50 active:scale-[0.99] transition-all text-left cursor-pointer"
+                className="flex items-center gap-3 p-3 rounded-2xl border border-indigo-100 dark:border-indigo-900/60 bg-indigo-50/40 dark:bg-indigo-950/30 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 active:scale-[0.99] transition-all text-left cursor-pointer"
               >
                 <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-indigo-600/20">
                   <Building2 className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-neutral-900">Despesa Fixa / Recorrente</span>
-                    <span className="px-1.5 py-0.2 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded">
+                    <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100">Despesa Fixa / Recorrente</span>
+                    <span className="px-1.5 py-0.2 bg-indigo-100 dark:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold rounded">
                       Mensal
                     </span>
                   </div>
-                  <p className="text-[11px] text-neutral-500 truncate">
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">
                     Aluguel, internet, feira fixa, faculdade, condomínio
                   </p>
                 </div>
@@ -84,19 +84,19 @@ export const NewLaunchSheet: React.FC<NewLaunchSheetProps> = ({
                   onClose();
                   onSelectInstallment();
                 }}
-                className="flex items-center gap-3 p-3 rounded-2xl border border-amber-100 bg-amber-50/40 hover:bg-amber-50 active:scale-[0.99] transition-all text-left cursor-pointer"
+                className="flex items-center gap-3 p-3 rounded-2xl border border-amber-100 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/30 hover:bg-amber-50 dark:hover:bg-amber-950/50 active:scale-[0.99] transition-all text-left cursor-pointer"
               >
                 <div className="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-amber-600/20">
                   <CreditCard className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-neutral-900">Parcela / Dívida Parcelada</span>
-                    <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 text-[10px] font-bold rounded">
+                    <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100">Parcela / Dívida Parcelada</span>
+                    <span className="px-1.5 py-0.2 bg-amber-100 dark:bg-amber-900/80 text-amber-800 dark:text-amber-300 text-[10px] font-bold rounded">
                       Prestações
                     </span>
                   </div>
-                  <p className="text-[11px] text-neutral-500 truncate">
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">
                     Empréstimo consignado, compras em 10x, acordo do cartão
                   </p>
                 </div>
@@ -108,19 +108,19 @@ export const NewLaunchSheet: React.FC<NewLaunchSheetProps> = ({
                   onClose();
                   onSelectIncome();
                 }}
-                className="flex items-center gap-3 p-3 rounded-2xl border border-emerald-100 bg-emerald-50/40 hover:bg-emerald-50 active:scale-[0.99] transition-all text-left cursor-pointer"
+                className="flex items-center gap-3 p-3 rounded-2xl border border-emerald-100 dark:border-emerald-900/60 bg-emerald-50/40 dark:bg-emerald-950/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 active:scale-[0.99] transition-all text-left cursor-pointer"
               >
                 <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-emerald-600/20">
                   <ArrowUpRight className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-neutral-900">Renda / Entrada Financeira</span>
-                    <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded">
+                    <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100">Renda / Entrada Financeira</span>
+                    <span className="px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-900/80 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold rounded">
                       Receita
                     </span>
                   </div>
-                  <p className="text-[11px] text-neutral-500 truncate">
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">
                     Salário, freelance, rendimento de investimento, PIX recebido
                   </p>
                 </div>
@@ -132,14 +132,14 @@ export const NewLaunchSheet: React.FC<NewLaunchSheetProps> = ({
                   onClose();
                   onSelectVariableExpense();
                 }}
-                className="flex items-center gap-3 p-3 rounded-2xl border border-neutral-200 bg-white hover:bg-neutral-50 active:scale-[0.99] transition-all text-left cursor-pointer"
+                className="flex items-center gap-3 p-3 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-800/80 hover:bg-neutral-50 dark:hover:bg-neutral-800 active:scale-[0.99] transition-all text-left cursor-pointer"
               >
-                <div className="w-10 h-10 rounded-xl bg-neutral-800 text-white flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-neutral-800 dark:bg-neutral-700 text-white flex items-center justify-center shrink-0">
                   <Plus className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs font-bold text-neutral-900">Gasto Avulso / Variável</span>
-                  <p className="text-[11px] text-neutral-500 truncate">
+                  <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100">Gasto Avulso / Variável</span>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">
                     Combustível, restaurante, farmácia, compras do dia a dia
                   </p>
                 </div>

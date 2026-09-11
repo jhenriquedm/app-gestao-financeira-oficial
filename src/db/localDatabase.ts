@@ -1,19 +1,14 @@
 import Dexie, { Table } from 'dexie';
-import { Transaction, DebtInstallment, Category, Budget, SavingsGoal, User } from '../types';
-import { DEFAULT_CATEGORIES, getInitialData } from '../data/initialData';
-
-export interface UserRecord {
-  id: string;
-  name: string;
-  email: string;
-  passwordHash: string;
-  createdAt: number;
-}
-
-export interface AppSettingRecord {
-  key: string;
-  value: any;
-}
+import {
+  Transaction,
+  DebtInstallment,
+  Category,
+  Budget,
+  SavingsGoal,
+  User,
+  UserRecord,
+} from '../types';
+import { getCurrentYearMonth } from '../utils/formatters';
 
 export class FinanceLocalDatabase extends Dexie {
   users!: Table<UserRecord, string>;
@@ -22,14 +17,14 @@ export class FinanceLocalDatabase extends Dexie {
   categories!: Table<Category, string>;
   budgets!: Table<Budget, string>;
   savingsGoals!: Table<SavingsGoal, string>;
-  settings!: Table<AppSettingRecord, string>;
+  settings!: Table<{ key: string; value: any }, string>;
 
   constructor() {
-    super('GestaoFinanceiraDB');
-    
+    super('GestaoFinanceiraDB_v2');
+
     this.version(1).stores({
-      transactions: 'id, type, categoryId, date, status, isFixed, startMonthYear, createdAt',
-      installments: 'id, category, competence, status, dueDay, createdAt',
+      transactions: 'id, type, categoryId, date, status, isFixed, startMonthYear',
+      installments: 'id, category, competence, status, dueDay',
       categories: 'id, name, type, target',
       budgets: 'id, categoryId',
       savingsGoals: 'id, title',
@@ -44,37 +39,23 @@ export class FinanceLocalDatabase extends Dexie {
       budgets: 'id, userId, categoryId',
       savingsGoals: 'id, userId, title',
       settings: 'key',
-    }).upgrade(async (trans) => {
-      // Create a default admin/initial user for existing data if any exists
-      const initialUserId = 'default_user_1';
-      const existingTx = await trans.table('transactions').toCollection().toArray();
-      if (existingTx.length > 0) {
-        const hash = await hashPassword('123456');
-        await trans.table('users').put({
-          id: initialUserId,
-          name: 'Usuário Padrão',
-          email: 'usuario@gestaofinanceira.com',
-          passwordHash: hash,
-          createdAt: Date.now(),
-        });
+    });
 
-        // Tag previous untagged data with this initial user
-        await trans.table('transactions').toCollection().modify((t: Transaction) => {
-          if (!t.userId) t.userId = initialUserId;
-        });
-        await trans.table('installments').toCollection().modify((i: DebtInstallment) => {
-          if (!i.userId) i.userId = initialUserId;
-        });
-        await trans.table('categories').toCollection().modify((c: Category) => {
-          if (!c.userId) c.userId = initialUserId;
-        });
-        await trans.table('budgets').toCollection().modify((b: Budget) => {
-          if (!b.userId) b.userId = initialUserId;
-        });
-        await trans.table('savingsGoals').toCollection().modify((g: SavingsGoal) => {
-          if (!g.userId) g.userId = initialUserId;
-        });
-      }
+    this.version(3).stores({
+      users: 'id, &email, createdAt',
+      transactions: 'id, userId, [userId+date], type, categoryId, date, status, isFixed, startMonthYear, createdAt',
+      installments: 'id, userId, [userId+competence], category, competence, status, dueDay, createdAt',
+      categories: 'id, userId, name, type, target',
+      budgets: 'id, userId, categoryId',
+      savingsGoals: 'id, userId, title',
+      settings: 'key',
+    }).upgrade(async (trans) => {
+      // Purge all legacy mock data
+      await trans.table('transactions').clear();
+      await trans.table('installments').clear();
+      await trans.table('categories').clear();
+      await trans.table('budgets').clear();
+      await trans.table('savingsGoals').clear();
     });
   }
 }
@@ -136,49 +117,10 @@ export const authOperations = {
         createdAt,
       };
 
-      // Create user and initialize their isolated default categories & starter state
-      await localDb.transaction('rw', [localDb.users, localDb.categories, localDb.transactions, localDb.installments, localDb.budgets, localDb.savingsGoals, localDb.settings], async () => {
+      // Create user record cleanly with no mock data
+      await localDb.transaction('rw', [localDb.users, localDb.settings], async () => {
         await localDb.users.put(userRecord);
-
-        // Seed user-isolated default categories
-        const userCategories: Category[] = DEFAULT_CATEGORIES.map((cat) => ({
-          ...cat,
-          id: `${cat.id}_${newUserId}`,
-          userId: newUserId,
-        }));
-        await localDb.categories.bulkPut(userCategories);
-
-        // Initialize user defaults
-        const initial = getInitialData();
-        const userTransactions = initial.initialTransactions.map(t => ({
-          ...t,
-          id: `${t.id}_${newUserId}`,
-          userId: newUserId,
-        }));
-        const userInstallments = initial.initialInstallments.map(i => ({
-          ...i,
-          id: `${i.id}_${newUserId}`,
-          userId: newUserId,
-        }));
-        const userBudgets = initial.initialBudgets.map(b => ({
-          ...b,
-          id: `${b.id}_${newUserId}`,
-          userId: newUserId,
-        }));
-        const userGoals = initial.initialGoals.map(g => ({
-          ...g,
-          id: `${g.id}_${newUserId}`,
-          userId: newUserId,
-        }));
-
-        await localDb.transactions.bulkPut(userTransactions);
-        await localDb.installments.bulkPut(userInstallments);
-        await localDb.budgets.bulkPut(userBudgets);
-        await localDb.savingsGoals.bulkPut(userGoals);
-
-        // Save active session
-        await localDb.settings.put({ key: 'active_session_user_id', value: newUserId });
-        await localDb.settings.put({ key: `user_${newUserId}_currentMonth`, value: '2026-10' });
+        await localDb.settings.put({ key: `user_${newUserId}_currentMonth`, value: getCurrentYearMonth() });
         await localDb.settings.put({ key: `user_${newUserId}_isDarkMode`, value: false });
         await localDb.settings.put({ key: `user_${newUserId}_isBalanceHidden`, value: false });
       });
@@ -273,26 +215,27 @@ export async function loadUserData(userId: string): Promise<{
   transactions: Transaction[];
   installments: DebtInstallment[];
   categories: Category[];
+  parcelCategories: string[];
   budgets: Budget[];
   savingsGoals: SavingsGoal[];
   settings: Record<string, any>;
 }> {
   try {
     const [allTx, allInst, allCat, allBudgets, allGoals, allSettings] = await Promise.all([
-      localDb.transactions.toArray(),
-      localDb.installments.toArray(),
-      localDb.categories.toArray(),
-      localDb.budgets.toArray(),
-      localDb.savingsGoals.toArray(),
+      localDb.transactions.where('userId').equals(userId).toArray().catch(() => localDb.transactions.toArray()),
+      localDb.installments.where('userId').equals(userId).toArray().catch(() => localDb.installments.toArray()),
+      localDb.categories.where('userId').equals(userId).toArray().catch(() => localDb.categories.toArray()),
+      localDb.budgets.where('userId').equals(userId).toArray().catch(() => localDb.budgets.toArray()),
+      localDb.savingsGoals.where('userId').equals(userId).toArray().catch(() => localDb.savingsGoals.toArray()),
       localDb.settings.toArray(),
     ]);
 
-    // Strictly filter by current userId or fallback for legacy untagged records
-    const userTx = allTx.filter((t) => t.userId === userId || (!t.userId && userId === 'default_user_1'));
-    const userInst = allInst.filter((i) => i.userId === userId || (!i.userId && userId === 'default_user_1'));
-    const userCat = allCat.filter((c) => c.userId === userId || (!c.userId && userId === 'default_user_1'));
-    const userBudgets = allBudgets.filter((b) => b.userId === userId || (!b.userId && userId === 'default_user_1'));
-    const userGoals = allGoals.filter((g) => g.userId === userId || (!g.userId && userId === 'default_user_1'));
+    // Strictly filter by current userId
+    const userTx = allTx.filter((t) => t.userId === userId);
+    const userInst = allInst.filter((i) => i.userId === userId);
+    const userCat = allCat.filter((c) => c.userId === userId);
+    const userBudgets = allBudgets.filter((b) => b.userId === userId);
+    const userGoals = allGoals.filter((g) => g.userId === userId);
 
     const settings: Record<string, any> = {};
     const prefix = `user_${userId}_`;
@@ -306,7 +249,8 @@ export async function loadUserData(userId: string): Promise<{
     return {
       transactions: userTx.sort((a, b) => b.createdAt - a.createdAt),
       installments: userInst.sort((a, b) => b.createdAt - a.createdAt),
-      categories: userCat.length > 0 ? userCat : DEFAULT_CATEGORIES.map(c => ({ ...c, userId })),
+      categories: userCat,
+      parcelCategories: (settings.parcelCategories as string[]) || [],
       budgets: userBudgets,
       savingsGoals: userGoals,
       settings,
@@ -316,7 +260,8 @@ export async function loadUserData(userId: string): Promise<{
     return {
       transactions: [],
       installments: [],
-      categories: DEFAULT_CATEGORIES.map(c => ({ ...c, userId })),
+      categories: [],
+      parcelCategories: [],
       budgets: [],
       savingsGoals: [],
       settings: {},
@@ -326,6 +271,11 @@ export async function loadUserData(userId: string): Promise<{
 
 // Database helper operations with user isolation
 export const dbOperations = {
+  // Parcel Categories
+  async saveParcelCategories(parcelCategories: string[], userId: string): Promise<void> {
+    await localDb.settings.put({ key: `user_${userId}_parcelCategories`, value: parcelCategories });
+  },
+
   // Transactions
   async saveTransaction(transaction: Transaction, userId: string): Promise<void> {
     await localDb.transactions.put({ ...transaction, userId });

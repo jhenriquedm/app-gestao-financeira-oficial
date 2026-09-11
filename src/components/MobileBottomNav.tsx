@@ -25,10 +25,11 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   pendingCount = 0,
 }) => {
   return (
-    <nav
-      id="mobile-bottom-dock"
-      className="sticky bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md border-t border-neutral-200/80 dark:border-neutral-800 px-2 py-1 shadow-lg transition-colors"
-    >
+    <div className="sticky bottom-0 left-0 right-0 z-40 px-3 pb-2 pt-1 bg-gradient-to-t from-neutral-100 dark:from-neutral-950 to-transparent pointer-events-none">
+      <nav
+        id="mobile-bottom-dock"
+        className="pointer-events-auto bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md border border-neutral-200/90 dark:border-neutral-750/90 rounded-2xl px-2 py-1 shadow-md shadow-neutral-900/5 dark:shadow-black/40 transition-colors"
+      >
       <div className="flex items-center justify-around max-w-md mx-auto relative">
         
         {/* Tab 1: Início */}
@@ -119,5 +120,6 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 
       </div>
     </nav>
+    </div>
   );
 };

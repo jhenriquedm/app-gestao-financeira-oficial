@@ -98,3 +98,19 @@ export interface MonthlySummary {
   pendingIncome: number;
   pendingExpense: number;
 }
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: number;
+}
+
+export interface UserRecord {
+  id: string;
+  name: string;
+  email: string;
+  passwordHash: string;
+  createdAt: number;
+}
+

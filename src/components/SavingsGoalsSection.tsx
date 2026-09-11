@@ -4,6 +4,7 @@ import { SavingsGoal } from '../types';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { CategoryIcon } from './CategoryIcon';
 import { formatCurrencyInput, parseCurrencyInput } from '../utils/currencyMask';
+import { sanitizeTextInput } from '../utils/textSanitizer';
 
 const MAX_GOAL_TITLE_LENGTH = 40;
 
@@ -162,7 +163,7 @@ export const SavingsGoalsSection: React.FC<SavingsGoalsSectionProps> = ({
                 placeholder="Ex: Reserva de Emergência, Viagem..."
                 value={title}
                 onChange={(e) => {
-                  setTitle(e.target.value);
+                  setTitle(sanitizeTextInput(e.target.value));
                   setCreateError('');
                 }}
                 className="w-full px-3 py-1.5 text-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white border border-teal-300 dark:border-teal-700 rounded-xl focus:outline-hidden"
@@ -206,7 +207,6 @@ export const SavingsGoalsSection: React.FC<SavingsGoalsSectionProps> = ({
               <label className="block text-[11px] font-semibold text-neutral-600 dark:text-neutral-300 mb-1">Data Prevista</label>
               <input
                 type="date"
-                min="2026-10-01"
                 value={targetDate}
                 onChange={(e) => setTargetDate(e.target.value)}
                 className="w-full px-3 py-1.5 text-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white border border-teal-300 dark:border-teal-700 rounded-xl focus:outline-hidden"
@@ -287,7 +287,7 @@ export const SavingsGoalsSection: React.FC<SavingsGoalsSectionProps> = ({
                         maxLength={MAX_GOAL_TITLE_LENGTH}
                         value={editTitle}
                         onChange={(e) => {
-                          setEditTitle(e.target.value);
+                          setEditTitle(sanitizeTextInput(e.target.value));
                           setEditError('');
                         }}
                         className="w-full px-2.5 py-1 text-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white border border-teal-300 dark:border-teal-700 rounded-lg"
@@ -329,7 +329,6 @@ export const SavingsGoalsSection: React.FC<SavingsGoalsSectionProps> = ({
                       <label className="block text-[10px] font-semibold text-neutral-600 dark:text-neutral-300 mb-1">Data Limite</label>
                       <input
                         type="date"
-                        min="2026-10-01"
                         value={editTargetDate}
                         onChange={(e) => setEditTargetDate(e.target.value)}
                         className="w-full px-2.5 py-1 text-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white border border-teal-300 dark:border-teal-700 rounded-lg"

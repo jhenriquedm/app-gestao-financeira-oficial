@@ -25,9 +25,10 @@ export function getTransactionsForMonth(
       continue;
     }
 
-    if (t.isFixed) {
+    // Only fixed expenses are recurring across months. Incomes must be filled per month.
+    if (t.isFixed && t.type === 'expense') {
       const baseMonth = t.startMonthYear || t.date.slice(0, 7);
-      // Fixed items appear in the start month and all subsequent months
+      // Fixed expenses appear in the start month and all subsequent months
       if (targetYearMonth >= baseMonth) {
         const day = t.dueDay || parseInt(t.date.split('-')[2], 10) || 5;
         const formattedDay = String(Math.min(28, Math.max(1, day))).padStart(2, '0');

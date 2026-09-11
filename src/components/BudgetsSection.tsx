@@ -4,6 +4,7 @@ import { Budget, Category, Transaction } from '../types';
 import { formatCurrency } from '../utils/formatters';
 import { CategoryIcon } from './CategoryIcon';
 import { formatCurrencyInput, parseCurrencyInput } from '../utils/currencyMask';
+import { sanitizeTextInput } from '../utils/textSanitizer';
 
 interface BudgetsSectionProps {
   budgets: Budget[];
@@ -12,6 +13,7 @@ interface BudgetsSectionProps {
   currentYearMonth: string;
   onSaveBudget: (budget: Budget) => void;
   onDeleteBudget: (budgetId: string) => void;
+  onOpenCategoryManager?: (tab?: 'fixed' | 'parcelas' | 'income') => void;
 }
 
 interface BudgetFormData {
@@ -30,6 +32,7 @@ export const BudgetsSection: React.FC<BudgetsSectionProps> = ({
   currentYearMonth,
   onSaveBudget,
   onDeleteBudget,
+  onOpenCategoryManager,
 }) => {
   const [formData, setFormData] = useState<BudgetFormData | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -231,7 +234,7 @@ export const BudgetsSection: React.FC<BudgetsSectionProps> = ({
                   maxLength={MAX_NAME_LENGTH}
                   placeholder="Ex: Mercado & Feira, Combustível, Lazer..."
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, name: sanitizeTextInput(e.target.value) })}
                   className="w-full px-3 py-2 text-xs bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-300 dark:border-neutral-700 rounded-xl focus:border-indigo-500 focus:outline-hidden transition-all"
                   autoFocus
                 />
@@ -239,25 +242,55 @@ export const BudgetsSection: React.FC<BudgetsSectionProps> = ({
 
               {/* Linked Category (Sorted Alphabetically) */}
               <div>
-                <label htmlFor="budget-category-select" className="block text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                  Categoria Vinculada *
-                </label>
-                <div className="relative">
-                  <select
-                    id="budget-category-select"
-                    required
-                    value={formData.categoryId}
-                    onChange={(e) => handleCategoryChange(e.target.value)}
-                    className="w-full pl-3 pr-8 py-2 text-xs font-medium bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-300 dark:border-neutral-700 rounded-xl focus:border-indigo-500 focus:outline-hidden transition-all appearance-none cursor-pointer"
-                  >
-                    {expenseCategories.map((cat) => (
-                      <option key={cat.id} value={cat.id} className="text-neutral-900 bg-white dark:bg-neutral-800 dark:text-white">
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                  <Tag className="w-3.5 h-3.5 text-neutral-400 absolute right-3 top-2.5 pointer-events-none" />
+                <div className="flex items-center justify-between mb-1">
+                  <label htmlFor="budget-category-select" className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300">
+                    Categoria Vinculada *
+                  </label>
+                  {onOpenCategoryManager && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenCategoryManager('fixed')}
+                      className="text-[10.5px] font-bold text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                      Nova Categoria
+                    </button>
+                  )}
                 </div>
+
+                {expenseCategories.length === 0 ? (
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center justify-between gap-2">
+                    <div className="text-[11px] text-amber-800 dark:text-amber-300 font-medium">
+                      Nenhuma categoria de despesa cadastrada.
+                    </div>
+                    {onOpenCategoryManager && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenCategoryManager('fixed')}
+                        className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold rounded-lg shrink-0 flex items-center gap-1 cursor-pointer shadow-xs"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Cadastrar Categoria
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <select
+                      id="budget-category-select"
+                      required
+                      value={formData.categoryId}
+                      onChange={(e) => handleCategoryChange(e.target.value)}
+                      className="w-full pl-3 pr-8 py-2 text-xs font-medium bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-300 dark:border-neutral-700 rounded-xl focus:border-indigo-500 focus:outline-hidden transition-all appearance-none cursor-pointer"
+                    >
+                      {expenseCategories.map((cat) => (
+                        <option key={cat.id} value={cat.id} className="text-neutral-900 bg-white dark:bg-neutral-800 dark:text-white">
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                    <Tag className="w-3.5 h-3.5 text-neutral-400 absolute right-3 top-2.5 pointer-events-none" />
+                  </div>
+                )}
               </div>
 
               {/* Monthly Limit Value */}

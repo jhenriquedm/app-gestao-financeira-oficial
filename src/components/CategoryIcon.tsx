@@ -15,11 +15,12 @@ import {
   ShieldCheck,
   Plane,
   Tag,
-  HelpCircle,
   PiggyBank,
   Wallet,
   Landmark,
-  DollarSign
+  DollarSign,
+  CreditCard,
+  Coins
 } from 'lucide-react';
 
 interface CategoryIconProps {
@@ -32,14 +33,22 @@ export const CategoryIcon: React.FC<CategoryIconProps> = ({ name, className = 'w
   const iconProps = { className, size };
 
   switch (name) {
+    case 'DollarSign':
+      return <DollarSign {...iconProps} />;
+    case 'Coins':
+      return <Coins {...iconProps} />;
     case 'Briefcase':
       return <Briefcase {...iconProps} />;
-    case 'Laptop':
-      return <Laptop {...iconProps} />;
+    case 'Wallet':
+      return <Wallet {...iconProps} />;
+    case 'PiggyBank':
+      return <PiggyBank {...iconProps} />;
+    case 'Landmark':
+      return <Landmark {...iconProps} />;
     case 'TrendingUp':
       return <TrendingUp {...iconProps} />;
-    case 'PlusCircle':
-      return <PlusCircle {...iconProps} />;
+    case 'CreditCard':
+      return <CreditCard {...iconProps} />;
     case 'Home':
       return <Home {...iconProps} />;
     case 'Utensils':
@@ -60,17 +69,13 @@ export const CategoryIcon: React.FC<CategoryIconProps> = ({ name, className = 'w
       return <ShieldCheck {...iconProps} />;
     case 'Plane':
       return <Plane {...iconProps} />;
-    case 'PiggyBank':
-      return <PiggyBank {...iconProps} />;
-    case 'Wallet':
-      return <Wallet {...iconProps} />;
-    case 'Landmark':
-      return <Landmark {...iconProps} />;
-    case 'DollarSign':
-      return <DollarSign {...iconProps} />;
+    case 'Laptop':
+      return <Laptop {...iconProps} />;
+    case 'PlusCircle':
+      return <PlusCircle {...iconProps} />;
     case 'Tag':
       return <Tag {...iconProps} />;
     default:
-      return <HelpCircle {...iconProps} />;
+      return <Tag {...iconProps} />;
   }
 };
