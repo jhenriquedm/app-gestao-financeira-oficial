@@ -62,13 +62,18 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   const [year, month] = currentYearMonth.split('-').map(Number);
   const systemCurrentMonth = getCurrentYearMonth();
 
-  // Dynamically generate the window of 13 months: current month + 12 months ahead (e.g. Setembro/2026 até Setembro/2027)
+  // Dynamically generate the window of months: 12 months in the past + current month + 12 months ahead (total 25 months)
   const availableMonths = useMemo(() => {
     const list: { ym: string; label: string; isCurrent: boolean }[] = [];
     const [currY, currM] = systemCurrentMonth.split('-').map(Number);
-    for (let i = 0; i <= 12; i++) {
+    // From -12 months (past history) to +12 months (future projection)
+    for (let i = -12; i <= 12; i++) {
       let targetMonth = currM + i;
       let targetYear = currY;
+      while (targetMonth < 1) {
+        targetMonth += 12;
+        targetYear -= 1;
+      }
       while (targetMonth > 12) {
         targetMonth -= 12;
         targetYear += 1;
@@ -85,7 +90,6 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   }, [systemCurrentMonth]);
 
   const handlePrevMonth = () => {
-    if (currentYearMonth <= systemCurrentMonth) return;
     let newYear = year;
     let newMonth = month - 1;
     if (newMonth < 1) {
@@ -93,9 +97,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
       newYear -= 1;
     }
     const targetYm = `${newYear}-${String(newMonth).padStart(2, '0')}`;
-    if (targetYm >= systemCurrentMonth) {
-      onMonthChange(targetYm);
-    }
+    onMonthChange(targetYm);
   };
 
   const handleNextMonth = () => {
@@ -152,13 +154,8 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
               <button
                 id="header-sub-prev-month"
                 onClick={handlePrevMonth}
-                disabled={currentYearMonth <= systemCurrentMonth}
-                className={`p-1 rounded-full transition-colors ${
-                  currentYearMonth <= systemCurrentMonth
-                    ? 'text-neutral-600 opacity-30 cursor-not-allowed'
-                    : 'text-neutral-400 hover:text-white cursor-pointer'
-                }`}
-                title={currentYearMonth <= systemCurrentMonth ? 'Mês atual é o limite inicial' : 'Mês anterior'}
+                className="p-1 text-neutral-400 hover:text-white transition-colors cursor-pointer rounded-full"
+                title="Mês anterior"
                 aria-label="Mês anterior"
               >
                 <ChevronLeft className="w-3 h-3" />
@@ -264,13 +261,8 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
               <button
                 id="mobile-btn-prev-month"
                 onClick={handlePrevMonth}
-                disabled={currentYearMonth <= systemCurrentMonth}
-                className={`p-0.5 rounded-full transition-colors ${
-                  currentYearMonth <= systemCurrentMonth
-                    ? 'text-neutral-600 opacity-30 cursor-not-allowed'
-                    : 'text-neutral-400 hover:text-white cursor-pointer'
-                }`}
-                title={currentYearMonth <= systemCurrentMonth ? 'Mês atual é o limite inicial' : 'Mês anterior'}
+                className="p-0.5 text-neutral-400 hover:text-white transition-colors cursor-pointer rounded-full"
+                title="Mês anterior"
                 aria-label="Mês anterior"
               >
                 <ChevronLeft className="w-3 h-3" />
