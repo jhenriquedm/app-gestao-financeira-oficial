@@ -11,11 +11,14 @@ import {
   AlertCircle,
   Wallet,
   Check,
-  X
+  X,
+  CreditCard,
+  KeyRound
 } from 'lucide-react';
 import { User } from '../types';
 import { authOperations } from '../db/localDatabase';
 import { sanitizePersonName } from '../utils/textSanitizer';
+import { formatCpf, unmaskCpf, validateCpf } from '../utils/cpfValidator';
 
 interface AuthScreenProps {
   onLoginSuccess: (user: User) => void;
@@ -28,11 +31,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   // Form fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [cpf, setCpf] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
   // Touched state for realtime validation display
   const [touchedEmail, setTouchedEmail] = useState(false);
+  const [touchedCpf, setTouchedCpf] = useState(false);
   const [touchedConfirmPassword, setTouchedConfirmPassword] = useState(false);
 
   // Password visibility
@@ -44,6 +49,18 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Password Recovery via CPF Modal States
+  const [isRecoveryModalOpen, setIsRecoveryModalOpen] = useState(false);
+  const [recoveryStep, setRecoveryStep] = useState<1 | 2>(1);
+  const [recoveryCpf, setRecoveryCpf] = useState('');
+  const [recoveryUserName, setRecoveryUserName] = useState('');
+  const [recoveryNewPassword, setRecoveryNewPassword] = useState('');
+  const [recoveryConfirmPassword, setRecoveryConfirmPassword] = useState('');
+  const [showRecoveryNewPassword, setShowRecoveryNewPassword] = useState(false);
+  const [showRecoveryConfirmPassword, setShowRecoveryConfirmPassword] = useState(false);
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [recoveryError, setRecoveryError] = useState<string | null>(null);
+
   // Real-time validations
   const emailRegex = useMemo(() => /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, []);
   
@@ -51,6 +68,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     if (!email.trim()) return false;
     return emailRegex.test(email.trim().toLowerCase());
   }, [email, emailRegex]);
+
+  const isCpfValid = useMemo(() => {
+    const unmasked = unmaskCpf(cpf);
+    return unmasked.length === 11 && validateCpf(unmasked);
+  }, [cpf]);
+
+  const isRecoveryCpfValid = useMemo(() => {
+    const unmasked = unmaskCpf(recoveryCpf);
+    return unmasked.length === 11 && validateCpf(unmasked);
+  }, [recoveryCpf]);
 
   const isPasswordValidLength = useMemo(() => {
     return password.length >= 6 && password.length <= 32;
@@ -66,6 +93,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     return password !== confirmPassword;
   }, [password, confirmPassword]);
 
+  const doRecoveryPasswordsMatch = useMemo(() => {
+    if (!recoveryConfirmPassword) return false;
+    return recoveryNewPassword === recoveryConfirmPassword && recoveryNewPassword.length >= 6;
+  }, [recoveryNewPassword, recoveryConfirmPassword]);
+
   // Special characters filter and sentence-case for 'Nome completo'
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const cleanValue = sanitizePersonName(e.target.value);
@@ -79,6 +111,19 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     if (errorMessage) setErrorMessage(null);
   };
 
+  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCpf(e.target.value);
+    setCpf(formatted);
+    setTouchedCpf(true);
+    if (errorMessage) setErrorMessage(null);
+  };
+
+  const handleRecoveryCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCpf(e.target.value);
+    setRecoveryCpf(formatted);
+    if (recoveryError) setRecoveryError(null);
+  };
+
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPassword(e.target.value);
     if (errorMessage) setErrorMessage(null);
@@ -88,6 +133,78 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     setConfirmPassword(e.target.value);
     setTouchedConfirmPassword(true);
     if (errorMessage) setErrorMessage(null);
+  };
+
+  // Password recovery handlers
+  const handleVerifyCpfForRecovery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRecoveryError(null);
+
+    const cleanCpf = unmaskCpf(recoveryCpf);
+    if (!cleanCpf || cleanCpf.length !== 11) {
+      setRecoveryError('Digite os 11 dígitos do CPF para consultar.');
+      return;
+    }
+
+    if (!validateCpf(cleanCpf)) {
+      setRecoveryError('O CPF informado possui dígitos verificadores inválidos.');
+      return;
+    }
+
+    setRecoveryLoading(true);
+    try {
+      const result = await authOperations.verifyCpfForRecovery(cleanCpf);
+      if (result.exists) {
+        setRecoveryUserName(result.userName || 'Usuário');
+        setRecoveryStep(2);
+      } else {
+        setRecoveryError(result.error || 'Nenhum usuário cadastrado com este CPF foi encontrado no banco de dados local.');
+      }
+    } catch (err: any) {
+      setRecoveryError(err?.message || 'Erro ao consultar banco de dados local.');
+    } finally {
+      setRecoveryLoading(false);
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRecoveryError(null);
+
+    if (recoveryNewPassword.length < 6) {
+      setRecoveryError('A nova senha deve ter no mínimo 6 caracteres.');
+      return;
+    }
+
+    if (recoveryNewPassword.length > 32) {
+      setRecoveryError('A nova senha não pode exceder 32 caracteres.');
+      return;
+    }
+
+    if (recoveryNewPassword !== recoveryConfirmPassword) {
+      setRecoveryError('As novas senhas digitadas não coincidem.');
+      return;
+    }
+
+    setRecoveryLoading(true);
+    try {
+      const result = await authOperations.resetPasswordWithCpf(recoveryCpf, recoveryNewPassword);
+      if (result.success) {
+        setIsRecoveryModalOpen(false);
+        setMode('login');
+        setSuccessMessage('Senha alterada com sucesso! Faça login com a sua nova senha.');
+        setRecoveryCpf('');
+        setRecoveryNewPassword('');
+        setRecoveryConfirmPassword('');
+        setRecoveryStep(1);
+      } else {
+        setRecoveryError(result.error || 'Não foi possível redefinir a senha.');
+      }
+    } catch (err: any) {
+      setRecoveryError(err?.message || 'Erro ao atualizar senha.');
+    } finally {
+      setRecoveryLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -111,6 +228,21 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       }
       if (/[^a-zA-ZÀ-ÿ\s]/.test(cleanName)) {
         setErrorMessage('O nome não pode conter números ou caracteres especiais.');
+        return;
+      }
+
+      // CPF Validation
+      const cleanCpf = unmaskCpf(cpf);
+      if (!cleanCpf) {
+        setErrorMessage('O campo CPF é obrigatório no cadastro.');
+        return;
+      }
+      if (cleanCpf.length !== 11) {
+        setErrorMessage('O CPF deve conter exatamente 11 dígitos.');
+        return;
+      }
+      if (!validateCpf(cleanCpf)) {
+        setErrorMessage('O CPF informado é inválido. Digite um CPF válido.');
         return;
       }
     }
@@ -156,14 +288,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
     try {
       if (mode === 'register') {
-        const result = await authOperations.register(name, cleanEmail, cleanPassword);
+        const cleanCpf = unmaskCpf(cpf);
+        const result = await authOperations.register(name, cleanEmail, cleanPassword, cleanCpf);
         if (result.success && result.user) {
           setSuccessMessage('Cadastro realizado com sucesso! Faça login com seu e-mail e senha para acessar.');
           setMode('login');
           setName('');
+          setCpf('');
           setPassword('');
           setConfirmPassword('');
           setTouchedEmail(false);
+          setTouchedCpf(false);
           setTouchedConfirmPassword(false);
         } else {
           setErrorMessage(result.error || 'Não foi possível realizar o cadastro.');
@@ -191,6 +326,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     setErrorMessage(null);
     setSuccessMessage(null);
     setTouchedEmail(false);
+    setTouchedCpf(false);
     setTouchedConfirmPassword(false);
   };
 
@@ -292,6 +428,72 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                     className="w-full pl-10 pr-3.5 py-3 bg-slate-950/70 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                   />
                 </div>
+              </div>
+            )}
+
+            {/* CPF (Register only - Mandatory with Mask & Validation) */}
+            {mode === 'register' && (
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-medium text-slate-300">
+                    CPF <span className="text-rose-400">*</span>
+                  </label>
+                  {/* Real-time CPF Validation Indicator */}
+                  {touchedCpf && cpf.length > 0 && (
+                    <span className={`text-[11px] font-medium flex items-center gap-1 ${
+                      isCpfValid ? 'text-emerald-400' : 'text-amber-400'
+                    }`}>
+                      {isCpfValid ? (
+                        <>
+                          <Check className="w-3 h-3" />
+                          <span>CPF válido</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="w-3 h-3" />
+                          <span>{unmaskCpf(cpf).length < 11 ? 'Incompleto' : 'CPF inválido'}</span>
+                        </>
+                      )}
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <CreditCard className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="text"
+                    id="input-auth-cpf"
+                    required
+                    maxLength={14}
+                    inputMode="numeric"
+                    value={cpf}
+                    onChange={handleCpfChange}
+                    onBlur={() => setTouchedCpf(true)}
+                    placeholder="000.000.000-00"
+                    className={`w-full pl-10 pr-9 py-3 bg-slate-950/70 border rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 transition-all ${
+                      touchedCpf && cpf.length > 0
+                        ? isCpfValid
+                          ? 'border-emerald-500/50 focus:ring-emerald-500'
+                          : 'border-amber-500/50 focus:ring-amber-500'
+                        : 'border-slate-800 focus:ring-emerald-500'
+                    }`}
+                  />
+                  {touchedCpf && cpf.length > 0 && (
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      {isCpfValid ? (
+                        <Check className="w-4 h-4 text-emerald-400" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-amber-400" />
+                      )}
+                    </div>
+                  )}
+                </div>
+                {touchedCpf && cpf.length > 0 && !isCpfValid && (
+                  <p className="mt-1 text-[11px] text-amber-400/90 leading-tight">
+                    Digite um CPF válido com 11 dígitos para recuperação e segurança da conta.
+                  </p>
+                )}
               </div>
             )}
 
@@ -399,6 +601,27 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               </div>
             </div>
 
+            {/* Esqueci Minha Senha (Login mode only) */}
+            {mode === 'login' && (
+              <div className="flex items-center justify-end -mt-1">
+                <button
+                  type="button"
+                  id="btn-forgot-password"
+                  onClick={() => {
+                    setIsRecoveryModalOpen(true);
+                    setRecoveryStep(1);
+                    setRecoveryCpf('');
+                    setRecoveryError(null);
+                    setRecoveryNewPassword('');
+                    setRecoveryConfirmPassword('');
+                  }}
+                  className="text-xs text-emerald-400 hover:text-emerald-300 font-medium transition-colors cursor-pointer"
+                >
+                  Esqueci minha senha
+                </button>
+              </div>
+            )}
+
             {/* Confirmar Senha (Register only with Real-time Match Validation) */}
             {mode === 'register' && (
               <div>
@@ -489,6 +712,248 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
           </div>
         </div>
       </div>
+
+      {/* Password Recovery Modal via CPF */}
+      {isRecoveryModalOpen && (
+        <div 
+          id="modal-password-recovery"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsRecoveryModalOpen(false);
+              setRecoveryError(null);
+              setRecoveryStep(1);
+            }
+          }}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-xs transition-all duration-200 overflow-y-auto"
+        >
+          <div className="relative w-full max-w-md bg-slate-900 border-t sm:border border-slate-800 rounded-t-[28px] sm:rounded-3xl p-5 sm:p-6 shadow-2xl text-slate-100 max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 sm:zoom-in-95">
+            {/* Mobile Drag Indicator */}
+            <div className="w-10 h-1 bg-slate-700 rounded-full mx-auto mb-3 sm:hidden shrink-0" />
+
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-800 mb-4 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+                  <KeyRound className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-base font-bold text-white truncate">
+                    {recoveryStep === 1 ? 'Recuperar Senha' : 'Criar Nova Senha'}
+                  </h3>
+                  <p className="text-[11px] sm:text-xs text-slate-400 truncate">
+                    {recoveryStep === 1 ? 'Passo 1 de 2: Identificação por CPF' : 'Passo 2 de 2: Nova Senha de Acesso'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                id="btn-close-recovery-modal"
+                onClick={() => {
+                  setIsRecoveryModalOpen(false);
+                  setRecoveryError(null);
+                  setRecoveryStep(1);
+                }}
+                className="w-9 h-9 sm:w-8 sm:h-8 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0 ml-2"
+                aria-label="Fechar modal"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Modal Body */}
+            <div className="overflow-y-auto max-h-[calc(92vh-100px)] sm:max-h-[calc(88vh-110px)] px-1.5 py-1 space-y-4">
+              {/* Error / Informative in Recovery Modal */}
+              {recoveryError && (
+                <div
+                  id="recovery-error-alert"
+                  className="p-3 bg-amber-500/15 border border-amber-500/30 rounded-xl flex items-start gap-2.5 text-amber-300 text-xs w-full break-words animate-in fade-in"
+                >
+                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
+                  <span className="leading-snug">{recoveryError}</span>
+                </div>
+              )}
+
+              {/* Step 1: Input CPF */}
+              {recoveryStep === 1 && (
+                <form onSubmit={handleVerifyCpfForRecovery} className="space-y-4">
+                  <div>
+                    <p className="text-xs text-slate-300 mb-3 leading-relaxed">
+                      Digite o número do seu CPF cadastrado. O sistema fará a busca no seu banco de dados local para permitir a alteração da sua senha.
+                    </p>
+                    <label className="text-xs font-medium text-slate-300 block mb-1.5">
+                      CPF Cadastrado <span className="text-rose-400">*</span>
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <CreditCard className="w-4 h-4" />
+                      </div>
+                      <input
+                        type="text"
+                        id="input-recovery-cpf"
+                        required
+                        autoFocus
+                        maxLength={14}
+                        inputMode="numeric"
+                        value={recoveryCpf}
+                        onChange={handleRecoveryCpfChange}
+                        placeholder="000.000.000-00"
+                        className="w-full pl-10 pr-4 py-3 min-h-[44px] bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:ring-inset transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsRecoveryModalOpen(false);
+                        setRecoveryError(null);
+                      }}
+                      className="flex-1 py-2.5 px-3 min-h-[44px] bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer flex items-center justify-center"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      id="btn-verify-cpf-recovery"
+                      disabled={recoveryLoading || !isRecoveryCpfValid}
+                      className="flex-1 py-2.5 px-3 min-h-[44px] bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      {recoveryLoading ? (
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <span>Buscar CPF</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Step 2: Set New Password */}
+              {recoveryStep === 2 && (
+                <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs sm:text-sm text-emerald-300 flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
+                    <span className="leading-snug">
+                      Usuário localizado: <strong className="text-white">{recoveryUserName}</strong>. Digite sua nova senha de acesso abaixo.
+                    </span>
+                  </div>
+
+                  {/* Nova Senha */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-medium text-slate-300">
+                        Nova Senha <span className="text-rose-400">*</span>
+                      </label>
+                      <span className="text-[11px] text-slate-400">
+                        {recoveryNewPassword.length >= 6 ? '✓ Mínimo 6 dígitos' : `${recoveryNewPassword.length}/6`}
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <Lock className="w-4 h-4" />
+                      </div>
+                      <input
+                        type={showRecoveryNewPassword ? 'text' : 'password'}
+                        id="input-recovery-new-password"
+                        required
+                        autoFocus
+                        minLength={6}
+                        maxLength={32}
+                        value={recoveryNewPassword}
+                        onChange={(e) => setRecoveryNewPassword(e.target.value)}
+                        placeholder="Mínimo 6 dígitos"
+                        className="w-full pl-10 pr-10 py-3 min-h-[44px] bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:ring-inset transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowRecoveryNewPassword(!showRecoveryNewPassword)}
+                        className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 cursor-pointer min-h-[44px]"
+                        tabIndex={-1}
+                        aria-label="Alternar visibilidade da senha"
+                      >
+                        {showRecoveryNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Confirmar Nova Senha */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-medium text-slate-300">
+                        Confirmar Nova Senha <span className="text-rose-400">*</span>
+                      </label>
+                      {recoveryConfirmPassword.length > 0 && (
+                        <span className={`text-[11px] font-medium flex items-center gap-1 ${
+                          doRecoveryPasswordsMatch ? 'text-emerald-400' : 'text-rose-400'
+                        }`}>
+                          {doRecoveryPasswordsMatch ? '✓ Senhas coincidem' : '✗ Senhas diferentes'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <Lock className="w-4 h-4" />
+                      </div>
+                      <input
+                        type={showRecoveryConfirmPassword ? 'text' : 'password'}
+                        id="input-recovery-confirm-password"
+                        required
+                        minLength={6}
+                        maxLength={32}
+                        value={recoveryConfirmPassword}
+                        onChange={(e) => setRecoveryConfirmPassword(e.target.value)}
+                        placeholder="Repita sua nova senha"
+                        className="w-full pl-10 pr-10 py-3 min-h-[44px] bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:ring-inset transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowRecoveryConfirmPassword(!showRecoveryConfirmPassword)}
+                        className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 cursor-pointer min-h-[44px]"
+                        tabIndex={-1}
+                        aria-label="Alternar visibilidade da confirmação de senha"
+                      >
+                        {showRecoveryConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRecoveryStep(1);
+                        setRecoveryError(null);
+                      }}
+                      className="flex-1 py-2.5 px-3 min-h-[44px] bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer flex items-center justify-center"
+                    >
+                      Voltar
+                    </button>
+                    <button
+                      type="submit"
+                      id="btn-save-new-password"
+                      disabled={recoveryLoading || recoveryNewPassword.length < 6 || !doRecoveryPasswordsMatch}
+                      className="flex-1 py-2.5 px-3 min-h-[44px] bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      {recoveryLoading ? (
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4" />
+                          <span>Salvar Nova Senha</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

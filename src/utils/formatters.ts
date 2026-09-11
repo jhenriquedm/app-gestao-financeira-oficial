@@ -85,15 +85,19 @@ export const downloadCSV = (
       typeLabel = t.isFixed ? 'Despesa Fixa' : 'Despesa Avulsa';
     }
 
+    const paymentMethodLabel = t.paymentMethod 
+      ? (PAYMENT_METHOD_LABELS[t.paymentMethod as keyof typeof PAYMENT_METHOD_LABELS] || t.paymentMethod) 
+      : '-';
+
     exportRows.push({
       date: t.date,
       type: typeLabel,
       description: t.description || '',
       category: categoryMap.get(t.categoryId) || 'Sem Categoria',
       amount: t.amount,
-      paymentMethod: PAYMENT_METHOD_LABELS[t.paymentMethod] || t.paymentMethod,
+      paymentMethod: paymentMethodLabel || '-',
       status: t.status === 'completed' ? 'Concluído' : 'Pendente',
-      notes: t.notes || (t.isFixed ? 'Recorrente Mensal' : 'Despesa Avulsa'),
+      notes: t.notes || (t.isFixed ? 'Recorrente Mensal' : '-'),
     });
   });
 
@@ -109,13 +113,17 @@ export const downloadCSV = (
         const safeDay = Math.min(daysInMonth, Math.max(1, inst.dueDay || 5));
         const dateStr = `${targetMonth}-${String(safeDay).padStart(2, '0')}`;
         
+        const instPayment = inst.origin 
+          ? (PAYMENT_METHOD_LABELS[inst.origin as keyof typeof PAYMENT_METHOD_LABELS] || inst.origin) 
+          : '-';
+
         exportRows.push({
           date: dateStr,
           type: 'Despesa Parcelada',
           description: `${inst.description} (Parcela ${ci.current}/${ci.total})`,
           category: inst.category || 'Parcelamento',
           amount: inst.monthlyAmount,
-          paymentMethod: inst.origin || 'Cartão de Crédito',
+          paymentMethod: instPayment || '-',
           status: ci.status === 'completed' ? 'Concluído' : 'Pendente',
           notes: inst.notes 
             ? `${inst.notes} | Parcela ${ci.current} de ${ci.total} (Restam ${ci.remaining})`
@@ -130,14 +138,14 @@ export const downloadCSV = (
 
   const headers = ['Data', 'Tipo', 'Descrição', 'Categoria', 'Valor (R$)', 'Forma de Pagamento', 'Status', 'Observações'];
   const rows = exportRows.map(r => [
-    r.date,
-    r.type,
+    `"${r.date}"`,
+    `"${r.type.replace(/"/g, '""')}"`,
     `"${r.description.replace(/"/g, '""')}"`,
     `"${r.category.replace(/"/g, '""')}"`,
-    r.amount.toFixed(2).replace('.', ','),
-    `"${r.paymentMethod.replace(/"/g, '""')}"`,
-    r.status,
-    `"${r.notes.replace(/"/g, '""')}"`
+    `"${r.amount.toFixed(2).replace('.', ',')}"`,
+    `"${(r.paymentMethod && r.paymentMethod.trim() ? r.paymentMethod : '-').replace(/"/g, '""')}"`,
+    `"${r.status.replace(/"/g, '""')}"`,
+    `"${(r.notes && r.notes.trim() ? r.notes : '-').replace(/"/g, '""')}"`
   ]);
 
   const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\r\n');

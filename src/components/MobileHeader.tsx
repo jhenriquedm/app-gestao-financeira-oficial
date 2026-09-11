@@ -18,7 +18,7 @@ import {
   X,
   LogOut
 } from 'lucide-react';
-import { formatCurrency, formatMonthYear, formatMonthYearShort, getCurrentYearMonth } from '../utils/formatters';
+import { formatCurrency, formatMonthYear, getCurrentYearMonth } from '../utils/formatters';
 import { MonthlySummary, User } from '../types';
 import { AppNavTab } from './MobileBottomNav';
 
@@ -123,73 +123,33 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
     : 'U';
 
   return (
-    <div id="mobile-header-root" className="bg-neutral-900 text-white pt-2.5 pb-2.5 px-3 rounded-b-2xl shadow-md transition-all duration-200">
+    <div id="mobile-header-root" className="bg-neutral-900 text-white pt-4 pb-4 px-3.5 sm:px-4 rounded-b-2xl shadow-md transition-all duration-200">
       
       {/* Top Bar: User Greeting & Quick Settings */}
-      <div className={`flex items-center justify-between gap-1.5 min-w-0 ${isOverview ? 'mb-2.5' : 'mb-0'}`}>
-        <div className="flex items-center gap-2 min-w-0 shrink">
-          <div className="w-7.5 h-7.5 rounded-full bg-emerald-600 text-white font-bold text-[11px] flex items-center justify-center ring-2 ring-emerald-400/30 shadow-xs shrink-0">
+      <div className={`flex items-center justify-between gap-2 min-w-0 ${isOverview ? 'mb-3.5' : 'mb-0'}`}>
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <div className="w-8.5 h-8.5 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center ring-2 ring-emerald-400/30 shadow-xs shrink-0">
             {initials}
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1 min-w-0">
-              <span className="text-xs font-bold text-neutral-200 truncate">Olá, {firstName}</span>
-              <span className="text-xs shrink-0">👋</span>
+              <span className="text-xs sm:text-sm font-bold text-neutral-100 truncate">Olá, {firstName}</span>
+              <span className="text-xs sm:text-sm shrink-0">👋</span>
             </div>
-            <p className="text-[9.5px] text-neutral-400 leading-tight truncate max-w-[85px] xs:max-w-[120px] sm:max-w-none">
-              {user?.email || 'Finanças Pessoais'}
-            </p>
           </div>
         </div>
 
-        {/* Action icons & Month Navigator (when not on overview) */}
-        <div className="flex items-center gap-0.5 shrink-0">
-          {/* Compact Month selector pill in top bar when not in Overview */}
-          {!isOverview && (
-            <div className="flex items-center bg-neutral-800/90 rounded-full px-1 py-0.5 border border-neutral-700/80 mr-0.5 shrink-0">
-              <button
-                id="header-sub-prev-month"
-                onClick={handlePrevMonth}
-                className="p-1 text-neutral-400 hover:text-white transition-colors cursor-pointer rounded-full"
-                title="Mês anterior"
-                aria-label="Mês anterior"
-              >
-                <ChevronLeft className="w-3 h-3" />
-              </button>
-
-              <button
-                id="header-sub-open-month-list"
-                onClick={handleOpenMonthPicker}
-                className="flex items-center gap-1 text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 px-1 py-0.5 rounded-full hover:bg-neutral-700/60 transition-colors cursor-pointer"
-                title="Clique para selecionar o mês"
-              >
-                <Calendar className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
-                <span className="truncate max-w-[70px] xs:max-w-[95px] sm:max-w-none">
-                  {formatMonthYearShort(currentYearMonth)}
-                </span>
-              </button>
-
-              <button
-                id="header-sub-next-month"
-                onClick={handleNextMonth}
-                className="p-1 text-neutral-400 hover:text-white transition-colors cursor-pointer"
-                title="Próximo mês"
-                aria-label="Próximo mês"
-              >
-                <ChevronRight className="w-3 h-3" />
-              </button>
-            </div>
-          )}
-
+        {/* Action icons */}
+        <div className="flex items-center gap-1 shrink-0">
           {onToggleDarkMode && (
             <button
               id="btn-mobile-toggle-theme"
               onClick={onToggleDarkMode}
               title={isDarkMode ? "Mudar para modo claro" : "Mudar para modo escuro"}
               aria-label="Alternar tema claro/escuro"
-              className="p-1.5 text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-full transition-colors cursor-pointer"
+              className="w-8 h-8 flex items-center justify-center text-neutral-300 hover:text-white bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/50 rounded-xl transition-all cursor-pointer shadow-xs"
             >
-              {isDarkMode ? <Sun className="w-3.5 h-3.5 text-amber-300" /> : <Moon className="w-3.5 h-3.5 text-neutral-300" />}
+              {isDarkMode ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-neutral-300" />}
             </button>
           )}
 
@@ -199,9 +159,9 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
               onClick={onOpenCategoryManager}
               title="Gerenciar Categorias"
               aria-label="Gerenciar Categorias"
-              className="p-1.5 text-neutral-300 hover:text-emerald-400 hover:bg-neutral-800 rounded-full transition-colors cursor-pointer"
+              className="w-8 h-8 flex items-center justify-center text-neutral-300 hover:text-emerald-400 bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/50 rounded-xl transition-all cursor-pointer shadow-xs"
             >
-              <Tag className="w-3.5 h-3.5" />
+              <Tag className="w-4 h-4" />
             </button>
           )}
 
@@ -211,9 +171,9 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
               onClick={onToggleBalancePrivacy}
               title={isBalanceHidden ? "Mostrar valores" : "Ocultar valores"}
               aria-label="Alternar privacidade de saldo"
-              className="p-1.5 text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-full transition-colors cursor-pointer"
+              className="w-8 h-8 flex items-center justify-center text-neutral-300 hover:text-white bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/50 rounded-xl transition-all cursor-pointer shadow-xs"
             >
-              {isBalanceHidden ? <EyeOff className="w-3.5 h-3.5 text-emerald-400" /> : <Eye className="w-3.5 h-3.5" />}
+              {isBalanceHidden ? <EyeOff className="w-4 h-4 text-emerald-400" /> : <Eye className="w-4 h-4" />}
             </button>
           )}
 
@@ -222,9 +182,9 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
             onClick={onOpenExportImport}
             title="Exportar CSV ou Restaurar"
             aria-label="Exportar ou importar dados"
-            className="p-1.5 text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-full transition-colors cursor-pointer"
+            className="w-8 h-8 flex items-center justify-center text-neutral-300 hover:text-white bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/50 rounded-xl transition-all cursor-pointer shadow-xs"
           >
-            <Download className="w-3.5 h-3.5" />
+            <Download className="w-4 h-4" />
           </button>
 
           {onLogout && (
@@ -233,13 +193,67 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
               onClick={onLogout}
               title="Sair da Conta"
               aria-label="Sair da Conta"
-              className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 rounded-full transition-colors cursor-pointer ml-0.5"
+              className="w-8 h-8 flex items-center justify-center text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 rounded-xl transition-all cursor-pointer ml-0.5 shadow-xs"
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <LogOut className="w-4 h-4" />
             </button>
           )}
         </div>
       </div>
+
+      {/* Month Navigator Sub-Bar when NOT in Overview */}
+      {!isOverview && (
+        <div id="mobile-sub-month-bar" className="flex items-center justify-between mt-3 pt-2.5 border-t border-neutral-800/80">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+              Referência
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {!isCurrentMonth && (
+              <button
+                onClick={handleCurrentMonth}
+                className="text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full transition-colors cursor-pointer shrink-0"
+              >
+                Mês Atual
+              </button>
+            )}
+
+            <div className="flex items-center bg-neutral-800/90 rounded-full px-1.5 py-0.5 border border-neutral-700/80 shadow-xs">
+              <button
+                id="header-sub-prev-month"
+                onClick={handlePrevMonth}
+                className="w-5 h-5 flex items-center justify-center text-neutral-400 hover:text-white transition-colors cursor-pointer rounded-full hover:bg-neutral-700/60"
+                title="Mês anterior"
+                aria-label="Mês anterior"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                id="header-sub-open-month-list"
+                onClick={handleOpenMonthPicker}
+                className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 px-2 py-0.5 rounded-full hover:bg-neutral-700/60 transition-colors cursor-pointer"
+                title="Clique para selecionar o mês"
+              >
+                <Calendar className="w-3 h-3 text-emerald-400 shrink-0" />
+                <span>{formatMonthYear(currentYearMonth)}</span>
+              </button>
+
+              <button
+                id="header-sub-next-month"
+                onClick={handleNextMonth}
+                className="w-5 h-5 flex items-center justify-center text-neutral-400 hover:text-white transition-colors cursor-pointer rounded-full hover:bg-neutral-700/60"
+                title="Próximo mês"
+                aria-label="Próximo mês"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero Balance Card - Rendered ONLY in 'Início' (overview tab) */}
       {isOverview && (

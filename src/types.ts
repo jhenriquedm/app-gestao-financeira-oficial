@@ -6,13 +6,6 @@ export type TransactionStatus = 'completed' | 'pending';
 
 export type CategoryTarget = 'fixed' | 'installment' | 'income' | 'variable';
 
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  createdAt: number;
-}
-
 export interface Category {
   id: string;
   userId?: string;
@@ -103,6 +96,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  cpf?: string;
   createdAt: number;
 }
 
@@ -110,6 +104,7 @@ export interface UserRecord {
   id: string;
   name: string;
   email: string;
+  cpf: string;
   passwordHash: string;
   createdAt: number;
 }
