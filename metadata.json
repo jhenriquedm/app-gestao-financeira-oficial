@@ -1,0 +1,8 @@
+{
+  "name": "Gestão Financeira",
+  "description": "Aplicativo completo para controle e gestão financeira pessoal com fluxo de receitas, despesas, saldo acumulado, categorias orçamentárias e relatórios.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
