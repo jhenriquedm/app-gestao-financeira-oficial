@@ -16,13 +16,16 @@ import {
   Tag,
   Calendar,
   X,
-  Check
+  Check,
+  LogOut
 } from 'lucide-react';
 import { formatCurrency, formatMonthYear } from '../utils/formatters';
-import { MonthlySummary } from '../types';
+import { MonthlySummary, User } from '../types';
 import { AppNavTab } from './MobileBottomNav';
 
 interface MobileHeaderProps {
+  user?: User | null;
+  onLogout?: () => void;
   activeTab: AppNavTab;
   currentYearMonth: string;
   onMonthChange: (yearMonth: string) => void;
@@ -57,6 +60,8 @@ const AVAILABLE_MONTHS = [
 ];
 
 export const MobileHeader: React.FC<MobileHeaderProps> = ({
+  user,
+  onLogout,
   activeTab,
   currentYearMonth,
   onMonthChange,
@@ -105,6 +110,15 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   const isBaseMonth = currentYearMonth === '2026-10';
   const isOverview = activeTab === 'overview';
 
+  const firstName = user?.name ? user.name.split(' ')[0] : 'Usuário';
+  const initials = user?.name
+    ? user.name
+        .split(' ')
+        .slice(0, 2)
+        .map((n) => n.charAt(0).toUpperCase())
+        .join('')
+    : 'U';
+
   return (
     <div id="mobile-header-root" className="bg-neutral-900 text-white pt-2.5 pb-2.5 px-3.5 rounded-b-2xl shadow-md transition-all duration-200">
       
@@ -112,14 +126,16 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
       <div className={`flex items-center justify-between gap-2 ${isOverview ? 'mb-2.5' : 'mb-0'}`}>
         <div className="flex items-center gap-2">
           <div className="w-7.5 h-7.5 rounded-full bg-emerald-600 text-white font-bold text-[11px] flex items-center justify-center ring-2 ring-emerald-400/30 shadow-xs">
-            JH
+            {initials}
           </div>
           <div>
             <div className="flex items-center gap-1">
-              <span className="text-xs font-bold text-neutral-200">Olá, Henrique</span>
+              <span className="text-xs font-bold text-neutral-200">Olá, {firstName}</span>
               <span className="text-xs">👋</span>
             </div>
-            <p className="text-[9.5px] text-neutral-400 leading-tight">Finanças Pessoais</p>
+            <p className="text-[9.5px] text-neutral-400 leading-tight truncate max-w-[110px] sm:max-w-none">
+              {user?.email || 'Finanças Pessoais'}
+            </p>
           </div>
         </div>
 
@@ -208,6 +224,18 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
           >
             <Download className="w-3.5 h-3.5" />
           </button>
+
+          {onLogout && (
+            <button
+              id="btn-mobile-logout"
+              onClick={onLogout}
+              title="Sair da Conta"
+              aria-label="Sair da Conta"
+              className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 rounded-full transition-colors cursor-pointer ml-0.5"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 

@@ -1,6 +1,14 @@
 import Dexie, { Table } from 'dexie';
-import { Transaction, DebtInstallment, Category, Budget, SavingsGoal } from '../types';
+import { Transaction, DebtInstallment, Category, Budget, SavingsGoal, User } from '../types';
 import { DEFAULT_CATEGORIES, getInitialData } from '../data/initialData';
+
+export interface UserRecord {
+  id: string;
+  name: string;
+  email: string;
+  passwordHash: string;
+  createdAt: number;
+}
 
 export interface AppSettingRecord {
   key: string;
@@ -8,6 +16,7 @@ export interface AppSettingRecord {
 }
 
 export class FinanceLocalDatabase extends Dexie {
+  users!: Table<UserRecord, string>;
   transactions!: Table<Transaction, string>;
   installments!: Table<DebtInstallment, string>;
   categories!: Table<Category, string>;
@@ -26,16 +35,241 @@ export class FinanceLocalDatabase extends Dexie {
       savingsGoals: 'id, title',
       settings: 'key',
     });
+
+    this.version(2).stores({
+      users: 'id, &email, createdAt',
+      transactions: 'id, userId, [userId+date], type, categoryId, date, status, isFixed, startMonthYear, createdAt',
+      installments: 'id, userId, [userId+competence], category, competence, status, dueDay, createdAt',
+      categories: 'id, userId, name, type, target',
+      budgets: 'id, userId, categoryId',
+      savingsGoals: 'id, userId, title',
+      settings: 'key',
+    }).upgrade(async (trans) => {
+      // Create a default admin/initial user for existing data if any exists
+      const initialUserId = 'default_user_1';
+      const existingTx = await trans.table('transactions').toCollection().toArray();
+      if (existingTx.length > 0) {
+        const hash = await hashPassword('123456');
+        await trans.table('users').put({
+          id: initialUserId,
+          name: 'Usuário Padrão',
+          email: 'usuario@gestaofinanceira.com',
+          passwordHash: hash,
+          createdAt: Date.now(),
+        });
+
+        // Tag previous untagged data with this initial user
+        await trans.table('transactions').toCollection().modify((t: Transaction) => {
+          if (!t.userId) t.userId = initialUserId;
+        });
+        await trans.table('installments').toCollection().modify((i: DebtInstallment) => {
+          if (!i.userId) i.userId = initialUserId;
+        });
+        await trans.table('categories').toCollection().modify((c: Category) => {
+          if (!c.userId) c.userId = initialUserId;
+        });
+        await trans.table('budgets').toCollection().modify((b: Budget) => {
+          if (!b.userId) b.userId = initialUserId;
+        });
+        await trans.table('savingsGoals').toCollection().modify((g: SavingsGoal) => {
+          if (!g.userId) g.userId = initialUserId;
+        });
+      }
+    });
   }
 }
 
 export const localDb = new FinanceLocalDatabase();
 
 /**
- * Initializes the database by migrating existing localStorage data if present,
- * or seeding with the initial database records.
+ * Native cryptographic SHA-256 password hasher with salt
  */
-export async function initLocalDatabase(): Promise<{
+export async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password + '_gfp_secure_salt_2026');
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Authentication operations
+ */
+export const authOperations = {
+  async register(
+    name: string,
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; user?: User; error?: string }> {
+    try {
+      const cleanEmail = email.trim().toLowerCase();
+      const cleanName = name.trim();
+
+      if (!cleanName || cleanName.length < 2) {
+        return { success: false, error: 'O nome deve ter pelo menos 2 caracteres.' };
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(cleanEmail)) {
+        return { success: false, error: 'Informe um endereço de e-mail válido.' };
+      }
+
+      if (!password || password.length < 6) {
+        return { success: false, error: 'A senha deve conter no mínimo 6 caracteres.' };
+      }
+
+      // Check if user already exists
+      const existingUser = await localDb.users.where('email').equalsIgnoreCase(cleanEmail).first();
+      if (existingUser) {
+        return { success: false, error: 'Este e-mail já está cadastrado no aplicativo.' };
+      }
+
+      const newUserId = 'user_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+      const passwordHash = await hashPassword(password);
+      const createdAt = Date.now();
+
+      const userRecord: UserRecord = {
+        id: newUserId,
+        name: cleanName,
+        email: cleanEmail,
+        passwordHash,
+        createdAt,
+      };
+
+      // Create user and initialize their isolated default categories & starter state
+      await localDb.transaction('rw', [localDb.users, localDb.categories, localDb.transactions, localDb.installments, localDb.budgets, localDb.savingsGoals, localDb.settings], async () => {
+        await localDb.users.put(userRecord);
+
+        // Seed user-isolated default categories
+        const userCategories: Category[] = DEFAULT_CATEGORIES.map((cat) => ({
+          ...cat,
+          id: `${cat.id}_${newUserId}`,
+          userId: newUserId,
+        }));
+        await localDb.categories.bulkPut(userCategories);
+
+        // Initialize user defaults
+        const initial = getInitialData();
+        const userTransactions = initial.initialTransactions.map(t => ({
+          ...t,
+          id: `${t.id}_${newUserId}`,
+          userId: newUserId,
+        }));
+        const userInstallments = initial.initialInstallments.map(i => ({
+          ...i,
+          id: `${i.id}_${newUserId}`,
+          userId: newUserId,
+        }));
+        const userBudgets = initial.initialBudgets.map(b => ({
+          ...b,
+          id: `${b.id}_${newUserId}`,
+          userId: newUserId,
+        }));
+        const userGoals = initial.initialGoals.map(g => ({
+          ...g,
+          id: `${g.id}_${newUserId}`,
+          userId: newUserId,
+        }));
+
+        await localDb.transactions.bulkPut(userTransactions);
+        await localDb.installments.bulkPut(userInstallments);
+        await localDb.budgets.bulkPut(userBudgets);
+        await localDb.savingsGoals.bulkPut(userGoals);
+
+        // Save active session
+        await localDb.settings.put({ key: 'active_session_user_id', value: newUserId });
+        await localDb.settings.put({ key: `user_${newUserId}_currentMonth`, value: '2026-10' });
+        await localDb.settings.put({ key: `user_${newUserId}_isDarkMode`, value: false });
+        await localDb.settings.put({ key: `user_${newUserId}_isBalanceHidden`, value: false });
+      });
+
+      return {
+        success: true,
+        user: {
+          id: userRecord.id,
+          name: userRecord.name,
+          email: userRecord.email,
+          createdAt: userRecord.createdAt,
+        },
+      };
+    } catch (err: any) {
+      console.error('Registration error:', err);
+      return { success: false, error: err?.message || 'Erro ao realizar cadastro.' };
+    }
+  },
+
+  async login(
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; user?: User; error?: string }> {
+    try {
+      const cleanEmail = email.trim().toLowerCase();
+
+      if (!cleanEmail || !password) {
+        return { success: false, error: 'Preencha o e-mail e a senha.' };
+      }
+
+      const userRecord = await localDb.users.where('email').equalsIgnoreCase(cleanEmail).first();
+      if (!userRecord) {
+        return { success: false, error: 'E-mail não encontrado ou senha incorreta.' };
+      }
+
+      const inputHash = await hashPassword(password);
+      if (inputHash !== userRecord.passwordHash) {
+        return { success: false, error: 'E-mail ou senha incorretos.' };
+      }
+
+      // Save active session
+      await localDb.settings.put({ key: 'active_session_user_id', value: userRecord.id });
+
+      return {
+        success: true,
+        user: {
+          id: userRecord.id,
+          name: userRecord.name,
+          email: userRecord.email,
+          createdAt: userRecord.createdAt,
+        },
+      };
+    } catch (err: any) {
+      console.error('Login error:', err);
+      return { success: false, error: 'Erro ao autenticar usuário.' };
+    }
+  },
+
+  async getActiveSessionUser(): Promise<User | null> {
+    try {
+      const sessionRecord = await localDb.settings.get('active_session_user_id');
+      if (!sessionRecord?.value) return null;
+
+      const userRecord = await localDb.users.get(sessionRecord.value);
+      if (!userRecord) return null;
+
+      return {
+        id: userRecord.id,
+        name: userRecord.name,
+        email: userRecord.email,
+        createdAt: userRecord.createdAt,
+      };
+    } catch (e) {
+      console.error('Session retrieval error:', e);
+      return null;
+    }
+  },
+
+  async logout(): Promise<void> {
+    try {
+      await localDb.settings.delete('active_session_user_id');
+    } catch (e) {
+      console.error('Logout error:', e);
+    }
+  },
+};
+
+/**
+ * Loads isolated data for the specified user
+ */
+export async function loadUserData(userId: string): Promise<{
   transactions: Transaction[];
   installments: DebtInstallment[];
   categories: Category[];
@@ -44,49 +278,7 @@ export async function initLocalDatabase(): Promise<{
   settings: Record<string, any>;
 }> {
   try {
-    const txCount = await localDb.transactions.count();
-    
-    // Check if there is data in localStorage to migrate seamlessly
-    const localTxRaw = localStorage.getItem('gfp_transactions');
-    const localInstRaw = localStorage.getItem('gfp_installments');
-    const localCatRaw = localStorage.getItem('gfp_categories');
-    const localBudgetsRaw = localStorage.getItem('gfp_budgets');
-    const localGoalsRaw = localStorage.getItem('gfp_savings_goals');
-    const localDarkMode = localStorage.getItem('gfp_theme_dark');
-    const localHiddenBalance = localStorage.getItem('gfp_hide_balance');
-    const localCurrentMonth = localStorage.getItem('gfp_current_month');
-
-    if (txCount === 0) {
-      if (localTxRaw) {
-        try {
-          const parsedTx = JSON.parse(localTxRaw);
-          const parsedInst = localInstRaw ? JSON.parse(localInstRaw) : [];
-          const parsedCat = localCatRaw ? JSON.parse(localCatRaw) : DEFAULT_CATEGORIES;
-          const parsedBudgets = localBudgetsRaw ? JSON.parse(localBudgetsRaw) : [];
-          const parsedGoals = localGoalsRaw ? JSON.parse(localGoalsRaw) : [];
-
-          await localDb.transaction('rw', [localDb.transactions, localDb.installments, localDb.categories, localDb.budgets, localDb.savingsGoals, localDb.settings], async () => {
-            if (Array.isArray(parsedTx) && parsedTx.length > 0) await localDb.transactions.bulkPut(parsedTx);
-            if (Array.isArray(parsedInst) && parsedInst.length > 0) await localDb.installments.bulkPut(parsedInst);
-            if (Array.isArray(parsedCat) && parsedCat.length > 0) await localDb.categories.bulkPut(parsedCat);
-            if (Array.isArray(parsedBudgets) && parsedBudgets.length > 0) await localDb.budgets.bulkPut(parsedBudgets);
-            if (Array.isArray(parsedGoals) && parsedGoals.length > 0) await localDb.savingsGoals.bulkPut(parsedGoals);
-            
-            if (localDarkMode !== null) await localDb.settings.put({ key: 'isDarkMode', value: localDarkMode === 'true' });
-            if (localHiddenBalance !== null) await localDb.settings.put({ key: 'isBalanceHidden', value: localHiddenBalance === 'true' });
-            if (localCurrentMonth) await localDb.settings.put({ key: 'currentYearMonth', value: localCurrentMonth });
-          });
-        } catch (e) {
-          console.error('Error during localStorage migration to Dexie:', e);
-          await seedInitialData();
-        }
-      } else {
-        await seedInitialData();
-      }
-    }
-
-    // Load all data from local database
-    const [transactions, installments, categories, budgets, savingsGoals, settingsList] = await Promise.all([
+    const [allTx, allInst, allCat, allBudgets, allGoals, allSettings] = await Promise.all([
       localDb.transactions.toArray(),
       localDb.installments.toArray(),
       localDb.categories.toArray(),
@@ -95,123 +287,111 @@ export async function initLocalDatabase(): Promise<{
       localDb.settings.toArray(),
     ]);
 
+    // Strictly filter by current userId or fallback for legacy untagged records
+    const userTx = allTx.filter((t) => t.userId === userId || (!t.userId && userId === 'default_user_1'));
+    const userInst = allInst.filter((i) => i.userId === userId || (!i.userId && userId === 'default_user_1'));
+    const userCat = allCat.filter((c) => c.userId === userId || (!c.userId && userId === 'default_user_1'));
+    const userBudgets = allBudgets.filter((b) => b.userId === userId || (!b.userId && userId === 'default_user_1'));
+    const userGoals = allGoals.filter((g) => g.userId === userId || (!g.userId && userId === 'default_user_1'));
+
     const settings: Record<string, any> = {};
-    settingsList.forEach(item => {
-      settings[item.key] = item.value;
+    const prefix = `user_${userId}_`;
+    allSettings.forEach((item) => {
+      if (item.key.startsWith(prefix)) {
+        const shortKey = item.key.replace(prefix, '');
+        settings[shortKey] = item.value;
+      }
     });
 
     return {
-      transactions: transactions.sort((a, b) => b.createdAt - a.createdAt),
-      installments: installments.sort((a, b) => b.createdAt - a.createdAt),
-      categories: categories.length > 0 ? categories : DEFAULT_CATEGORIES,
-      budgets,
-      savingsGoals,
+      transactions: userTx.sort((a, b) => b.createdAt - a.createdAt),
+      installments: userInst.sort((a, b) => b.createdAt - a.createdAt),
+      categories: userCat.length > 0 ? userCat : DEFAULT_CATEGORIES.map(c => ({ ...c, userId })),
+      budgets: userBudgets,
+      savingsGoals: userGoals,
       settings,
     };
   } catch (error) {
-    console.error('Database initialization error:', error);
-    const initial = getInitialData();
+    console.error('Error loading user data:', error);
     return {
-      transactions: initial.initialTransactions,
-      installments: initial.initialInstallments,
-      categories: DEFAULT_CATEGORIES,
-      budgets: initial.initialBudgets,
-      savingsGoals: initial.initialGoals,
+      transactions: [],
+      installments: [],
+      categories: DEFAULT_CATEGORIES.map(c => ({ ...c, userId })),
+      budgets: [],
+      savingsGoals: [],
       settings: {},
     };
   }
 }
 
-async function seedInitialData() {
-  const initial = getInitialData();
-  await localDb.transaction('rw', [localDb.transactions, localDb.installments, localDb.categories, localDb.budgets, localDb.savingsGoals, localDb.settings], async () => {
-    await localDb.transactions.bulkPut(initial.initialTransactions);
-    await localDb.installments.bulkPut(initial.initialInstallments);
-    await localDb.categories.bulkPut(DEFAULT_CATEGORIES);
-    await localDb.budgets.bulkPut(initial.initialBudgets);
-    await localDb.savingsGoals.bulkPut(initial.initialGoals);
-    await localDb.settings.put({ key: 'currentYearMonth', value: '2026-10' });
-    await localDb.settings.put({ key: 'isDarkMode', value: false });
-    await localDb.settings.put({ key: 'isBalanceHidden', value: false });
-  });
-}
-
-// Database helper operations
+// Database helper operations with user isolation
 export const dbOperations = {
   // Transactions
-  async saveTransaction(transaction: Transaction): Promise<void> {
-    await localDb.transactions.put(transaction);
+  async saveTransaction(transaction: Transaction, userId: string): Promise<void> {
+    await localDb.transactions.put({ ...transaction, userId });
   },
-  async saveTransactions(transactions: Transaction[]): Promise<void> {
-    await localDb.transactions.bulkPut(transactions);
+  async saveTransactions(transactions: Transaction[], userId: string): Promise<void> {
+    const tagged = transactions.map((t) => ({ ...t, userId }));
+    await localDb.transactions.bulkPut(tagged);
   },
   async deleteTransaction(id: string): Promise<void> {
     await localDb.transactions.delete(id);
   },
 
   // Installments
-  async saveInstallment(installment: DebtInstallment): Promise<void> {
-    await localDb.installments.put(installment);
+  async saveInstallment(installment: DebtInstallment, userId: string): Promise<void> {
+    await localDb.installments.put({ ...installment, userId });
   },
-  async saveInstallments(installments: DebtInstallment[]): Promise<void> {
-    await localDb.installments.bulkPut(installments);
+  async saveInstallments(installments: DebtInstallment[], userId: string): Promise<void> {
+    const tagged = installments.map((i) => ({ ...i, userId }));
+    await localDb.installments.bulkPut(tagged);
   },
   async deleteInstallment(id: string): Promise<void> {
     await localDb.installments.delete(id);
   },
 
   // Categories
-  async saveCategory(category: Category): Promise<void> {
-    await localDb.categories.put(category);
+  async saveCategory(category: Category, userId: string): Promise<void> {
+    await localDb.categories.put({ ...category, userId });
   },
-  async saveCategories(categories: Category[]): Promise<void> {
-    await localDb.categories.bulkPut(categories);
+  async saveCategories(categories: Category[], userId: string): Promise<void> {
+    const tagged = categories.map((c) => ({ ...c, userId }));
+    await localDb.categories.bulkPut(tagged);
   },
   async deleteCategory(id: string): Promise<void> {
     await localDb.categories.delete(id);
   },
 
   // Budgets
-  async saveBudget(budget: Budget): Promise<void> {
-    await localDb.budgets.put(budget);
+  async saveBudget(budget: Budget, userId: string): Promise<void> {
+    await localDb.budgets.put({ ...budget, userId });
   },
-  async saveBudgets(budgets: Budget[]): Promise<void> {
-    await localDb.budgets.bulkPut(budgets);
+  async saveBudgets(budgets: Budget[], userId: string): Promise<void> {
+    const tagged = budgets.map((b) => ({ ...b, userId }));
+    await localDb.budgets.bulkPut(tagged);
   },
   async deleteBudget(id: string): Promise<void> {
     await localDb.budgets.delete(id);
   },
 
   // Savings Goals
-  async saveGoal(goal: SavingsGoal): Promise<void> {
-    await localDb.savingsGoals.put(goal);
+  async saveGoal(goal: SavingsGoal, userId: string): Promise<void> {
+    await localDb.savingsGoals.put({ ...goal, userId });
   },
-  async saveGoals(goals: SavingsGoal[]): Promise<void> {
-    await localDb.savingsGoals.bulkPut(goals);
+  async saveGoals(goals: SavingsGoal[], userId: string): Promise<void> {
+    const tagged = goals.map((g) => ({ ...g, userId }));
+    await localDb.savingsGoals.bulkPut(tagged);
   },
   async deleteGoal(id: string): Promise<void> {
     await localDb.savingsGoals.delete(id);
   },
 
   // Settings
-  async setSetting(key: string, value: any): Promise<void> {
-    await localDb.settings.put({ key, value });
+  async setUserSetting(userId: string, key: string, value: any): Promise<void> {
+    await localDb.settings.put({ key: `user_${userId}_${key}`, value });
   },
-  async getSetting(key: string): Promise<any> {
-    const record = await localDb.settings.get(key);
+  async getUserSetting(userId: string, key: string): Promise<any> {
+    const record = await localDb.settings.get(`user_${userId}_${key}`);
     return record?.value;
   },
-
-  // Reset / Clear Database
-  async resetAllData(): Promise<void> {
-    await localDb.transaction('rw', [localDb.transactions, localDb.installments, localDb.categories, localDb.budgets, localDb.savingsGoals, localDb.settings], async () => {
-      await localDb.transactions.clear();
-      await localDb.installments.clear();
-      await localDb.categories.clear();
-      await localDb.budgets.clear();
-      await localDb.savingsGoals.clear();
-      await localDb.settings.clear();
-    });
-    await seedInitialData();
-  }
 };

@@ -6,10 +6,12 @@ import {
   SavingsGoal, 
   DebtInstallment,
   MonthlySummary,
-  FinancialHealthStatus 
+  FinancialHealthStatus,
+  User 
 } from './types';
-import { DEFAULT_CATEGORIES, PARCELAS_CATEGORIES, getInitialData } from './data/initialData';
-import { initLocalDatabase, dbOperations } from './db/localDatabase';
+import { DEFAULT_CATEGORIES, PARCELAS_CATEGORIES } from './data/initialData';
+import { authOperations, loadUserData, dbOperations } from './db/localDatabase';
+import { AuthScreen } from './components/AuthScreen';
 import { MobileFrame } from './components/MobileFrame';
 import { MobileHeader } from './components/MobileHeader';
 import { MobileBottomNav, AppNavTab } from './components/MobileBottomNav';
@@ -35,15 +37,16 @@ import { Receipt, Target, PiggyBank } from 'lucide-react';
 const START_YEAR_MONTH = '2026-10';
 
 export const App: React.FC = () => {
-  const [isDbLoaded, setIsDbLoaded] = useState<boolean>(false);
+  const [isInitializing, setIsInitializing] = useState<boolean>(true);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // Core database-backed states
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
   const [parcelCategories, setParcelCategories] = useState<string[]>(PARCELAS_CATEGORIES);
-  const [transactions, setTransactions] = useState<Transaction[]>(() => getInitialData().initialTransactions);
-  const [installments, setInstallments] = useState<DebtInstallment[]>(() => getInitialData().initialInstallments);
-  const [budgets, setBudgets] = useState<Budget[]>(() => getInitialData().initialBudgets);
-  const [goals, setGoals] = useState<SavingsGoal[]>(() => getInitialData().initialGoals);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [installments, setInstallments] = useState<DebtInstallment[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [goals, setGoals] = useState<SavingsGoal[]>([]);
 
   // Settings states
   const [isBalanceHidden, setIsBalanceHidden] = useState<boolean>(false);
@@ -54,37 +57,69 @@ export const App: React.FC = () => {
   // Month competence
   const [currentYearMonth, setCurrentYearMonth] = useState<string>('2026-10');
 
-  // Load from Dexie Local Database on mount
+  // Check active session and load user data on mount
   useEffect(() => {
     let isMounted = true;
-    async function loadData() {
+    async function initSession() {
       try {
-        const data = await initLocalDatabase();
+        const activeUser = await authOperations.getActiveSessionUser();
         if (!isMounted) return;
-        
-        if (data.categories && data.categories.length > 0) setCategories(data.categories);
-        if (data.transactions) setTransactions(data.transactions.filter(t => t.date >= `${START_YEAR_MONTH}-01`));
-        if (data.installments) setInstallments(data.installments);
-        if (data.budgets) setBudgets(data.budgets);
-        if (data.savingsGoals) setGoals(data.savingsGoals);
-        
-        if (data.settings) {
-          if (data.settings.isDarkMode !== undefined) setIsDarkMode(Boolean(data.settings.isDarkMode));
-          if (data.settings.isBalanceHidden !== undefined) setIsBalanceHidden(Boolean(data.settings.isBalanceHidden));
-          if (data.settings.currentYearMonth) setCurrentYearMonth(String(data.settings.currentYearMonth));
+
+        if (activeUser) {
+          setCurrentUser(activeUser);
+          const data = await loadUserData(activeUser.id);
+          if (!isMounted) return;
+
+          if (data.categories && data.categories.length > 0) setCategories(data.categories);
+          if (data.transactions) setTransactions(data.transactions.filter(t => t.date >= `${START_YEAR_MONTH}-01`));
+          if (data.installments) setInstallments(data.installments);
+          if (data.budgets) setBudgets(data.budgets);
+          if (data.savingsGoals) setGoals(data.savingsGoals);
+
+          if (data.settings) {
+            if (data.settings.isDarkMode !== undefined) setIsDarkMode(Boolean(data.settings.isDarkMode));
+            if (data.settings.isBalanceHidden !== undefined) setIsBalanceHidden(Boolean(data.settings.isBalanceHidden));
+            if (data.settings.currentYearMonth) setCurrentYearMonth(String(data.settings.currentYearMonth));
+          }
         }
       } catch (err) {
-        console.error('Error loading local database:', err);
+        console.error('Session initialization error:', err);
       } finally {
-        if (isMounted) setIsDbLoaded(true);
+        if (isMounted) setIsInitializing(false);
       }
     }
 
-    loadData();
+    initSession();
     return () => {
       isMounted = false;
     };
   }, []);
+
+  const handleLoginSuccess = async (user: User) => {
+    setCurrentUser(user);
+    try {
+      const data = await loadUserData(user.id);
+      setCategories(data.categories.length > 0 ? data.categories : DEFAULT_CATEGORIES.map(c => ({ ...c, userId: user.id })));
+      setTransactions(data.transactions.filter(t => t.date >= `${START_YEAR_MONTH}-01`));
+      setInstallments(data.installments);
+      setBudgets(data.budgets);
+      setGoals(data.savingsGoals);
+
+      if (data.settings) {
+        if (data.settings.isDarkMode !== undefined) setIsDarkMode(Boolean(data.settings.isDarkMode));
+        if (data.settings.isBalanceHidden !== undefined) setIsBalanceHidden(Boolean(data.settings.isBalanceHidden));
+        if (data.settings.currentYearMonth) setCurrentYearMonth(String(data.settings.currentYearMonth));
+      }
+      setActiveTab('overview');
+    } catch (e) {
+      console.error('Error loading data after login:', e);
+    }
+  };
+
+  const handleLogout = async () => {
+    await authOperations.logout();
+    setCurrentUser(null);
+  };
 
   // Theme synchronization
   useEffect(() => {
@@ -93,10 +128,10 @@ export const App: React.FC = () => {
     } else {
       document.documentElement.classList.remove('dark');
     }
-    if (isDbLoaded) {
-      dbOperations.setSetting('isDarkMode', isDarkMode).catch(console.error);
+    if (currentUser) {
+      dbOperations.setUserSetting(currentUser.id, 'isDarkMode', isDarkMode).catch(console.error);
     }
-  }, [isDarkMode, isDbLoaded]);
+  }, [isDarkMode, currentUser]);
 
   const handleToggleDarkMode = () => {
     setIsDarkMode((prev) => !prev);
@@ -105,49 +140,49 @@ export const App: React.FC = () => {
   const handleToggleBalancePrivacy = () => {
     setIsBalanceHidden((prev) => {
       const nextVal = !prev;
-      if (isDbLoaded) {
-        dbOperations.setSetting('isBalanceHidden', nextVal).catch(console.error);
+      if (currentUser) {
+        dbOperations.setUserSetting(currentUser.id, 'isBalanceHidden', nextVal).catch(console.error);
       }
       return nextVal;
     });
   };
 
-  // Sync state mutations to Dexie Local Database
+  // Sync state mutations to Dexie Local Database isolated per user
   useEffect(() => {
-    if (isDbLoaded) {
-      dbOperations.saveTransactions(transactions).catch(console.error);
+    if (currentUser) {
+      dbOperations.saveTransactions(transactions, currentUser.id).catch(console.error);
     }
-  }, [transactions, isDbLoaded]);
+  }, [transactions, currentUser]);
 
   useEffect(() => {
-    if (isDbLoaded) {
-      dbOperations.saveInstallments(installments).catch(console.error);
+    if (currentUser) {
+      dbOperations.saveInstallments(installments, currentUser.id).catch(console.error);
     }
-  }, [installments, isDbLoaded]);
+  }, [installments, currentUser]);
 
   useEffect(() => {
-    if (isDbLoaded) {
-      dbOperations.saveCategories(categories).catch(console.error);
+    if (currentUser) {
+      dbOperations.saveCategories(categories, currentUser.id).catch(console.error);
     }
-  }, [categories, isDbLoaded]);
+  }, [categories, currentUser]);
 
   useEffect(() => {
-    if (isDbLoaded) {
-      dbOperations.saveBudgets(budgets).catch(console.error);
+    if (currentUser) {
+      dbOperations.saveBudgets(budgets, currentUser.id).catch(console.error);
     }
-  }, [budgets, isDbLoaded]);
+  }, [budgets, currentUser]);
 
   useEffect(() => {
-    if (isDbLoaded) {
-      dbOperations.saveGoals(goals).catch(console.error);
+    if (currentUser) {
+      dbOperations.saveGoals(goals, currentUser.id).catch(console.error);
     }
-  }, [goals, isDbLoaded]);
+  }, [goals, currentUser]);
 
   useEffect(() => {
-    if (isDbLoaded) {
-      dbOperations.setSetting('currentYearMonth', currentYearMonth).catch(console.error);
+    if (currentUser) {
+      dbOperations.setUserSetting(currentUser.id, 'currentYearMonth', currentYearMonth).catch(console.error);
     }
-  }, [currentYearMonth, isDbLoaded]);
+  }, [currentYearMonth, currentUser]);
 
   // Delete confirmation modal state (non-blocking)
   const [deleteModalState, setDeleteModalState] = useState<{
@@ -654,11 +689,26 @@ export const App: React.FC = () => {
     if (data.installments) setInstallments(data.installments);
   };
 
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-slate-400">
+        <div className="w-10 h-10 border-3 border-emerald-500/30 border-t-emerald-400 rounded-full animate-spin mb-3" />
+        <span className="text-xs font-medium">Carregando Gestão Financeira...</span>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return <AuthScreen onLoginSuccess={handleLoginSuccess} isDarkMode={isDarkMode} />;
+  }
+
   return (
     <MobileFrame activeTab={activeTab}>
       
       {/* Mobile App Header with Month Selector Dropdown, Dark Mode & Categories */}
       <MobileHeader
+        user={currentUser}
+        onLogout={handleLogout}
         activeTab={activeTab}
         currentYearMonth={currentYearMonth}
         onMonthChange={setCurrentYearMonth}

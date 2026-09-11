@@ -6,8 +6,16 @@ export type TransactionStatus = 'completed' | 'pending';
 
 export type CategoryTarget = 'fixed' | 'installment' | 'income' | 'variable';
 
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: number;
+}
+
 export interface Category {
   id: string;
+  userId?: string;
   name: string;
   type: TransactionType;
   target?: CategoryTarget;
@@ -17,6 +25,7 @@ export interface Category {
 
 export interface Transaction {
   id: string;
+  userId?: string;
   description: string;
   amount: number;
   type: TransactionType;
@@ -35,6 +44,7 @@ export interface Transaction {
 
 export interface DebtInstallment {
   id: string;
+  userId?: string;
   description: string;
   category: string;
   currentInstallment: number; // Parcela atual (ex: 4)
@@ -52,6 +62,7 @@ export interface DebtInstallment {
 
 export interface Budget {
   id: string;
+  userId?: string;
   name?: string; // Nome personalizado do teto de gastos
   categoryId: string;
   monthlyLimit: number;
@@ -59,6 +70,7 @@ export interface Budget {
 
 export interface SavingsGoal {
   id: string;
+  userId?: string;
   title: string;
   targetAmount: number;
   currentAmount: number;
