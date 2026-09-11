@@ -20,15 +20,13 @@ jobs:
       - name: 📥 Clonar repositório
         uses: actions/checkout@v4
 
-      - name: ⚙️ Configurar Node.js 20
+      - name: ⚙️ Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: 22
 
       - name: 📦 Instalar dependências
-        run: |
-          npm ci || npm install
+        run: npm install
 
       - name: 🔍 Verificação estática e Tipagem (Lint / TypeScript)
         run: npm run lint
