@@ -157,13 +157,13 @@ export const TransactionList: React.FC<TransactionListProps> = ({
           )}
         </div>
 
-        {/* Quick Filter Chips (Scrollable horizontal, clean) */}
-        <div id="tx-quick-filter-chips" className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+        {/* Quick Filter Chips (Responsive Wrap & Scroll-safe) */}
+        <div id="tx-quick-filter-chips" className="flex items-center gap-1.5 flex-wrap py-0.5">
           <button
             onClick={() => { setTypeFilter('all'); setStatusFilter('all'); }}
-            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+            className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
               typeFilter === 'all' && statusFilter === 'all'
-                ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
+                ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-xs'
                 : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
             }`}
           >
@@ -172,9 +172,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
           <button
             onClick={() => { setTypeFilter('expense'); }}
-            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+            className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
               typeFilter === 'expense'
-                ? 'bg-rose-600 text-white'
+                ? 'bg-rose-600 text-white shadow-xs'
                 : 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 hover:bg-rose-100'
             }`}
           >
@@ -183,9 +183,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
           <button
             onClick={() => { setTypeFilter('income'); }}
-            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+            className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
               typeFilter === 'income'
-                ? 'bg-emerald-600 text-white'
+                ? 'bg-emerald-600 text-white shadow-xs'
                 : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100'
             }`}
           >
@@ -194,9 +194,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
           <button
             onClick={() => { setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending'); }}
-            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+            className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
               statusFilter === 'pending'
-                ? 'bg-amber-600 text-white'
+                ? 'bg-amber-600 text-white shadow-xs'
                 : 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 hover:bg-amber-100'
             }`}
           >
@@ -205,9 +205,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
           <button
             onClick={() => { setStatusFilter(statusFilter === 'completed' ? 'all' : 'completed'); }}
-            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+            className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
               statusFilter === 'completed'
-                ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900'
+                ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900 shadow-xs'
                 : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200'
             }`}
           >

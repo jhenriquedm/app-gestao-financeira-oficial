@@ -17,19 +17,21 @@ interface InstallmentModalProps {
   parcelCategories?: string[];
 }
 
-const COMMON_ORIGINS = [
-  'Holerite',
-  'Débito na Conta Itaú',
-  'Mercado pago',
+const RAW_COMMON_ORIGINS = [
   'Banco do Brasil',
+  'Banco Inter',
   'Banco Pan',
   'Cartão Amazon',
   'Cartão Havan',
+  'Débito na Conta Itaú',
+  'Holerite',
   'Linha de crédito MP',
-  'Banco Inter',
+  'Mercado pago',
   'Nubank',
-  'Outro',
 ];
+
+// Always sorted alphabetically with 'Outro' as the last option
+const COMMON_ORIGINS = [...RAW_COMMON_ORIGINS.sort((a, b) => a.localeCompare(b, 'pt-BR')), 'Outro'];
 
 const COMMON_CATEGORIES = [
   'Renegociação de dívidas',
@@ -326,8 +328,22 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
                     required
                     placeholder="Ex: 5"
                     value={dueDay}
-                    onChange={(e) => setDueDay(e.target.value.replace(/\D/g, '').slice(0, 2))}
-                    className="w-full px-3 py-2 text-sm font-semibold text-neutral-900 bg-white placeholder:text-neutral-400 rounded-xl border border-neutral-300 focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all"
+                    onChange={(e) => {
+                      const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 2);
+                      if (!digitsOnly) {
+                        setDueDay('');
+                        return;
+                      }
+                      const num = parseInt(digitsOnly, 10);
+                      if (num > 31) {
+                        setDueDay('31');
+                      } else if (num < 1) {
+                        setDueDay('1');
+                      } else {
+                        setDueDay(digitsOnly);
+                      }
+                    }}
+                    className="w-full px-3 py-2 text-sm font-black text-neutral-900 bg-white placeholder:text-neutral-400 rounded-xl border-2 border-neutral-300 focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 shadow-xs transition-all"
                   />
                 </div>
 

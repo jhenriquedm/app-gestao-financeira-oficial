@@ -727,6 +727,7 @@ export const App: React.FC = () => {
       
       {/* Mobile App Header with Month Selector Dropdown, Dark Mode & Categories */}
       <MobileHeader
+        activeTab={activeTab}
         currentYearMonth={currentYearMonth}
         onMonthChange={setCurrentYearMonth}
         summary={monthlySummary}

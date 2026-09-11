@@ -366,7 +366,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
                   {isFixed && (
                     <div className="pt-1.5 border-t border-indigo-100 flex items-center justify-between gap-2">
-                      <label className="text-[11px] font-semibold text-indigo-900">
+                      <label className="text-[11px] font-bold text-indigo-950">
                         Dia de Vencimento no Mês:
                       </label>
                       <input
@@ -376,8 +376,22 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                         maxLength={2}
                         placeholder="Ex: 15"
                         value={dueDay}
-                        onChange={(e) => setDueDay(e.target.value.replace(/\D/g, '').slice(0, 2))}
-                        className="w-20 px-2 py-1 text-xs font-bold text-center bg-white border border-indigo-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        onChange={(e) => {
+                          const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 2);
+                          if (!digitsOnly) {
+                            setDueDay('');
+                            return;
+                          }
+                          const num = parseInt(digitsOnly, 10);
+                          if (num > 31) {
+                            setDueDay('31');
+                          } else if (num < 1) {
+                            setDueDay('1');
+                          } else {
+                            setDueDay(digitsOnly);
+                          }
+                        }}
+                        className="w-20 px-2 py-1.5 text-xs font-black text-neutral-900 bg-white border-2 border-indigo-300 focus:border-indigo-600 rounded-lg focus:outline-hidden shadow-xs text-center"
                       />
                     </div>
                   )}
