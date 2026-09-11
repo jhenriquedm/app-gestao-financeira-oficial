@@ -211,12 +211,12 @@ export const authOperations = {
 
       const userRecord = await localDb.users.where('email').equalsIgnoreCase(cleanEmail).first();
       if (!userRecord) {
-        return { success: false, error: 'E-mail não encontrado ou senha incorreta.' };
+        return { success: false, error: 'Credenciais inválidas, tente novamente!' };
       }
 
       const inputHash = await hashPassword(password);
       if (inputHash !== userRecord.passwordHash) {
-        return { success: false, error: 'E-mail ou senha incorretos.' };
+        return { success: false, error: 'Credenciais inválidas, tente novamente!' };
       }
 
       // Save active session
