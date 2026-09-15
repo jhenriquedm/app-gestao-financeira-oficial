@@ -14,6 +14,7 @@ interface TransactionModalProps {
   onClose: () => void;
   onSave: (transactionData: Omit<Transaction, 'id' | 'createdAt'>, existingId?: string) => void;
   categories: Category[];
+  existingTransactions?: Transaction[];
   initialData?: Transaction | null;
   defaultDate?: string;
   initialType?: 'income' | 'expense';
@@ -26,6 +27,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   onClose,
   onSave,
   categories,
+  existingTransactions,
   initialData,
   defaultDate,
   initialType = 'expense',
@@ -43,6 +45,41 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [dueDay, setDueDay] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
+  const [successFeedback, setSuccessFeedback] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastSaved, setLastSaved] = useState<{
+    description: string;
+    amount: number;
+    date: string;
+    type: string;
+    timestamp: number;
+  } | null>(null);
+
+  const successTimerRef = React.useRef<any>(null);
+  const errorTimerRef = React.useRef<any>(null);
+
+  const triggerError = (msg: string) => {
+    setError(msg);
+    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    errorTimerRef.current = setTimeout(() => {
+      setError('');
+    }, 3000);
+  };
+
+  const triggerSuccess = (msg: string) => {
+    setSuccessFeedback(msg);
+    if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    successTimerRef.current = setTimeout(() => {
+      setSuccessFeedback(null);
+    }, 3000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    };
+  }, []);
 
   // Reset or populate form when opened or initialData changes
   useEffect(() => {
@@ -73,11 +110,15 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setNotes('');
     }
     setError('');
+    setSuccessFeedback(null);
+    if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
   }, [initialData, isOpen, defaultDate, categories, initialType, isFixedDefault]);
 
   // When type toggles, default category to matching type
   const handleTypeChange = (newType: TransactionType) => {
     setType(newType);
+    setSuccessFeedback(null);
     const matchingCat = categories.find((c) => c.type === newType);
     if (matchingCat) {
       setCategoryId(matchingCat.id);
@@ -88,36 +129,63 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!description.trim()) {
-      setError('Por favor, informe a descrição da transação.');
+    setSuccessFeedback(null);
+
+    const cleanDesc = description.trim();
+    if (!cleanDesc) {
+      triggerError('Por favor, informe a descrição da transação.');
       return;
     }
 
     const parsedAmount = parseCurrencyInput(amount);
     if (parsedAmount <= 0) {
-      setError('Por favor, informe um valor monetário positivo válido.');
+      triggerError('Por favor, informe um valor monetário positivo válido.');
       return;
     }
 
     if (!categoryId) {
-      setError(`Por favor, cadastre uma categoria de ${type === 'income' ? 'receita' : 'despesa'} antes de salvar.`);
+      triggerError(`Por favor, cadastre uma categoria de ${type === 'income' ? 'receita' : 'despesa'} antes de salvar.`);
       return;
     }
 
     if (!date) {
-      setError('Por favor, selecione uma data.');
+      triggerError('Por favor, selecione uma data.');
       return;
     }
 
     const parsedDueDay = dueDay ? parseInt(dueDay, 10) : undefined;
     if (isFixed && parsedDueDay && (parsedDueDay < 1 || parsedDueDay > 31)) {
-      setError('O dia de vencimento deve estar entre 1 e 31.');
+      triggerError('O dia de vencimento deve estar entre 1 e 31.');
       return;
     }
 
+    // Protection against duplicate records
+    const isDuplicate = (!initialData && existingTransactions && existingTransactions.some((t) => {
+      if (t.type !== type) return false;
+      const sameDesc = t.description.trim().toLowerCase() === cleanDesc.toLowerCase();
+      const sameAmount = Math.abs(t.amount - parsedAmount) < 0.01;
+      if (type === 'expense' && isFixed) {
+        return t.isFixed && sameDesc && sameAmount;
+      }
+      return sameDesc && sameAmount && t.date === date && t.categoryId === categoryId;
+    })) || (
+      lastSaved &&
+      lastSaved.description.toLowerCase() === cleanDesc.toLowerCase() &&
+      lastSaved.amount === parsedAmount &&
+      lastSaved.date === date &&
+      lastSaved.type === type
+    );
+
+    if (isDuplicate) {
+      triggerError('Este registro já existe no sistema.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
     onSave(
       {
-        description: description.trim(),
+        description: cleanDesc,
         amount: parsedAmount,
         type,
         categoryId,
@@ -131,7 +199,28 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       initialData ? initialData.id : undefined
     );
 
-    onClose();
+    const now = Date.now();
+    setLastSaved({
+      description: cleanDesc,
+      amount: parsedAmount,
+      date,
+      type,
+      timestamp: now,
+    });
+
+    if (initialData) {
+      triggerSuccess('Registro atualizado com sucesso!');
+      setError('');
+      setIsSubmitting(false);
+    } else {
+      // Keep modal open for next entry as requested, clear specific fields
+      triggerSuccess('Registro salvo com sucesso! O formulário continua aberto para novos lançamentos.');
+      setError('');
+      setDescription('');
+      setAmount('');
+      setNotes('');
+      setIsSubmitting(false);
+    }
   };
 
   const filteredCategories = categories
@@ -182,6 +271,15 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
             {/* Form */}
             <form onSubmit={handleSubmit} id="form-transaction" className="p-4 overflow-y-auto space-y-3.5 flex-1">
+              {successFeedback && (
+                <div id="tx-success-message" className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                    <Check className="w-3 h-3" />
+                  </div>
+                  <span>{successFeedback}</span>
+                </div>
+              )}
+
               {error && (
                 <div id="tx-error-message" className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-medium">
                   {error}
@@ -479,25 +577,26 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </form>
 
             {/* Sticky Action Footer */}
-            <div className="px-4 py-3 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/90 dark:bg-neutral-950/90 flex items-center justify-end gap-2 shrink-0">
+            <div className="px-4 py-3 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/90 dark:bg-neutral-950/90 flex items-center justify-between gap-2 shrink-0">
               <button
                 type="button"
                 id="btn-cancel-transaction"
                 onClick={onClose}
                 className="px-3 py-1.5 text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-neutral-200/60 dark:hover:bg-neutral-800 rounded-xl transition-colors cursor-pointer"
               >
-                Cancelar
+                {successFeedback ? 'Concluir e Fechar' : 'Cancelar'}
               </button>
               <button
                 type="submit"
                 form="form-transaction"
                 id="btn-save-transaction"
-                className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer ${
+                disabled={isSubmitting}
+                className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer disabled:opacity-50 ${
                   type === 'income' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'
                 }`}
               >
                 <Check className="w-3.5 h-3.5" />
-                Salvar Lançamento
+                <span>{isSubmitting ? 'Salvando...' : 'Salvar Lançamento'}</span>
               </button>
             </div>
           </motion.div>

@@ -6,6 +6,8 @@ export type TransactionStatus = 'completed' | 'pending';
 
 export type CategoryTarget = 'fixed' | 'installment' | 'income' | 'variable';
 
+export type SyncStatus = 'synced' | 'pendingUpload' | 'pendingDelete';
+
 export interface Category {
   id: string;
   userId?: string;
@@ -14,6 +16,9 @@ export interface Category {
   target?: CategoryTarget;
   color: string;
   iconName: string;
+  syncStatus?: SyncStatus;
+  updatedAt?: number;
+  isDeleted?: boolean;
 }
 
 export interface Transaction {
@@ -33,6 +38,9 @@ export interface Transaction {
   deletedFromMonthYear?: string; // YYYY-MM se foi cancelada/excluída a partir deste mês
   paidMonths?: string[]; // Meses em que foi marcada como concluída/paga
   createdAt: number;
+  syncStatus?: SyncStatus;
+  updatedAt?: number;
+  isDeleted?: boolean;
 }
 
 export interface DebtInstallment {
@@ -51,6 +59,9 @@ export interface DebtInstallment {
   paidMonths?: string[]; // Meses em que a parcela foi marcada como paga
   notes?: string;
   createdAt: number;
+  syncStatus?: SyncStatus;
+  updatedAt?: number;
+  isDeleted?: boolean;
 }
 
 export interface Budget {
@@ -59,6 +70,9 @@ export interface Budget {
   name?: string; // Nome personalizado do teto de gastos
   categoryId: string;
   monthlyLimit: number;
+  syncStatus?: SyncStatus;
+  updatedAt?: number;
+  isDeleted?: boolean;
 }
 
 export interface SavingsGoal {
@@ -70,6 +84,9 @@ export interface SavingsGoal {
   targetDate?: string; // YYYY-MM-DD
   color: string;
   iconName: string;
+  syncStatus?: SyncStatus;
+  updatedAt?: number;
+  isDeleted?: boolean;
 }
 
 export type FinancialHealthStatus = 'SAUDÁVEL' | 'ATENÇÃO' | 'CRÍTICO' | 'NEGATIVO';
@@ -97,6 +114,7 @@ export interface User {
   name: string;
   email: string;
   cpf?: string;
+  photoUrl?: string;
   createdAt: number;
 }
 
@@ -106,6 +124,7 @@ export interface UserRecord {
   email: string;
   cpf: string;
   passwordHash: string;
+  photoUrl?: string;
   createdAt: number;
 }
 

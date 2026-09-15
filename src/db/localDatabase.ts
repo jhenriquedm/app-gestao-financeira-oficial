@@ -10,6 +10,7 @@ import {
 } from '../types';
 import { getCurrentYearMonth } from '../utils/formatters';
 import { unmaskCpf, validateCpf } from '../utils/cpfValidator';
+import { FirestoreSyncService } from '../services/firestoreSyncService';
 
 export class FinanceLocalDatabase extends Dexie {
   users!: Table<UserRecord, string>;
@@ -153,6 +154,9 @@ export const authOperations = {
         await localDb.settings.put({ key: `user_${newUserId}_isBalanceHidden`, value: false });
       });
 
+      // Persist user account to cloud
+      FirestoreSyncService.saveUserAccount(userRecord).catch(console.warn);
+
       return {
         success: true,
         user: {
@@ -180,7 +184,16 @@ export const authOperations = {
         return { success: false, error: 'Preencha o e-mail e a senha.' };
       }
 
-      const userRecord = await localDb.users.where('email').equalsIgnoreCase(cleanEmail).first();
+      let userRecord = await localDb.users.where('email').equalsIgnoreCase(cleanEmail).first();
+      // If not found locally, seamlessly check cloud
+      if (!userRecord) {
+        const cloudUser = await FirestoreSyncService.findUserInCloud({ email: cleanEmail });
+        if (cloudUser) {
+          await localDb.users.put(cloudUser);
+          userRecord = cloudUser;
+        }
+      }
+
       if (!userRecord) {
         return { success: false, error: 'Credenciais inválidas, tente novamente!' };
       }
@@ -200,6 +213,7 @@ export const authOperations = {
           name: userRecord.name,
           email: userRecord.email,
           cpf: userRecord.cpf,
+          photoUrl: userRecord.photoUrl,
           createdAt: userRecord.createdAt,
         },
       };
@@ -218,9 +232,18 @@ export const authOperations = {
       if (!validateCpf(cleanCpf)) {
         return { exists: false, error: 'CPF com formato ou dígitos verificadores inválidos.' };
       }
-      const user = await localDb.users.where('cpf').equals(cleanCpf).first();
+      let user = await localDb.users.where('cpf').equals(cleanCpf).first();
+      // Seamless cloud check without alerting user
       if (!user) {
-        return { exists: false, error: 'CPF não encontrado no banco de dados local.' };
+        const cloudUser = await FirestoreSyncService.findUserInCloud({ cpf: cleanCpf });
+        if (cloudUser) {
+          await localDb.users.put(cloudUser);
+          user = cloudUser;
+        }
+      }
+
+      if (!user) {
+        return { exists: false, error: 'CPF não encontrado no sistema.' };
       }
       return { exists: true, userName: user.name };
     } catch (err: any) {
@@ -242,7 +265,14 @@ export const authOperations = {
         return { success: false, error: 'A nova senha deve ter no máximo 32 caracteres.' };
       }
 
-      const user = await localDb.users.where('cpf').equals(cleanCpf).first();
+      let user = await localDb.users.where('cpf').equals(cleanCpf).first();
+      if (!user) {
+        const cloudUser = await FirestoreSyncService.findUserInCloud({ cpf: cleanCpf });
+        if (cloudUser) {
+          user = cloudUser;
+        }
+      }
+
       if (!user) {
         return { success: false, error: 'CPF não encontrado no banco de dados.' };
       }
@@ -251,10 +281,104 @@ export const authOperations = {
       user.passwordHash = passwordHash;
       await localDb.users.put(user);
 
+      // Seamlessly update cloud
+      FirestoreSyncService.updateUserPasswordInCloud(user.id, passwordHash).catch(console.warn);
+
       return { success: true };
     } catch (err: any) {
       console.error('Password reset error:', err);
       return { success: false, error: err?.message || 'Erro ao redefinir a senha.' };
+    }
+  },
+
+  async updateProfile(
+    userId: string,
+    profileData: {
+      name: string;
+      email: string;
+      cpf: string;
+      photoUrl?: string | null;
+      newPassword?: string;
+    }
+  ): Promise<{ success: boolean; user?: User; error?: string }> {
+    try {
+      const user = await localDb.users.get(userId);
+      if (!user) {
+        return { success: false, error: 'Usuário não encontrado.' };
+      }
+
+      const cleanName = profileData.name.trim();
+      const cleanEmail = profileData.email.trim().toLowerCase();
+      const cleanCpf = unmaskCpf(profileData.cpf);
+
+      if (!cleanName || cleanName.length < 2) {
+        return { success: false, error: 'O nome deve conter pelo menos 2 caracteres.' };
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(cleanEmail)) {
+        return { success: false, error: 'Informe um e-mail válido.' };
+      }
+      if (!cleanCpf || cleanCpf.length !== 11 || !validateCpf(cleanCpf)) {
+        return { success: false, error: 'Informe um CPF válido com 11 dígitos.' };
+      }
+
+      // Check if email is used by another user
+      const otherEmail = await localDb.users.where('email').equalsIgnoreCase(cleanEmail).first();
+      if (otherEmail && otherEmail.id !== userId) {
+        return { success: false, error: 'Este e-mail já pertence a outro usuário.' };
+      }
+
+      // Check if CPF is used by another user
+      const otherCpf = await localDb.users.where('cpf').equals(cleanCpf).first();
+      if (otherCpf && otherCpf.id !== userId) {
+        return { success: false, error: 'Este CPF já pertence a outro usuário.' };
+      }
+
+      user.name = cleanName;
+      user.email = cleanEmail;
+      user.cpf = cleanCpf;
+
+      if (profileData.photoUrl !== undefined) {
+        user.photoUrl = profileData.photoUrl === null ? undefined : profileData.photoUrl;
+      }
+
+      let newPasswordHash: string | undefined = undefined;
+      if (profileData.newPassword && profileData.newPassword.trim().length > 0) {
+        if (profileData.newPassword.trim().length < 6) {
+          return { success: false, error: 'A nova senha deve ter no mínimo 6 caracteres.' };
+        }
+        newPasswordHash = await hashPassword(profileData.newPassword.trim());
+        user.passwordHash = newPasswordHash;
+      }
+
+      await localDb.users.put(user);
+      await localDb.settings.put({ key: 'active_session_user_id', value: user.id });
+
+      // Sincronização imediata para a nuvem (SEM a foto, conforme solicitado: apenas local)
+      try {
+        await FirestoreSyncService.updateUserProfileInCloud(userId, {
+          name: cleanName,
+          email: cleanEmail,
+          cpf: cleanCpf,
+          passwordHash: newPasswordHash,
+        });
+      } catch (cloudErr) {
+        console.warn('Could not immediately sync user profile to cloud:', cloudErr);
+      }
+
+      return {
+        success: true,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          cpf: user.cpf,
+          photoUrl: user.photoUrl,
+          createdAt: user.createdAt,
+        },
+      };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Erro ao atualizar perfil.' };
     }
   },
 
@@ -271,6 +395,7 @@ export const authOperations = {
         name: userRecord.name,
         email: userRecord.email,
         cpf: userRecord.cpf,
+        photoUrl: userRecord.photoUrl,
         createdAt: userRecord.createdAt,
       };
     } catch (e) {
@@ -310,12 +435,17 @@ export async function loadUserData(userId: string): Promise<{
       localDb.settings.toArray(),
     ]);
 
-    // Strictly filter by current userId
-    const userTx = allTx.filter((t) => t.userId === userId);
-    const userInst = allInst.filter((i) => i.userId === userId);
-    const userCat = allCat.filter((c) => c.userId === userId);
-    const userBudgets = allBudgets.filter((b) => b.userId === userId);
-    const userGoals = allGoals.filter((g) => g.userId === userId);
+    // Load local deletion tombstones
+    const tombstoneKey = `deleted_records_${userId}`;
+    const tombstoneSetting = await localDb.settings.get(tombstoneKey);
+    const tombstoneSet = new Set<string>(Array.isArray(tombstoneSetting?.value) ? tombstoneSetting.value : []);
+
+    // Strictly filter by current userId and exclude deleted or tombstoned records
+    const userTx = allTx.filter((t) => t.userId === userId && !t.isDeleted && t.syncStatus !== 'pendingDelete' && !tombstoneSet.has(t.id));
+    const userInst = allInst.filter((i) => i.userId === userId && !i.isDeleted && i.syncStatus !== 'pendingDelete' && !tombstoneSet.has(i.id));
+    const userCat = allCat.filter((c) => c.userId === userId && !c.isDeleted && c.syncStatus !== 'pendingDelete' && !tombstoneSet.has(c.id));
+    const userBudgets = allBudgets.filter((b) => b.userId === userId && !b.isDeleted && b.syncStatus !== 'pendingDelete' && !tombstoneSet.has(b.id));
+    const userGoals = allGoals.filter((g) => g.userId === userId && !g.isDeleted && g.syncStatus !== 'pendingDelete' && !tombstoneSet.has(g.id));
 
     const settings: Record<string, any> = {};
     const prefix = `user_${userId}_`;
@@ -358,62 +488,157 @@ export const dbOperations = {
 
   // Transactions
   async saveTransaction(transaction: Transaction, userId: string): Promise<void> {
-    await localDb.transactions.put({ ...transaction, userId });
+    const item: Transaction = {
+      ...transaction,
+      userId,
+      syncStatus: 'pendingUpload',
+      updatedAt: Date.now(),
+      isDeleted: false,
+    };
+    await localDb.transactions.put(item);
+    FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
   },
   async saveTransactions(transactions: Transaction[], userId: string): Promise<void> {
-    const tagged = transactions.map((t) => ({ ...t, userId }));
+    const now = Date.now();
+    const tagged = transactions.map((t) => ({
+      ...t,
+      userId,
+      syncStatus: 'pendingUpload' as const,
+      updatedAt: now,
+      isDeleted: false,
+    }));
     await localDb.transactions.bulkPut(tagged);
+    FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
   },
-  async deleteTransaction(id: string): Promise<void> {
+  async deleteTransaction(id: string, userId?: string): Promise<void> {
     await localDb.transactions.delete(id);
+    if (userId) {
+      FirestoreSyncService.deleteCloudRecord(userId, 'transactions', id).catch(() => {});
+    }
   },
 
   // Installments
   async saveInstallment(installment: DebtInstallment, userId: string): Promise<void> {
-    await localDb.installments.put({ ...installment, userId });
+    const item: DebtInstallment = {
+      ...installment,
+      userId,
+      syncStatus: 'pendingUpload',
+      updatedAt: Date.now(),
+      isDeleted: false,
+    };
+    await localDb.installments.put(item);
+    FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
   },
   async saveInstallments(installments: DebtInstallment[], userId: string): Promise<void> {
-    const tagged = installments.map((i) => ({ ...i, userId }));
+    const now = Date.now();
+    const tagged = installments.map((i) => ({
+      ...i,
+      userId,
+      syncStatus: 'pendingUpload' as const,
+      updatedAt: now,
+      isDeleted: false,
+    }));
     await localDb.installments.bulkPut(tagged);
+    FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
   },
-  async deleteInstallment(id: string): Promise<void> {
+  async deleteInstallment(id: string, userId?: string): Promise<void> {
     await localDb.installments.delete(id);
+    if (userId) {
+      FirestoreSyncService.deleteCloudRecord(userId, 'installments', id).catch(() => {});
+    }
   },
 
   // Categories
   async saveCategory(category: Category, userId: string): Promise<void> {
-    await localDb.categories.put({ ...category, userId });
+    const item: Category = {
+      ...category,
+      userId,
+      syncStatus: 'pendingUpload',
+      updatedAt: Date.now(),
+      isDeleted: false,
+    };
+    await localDb.categories.put(item);
+    FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
   },
   async saveCategories(categories: Category[], userId: string): Promise<void> {
-    const tagged = categories.map((c) => ({ ...c, userId }));
+    const now = Date.now();
+    const tagged = categories.map((c) => ({
+      ...c,
+      userId,
+      syncStatus: 'pendingUpload' as const,
+      updatedAt: now,
+      isDeleted: false,
+    }));
     await localDb.categories.bulkPut(tagged);
+    FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
   },
-  async deleteCategory(id: string): Promise<void> {
+  async deleteCategory(id: string, userId?: string): Promise<void> {
     await localDb.categories.delete(id);
+    if (userId) {
+      FirestoreSyncService.deleteCloudRecord(userId, 'categories', id).catch(() => {});
+    }
   },
 
   // Budgets
   async saveBudget(budget: Budget, userId: string): Promise<void> {
-    await localDb.budgets.put({ ...budget, userId });
+    const item: Budget = {
+      ...budget,
+      userId,
+      syncStatus: 'pendingUpload',
+      updatedAt: Date.now(),
+      isDeleted: false,
+    };
+    await localDb.budgets.put(item);
+    FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
   },
   async saveBudgets(budgets: Budget[], userId: string): Promise<void> {
-    const tagged = budgets.map((b) => ({ ...b, userId }));
+    const now = Date.now();
+    const tagged = budgets.map((b) => ({
+      ...b,
+      userId,
+      syncStatus: 'pendingUpload' as const,
+      updatedAt: now,
+      isDeleted: false,
+    }));
     await localDb.budgets.bulkPut(tagged);
+    FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
   },
-  async deleteBudget(id: string): Promise<void> {
+  async deleteBudget(id: string, userId?: string): Promise<void> {
     await localDb.budgets.delete(id);
+    if (userId) {
+      FirestoreSyncService.deleteCloudRecord(userId, 'budgets', id).catch(() => {});
+    }
   },
 
   // Savings Goals
   async saveGoal(goal: SavingsGoal, userId: string): Promise<void> {
-    await localDb.savingsGoals.put({ ...goal, userId });
+    const item: SavingsGoal = {
+      ...goal,
+      userId,
+      syncStatus: 'pendingUpload',
+      updatedAt: Date.now(),
+      isDeleted: false,
+    };
+    await localDb.savingsGoals.put(item);
+    FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
   },
   async saveGoals(goals: SavingsGoal[], userId: string): Promise<void> {
-    const tagged = goals.map((g) => ({ ...g, userId }));
+    const now = Date.now();
+    const tagged = goals.map((g) => ({
+      ...g,
+      userId,
+      syncStatus: 'pendingUpload' as const,
+      updatedAt: now,
+      isDeleted: false,
+    }));
     await localDb.savingsGoals.bulkPut(tagged);
+    FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
   },
-  async deleteGoal(id: string): Promise<void> {
+  async deleteGoal(id: string, userId?: string): Promise<void> {
     await localDb.savingsGoals.delete(id);
+    if (userId) {
+      FirestoreSyncService.deleteCloudRecord(userId, 'savingsGoals', id).catch(() => {});
+    }
   },
 
   // Settings

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   CreditCard, 
   Plus, 
@@ -9,7 +9,9 @@ import {
   Landmark, 
   Calendar,
   ArrowUpRight,
-  ArrowDownUp
+  ArrowDownUp,
+  Search,
+  X
 } from 'lucide-react';
 import { DebtInstallment, TransactionStatus } from '../types';
 import { formatCurrency } from '../utils/formatters';
@@ -39,6 +41,20 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
   isBalanceHidden = false,
 }) => {
   const [sortOrder, setSortOrder] = useState<'amount-desc' | 'amount-asc' | 'dueDay-asc'>('amount-desc');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Compute installment state for the selected month
   const computedList: ComputedInstallment[] = installments.map((inst) =>
@@ -49,27 +65,48 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
   // Finished installments (current > total) are automatically excluded as requested!
   const activeComputedList = computedList.filter((item) => item.isActive);
 
+  // Autocomplete suggestions based on installment descriptions
+  const autocompleteSuggestions = Array.from(
+    new Set(
+      activeComputedList
+        .map((i) => i.installment.description)
+        .filter((desc) => desc.toLowerCase().includes(searchQuery.toLowerCase().trim()))
+    )
+  ).slice(0, 5);
+
+  // Filter by search query
+  const filteredActiveList = activeComputedList.filter((item) => {
+    if (!searchQuery.trim()) return true;
+    const term = searchQuery.toLowerCase().trim();
+    const inst = item.installment;
+    return (
+      inst.description.toLowerCase().includes(term) ||
+      inst.category.toLowerCase().includes(term) ||
+      inst.origin.toLowerCase().includes(term)
+    );
+  });
+
   // Sort: default is highest monthly amount to lowest (do maior para o menor)
-  const sortedList = [...activeComputedList].sort((a, b) => {
+  const sortedList = [...filteredActiveList].sort((a, b) => {
     if (sortOrder === 'amount-desc') return b.installment.monthlyAmount - a.installment.monthlyAmount;
     if (sortOrder === 'amount-asc') return a.installment.monthlyAmount - b.installment.monthlyAmount;
     if (sortOrder === 'dueDay-asc') return (a.installment.dueDay || 1) - (b.installment.dueDay || 1);
     return 0;
   });
 
-  // Calculations for current month
-  const totalMonthlyAmount = sortedList.reduce((sum, item) => sum + item.installment.monthlyAmount, 0);
-  const paidMonthlyAmount = sortedList
+  // Calculations for current month (computed from all active in month)
+  const totalMonthlyAmount = activeComputedList.reduce((sum, item) => sum + item.installment.monthlyAmount, 0);
+  const paidMonthlyAmount = activeComputedList
     .filter((i) => i.status === 'completed')
     .reduce((sum, item) => sum + item.installment.monthlyAmount, 0);
   const pendingMonthlyAmount = totalMonthlyAmount - paidMonthlyAmount;
 
   // Global calculations across active debt commitments
-  const totalContractedDebt = sortedList.reduce(
+  const totalContractedDebt = activeComputedList.reduce(
     (sum, item) => sum + item.installment.monthlyAmount * item.total,
     0
   );
-  const totalPaidDebt = sortedList.reduce(
+  const totalPaidDebt = activeComputedList.reduce(
     (sum, item) => sum + item.installment.monthlyAmount * item.current,
     0
   );
@@ -163,6 +200,55 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
 
       {/* Lista de Parcelas */}
       <div className="space-y-2.5">
+        {/* Name Filter with Autocomplete for Installments */}
+        {activeComputedList.length > 0 && (
+          <div ref={searchContainerRef} className="relative z-10 px-1">
+            <div className="relative">
+              <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-2.5 pointer-events-none" />
+              <input
+                type="text"
+                id="input-search-installments"
+                placeholder="Buscar parcela por nome..."
+                value={searchQuery}
+                onFocus={() => setShowSuggestions(true)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                className="w-full pl-9 pr-8 py-2 text-xs font-medium text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:border-amber-500 focus:outline-hidden transition-all placeholder:text-neutral-400 shadow-2xs"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-2.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-0.5 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Autocomplete suggestions dropdown */}
+            {showSuggestions && searchQuery.trim() && autocompleteSuggestions.length > 0 && (
+              <div className="absolute top-full left-1 right-1 mt-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl overflow-hidden z-30 py-1">
+                {autocompleteSuggestions.map((suggestion, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery(suggestion);
+                      setShowSuggestions(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs text-neutral-800 dark:text-neutral-200 hover:bg-amber-50 dark:hover:bg-amber-950/40 flex items-center justify-between cursor-pointer"
+                  >
+                    <span>{suggestion}</span>
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">Selecionar</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center gap-1.5">
             <span>Contratos Ativos</span>
@@ -183,7 +269,7 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
           </div>
         </div>
 
-        {sortedList.length === 0 ? (
+        {activeComputedList.length === 0 ? (
           <div className="p-8 text-center bg-white dark:bg-neutral-900 rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-800 space-y-3">
             <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
               <CreditCard className="w-6 h-6" />
@@ -202,6 +288,18 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
             >
               <Plus className="w-4 h-4" />
               <span>Cadastrar Nova Parcela</span>
+            </button>
+          </div>
+        ) : sortedList.length === 0 ? (
+          <div className="p-8 text-center bg-white dark:bg-neutral-900 rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-800 space-y-3">
+            <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
+              Nenhuma parcela encontrada para &quot;{searchQuery}&quot;.
+            </p>
+            <button
+              onClick={() => setSearchQuery('')}
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 text-xs font-bold rounded-xl cursor-pointer"
+            >
+              Limpar busca
             </button>
           </div>
         ) : (

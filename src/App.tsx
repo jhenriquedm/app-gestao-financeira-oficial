@@ -10,6 +10,7 @@ import {
   User 
 } from './types';
 import { authOperations, loadUserData, dbOperations } from './db/localDatabase';
+import { FirestoreSyncService } from './services/firestoreSyncService';
 import { AuthScreen } from './components/AuthScreen';
 import { SplashScreen } from './components/SplashScreen';
 import { MobileFrame } from './components/MobileFrame';
@@ -28,6 +29,7 @@ import { InstallmentModal } from './components/InstallmentModal';
 import { NewLaunchSheet } from './components/NewLaunchSheet';
 import { ConfirmDeleteModal } from './components/ConfirmDeleteModal';
 import { CategoryManagerModal } from './components/CategoryManagerModal';
+import { ProfileModal } from './components/ProfileModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { getComputedInstallment } from './utils/installmentHelpers';
 import { getTransactionsForMonth } from './utils/transactionHelpers';
@@ -55,6 +57,28 @@ export const App: React.FC = () => {
   // Month competence
   const [currentYearMonth, setCurrentYearMonth] = useState<string>(() => getCurrentYearMonth());
 
+  // Cloud sync state
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
+  const handleSyncCloud = async () => {
+    if (!currentUser || isSyncing) return;
+    setIsSyncing(true);
+    try {
+      await FirestoreSyncService.fullSync(currentUser.id);
+      const data = await loadUserData(currentUser.id);
+      setCategories(data.categories || []);
+      setParcelCategories(data.parcelCategories || []);
+      setTransactions(data.transactions || []);
+      setInstallments(data.installments || []);
+      setBudgets(data.budgets || []);
+      setGoals(data.savingsGoals || []);
+    } catch (e) {
+      console.warn('Sync failed:', e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   // Check active session and load user data on mount
   useEffect(() => {
     let isMounted = true;
@@ -80,6 +104,22 @@ export const App: React.FC = () => {
             if (data.settings.isBalanceHidden !== undefined) setIsBalanceHidden(Boolean(data.settings.isBalanceHidden));
             if (data.settings.currentYearMonth) setCurrentYearMonth(String(data.settings.currentYearMonth));
           }
+
+          // Trigger background sync with Firestore for active session
+          FirestoreSyncService.fullSync(activeUser.id)
+            .then(async (result) => {
+              if (result.success && result.downloadedCount > 0 && isMounted) {
+                const refreshed = await loadUserData(activeUser.id);
+                if (!isMounted) return;
+                setCategories(refreshed.categories || []);
+                setParcelCategories(refreshed.parcelCategories || []);
+                setTransactions(refreshed.transactions || []);
+                setInstallments(refreshed.installments || []);
+                setBudgets(refreshed.budgets || []);
+                setGoals(refreshed.savingsGoals || []);
+              }
+            })
+            .catch(() => {});
         }
       } catch (err) {
         console.error('Session initialization error:', err);
@@ -111,6 +151,21 @@ export const App: React.FC = () => {
         if (data.settings.currentYearMonth) setCurrentYearMonth(String(data.settings.currentYearMonth));
       }
       setActiveTab('overview');
+
+      // Trigger background sync with Firestore
+      FirestoreSyncService.fullSync(user.id)
+        .then(async (result) => {
+          if (result.success && result.downloadedCount > 0) {
+            const refreshed = await loadUserData(user.id);
+            setCategories(refreshed.categories || []);
+            setParcelCategories(refreshed.parcelCategories || []);
+            setTransactions(refreshed.transactions || []);
+            setInstallments(refreshed.installments || []);
+            setBudgets(refreshed.budgets || []);
+            setGoals(refreshed.savingsGoals || []);
+          }
+        })
+        .catch(() => {});
     } catch (e) {
       console.error('Error loading data after login:', e);
     }
@@ -230,6 +285,7 @@ export const App: React.FC = () => {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [categoryModalInitialTab, setCategoryModalInitialTab] = useState<'fixed' | 'parcelas' | 'income'>('fixed');
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const handleOpenCategoryManager = (tab: 'fixed' | 'parcelas' | 'income' = 'fixed') => {
     setCategoryModalInitialTab(tab);
@@ -439,14 +495,16 @@ export const App: React.FC = () => {
                 // Se a despesa foi criada exatamente no mês atual ou posterior, remove ou marca deletedFromMonthYear
                 const startMonth = t.startMonthYear || t.date.slice(0, 7);
                 if (currentYearMonth <= startMonth) {
-                  dbOperations.deleteTransaction(id).catch(console.error);
+                  dbOperations.deleteTransaction(id, currentUser?.id).catch(console.error);
                   return null; // Removida completamente
                 }
                 // Despesa fixa: cancelada a partir deste mês (e meses subsequentes)
-                return { ...t, deletedFromMonthYear: currentYearMonth };
+                const updated = { ...t, deletedFromMonthYear: currentYearMonth };
+                if (currentUser) dbOperations.saveTransaction(updated, currentUser.id).catch(console.error);
+                return updated;
               }
               // Transação variável: remove
-              dbOperations.deleteTransaction(id).catch(console.error);
+              dbOperations.deleteTransaction(id, currentUser?.id).catch(console.error);
               return null;
             }
             return t;
@@ -454,20 +512,28 @@ export const App: React.FC = () => {
           .filter(Boolean) as Transaction[]
       );
     } else if (type === 'installment') {
-      setInstallments((prev) =>
-        prev.map((inst) => {
-          if (inst.id === id) {
-            // Parcela: cancelada a partir deste mês (e meses subsequentes)
-            return { ...inst, deletedFromMonthYear: currentYearMonth };
-          }
-          return inst;
-        })
-      );
+      const target = installments.find((inst) => inst.id === id);
+      const startMonth = target?.competence || '';
+      if (!target || !startMonth || currentYearMonth <= startMonth) {
+        dbOperations.deleteInstallment(id, currentUser?.id).catch(console.error);
+        setInstallments((prev) => prev.filter((inst) => inst.id !== id));
+      } else {
+        setInstallments((prev) =>
+          prev.map((inst) => {
+            if (inst.id === id) {
+              const updated = { ...inst, deletedFromMonthYear: currentYearMonth };
+              if (currentUser) dbOperations.saveInstallment(updated, currentUser.id).catch(console.error);
+              return updated;
+            }
+            return inst;
+          })
+        );
+      }
     } else if (type === 'goal') {
-      dbOperations.deleteGoal(id).catch(console.error);
+      dbOperations.deleteGoal(id, currentUser?.id).catch(console.error);
       setGoals((prev) => prev.filter((g) => g.id !== id));
     } else if (type === 'budget') {
-      dbOperations.deleteBudget(id).catch(console.error);
+      dbOperations.deleteBudget(id, currentUser?.id).catch(console.error);
       setBudgets((prev) => prev.filter((b) => b.id !== id));
     }
     setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
@@ -665,6 +731,7 @@ export const App: React.FC = () => {
       budgets.some((b) => b.categoryId === id) ||
       installments.some((i) => i.category === catName || i.category === id);
     if (isUsed) return;
+    dbOperations.deleteCategory(id, currentUser?.id).catch(console.error);
     setCategories((prev) => prev.filter((c) => c.id !== id));
   };
 
@@ -734,6 +801,9 @@ export const App: React.FC = () => {
         onOpenCategoryManager={() => handleOpenCategoryManager('fixed')}
         onOpenNewTransaction={() => setIsNewLaunchSheetOpen(true)}
         onOpenExportImport={() => setIsExportModalOpen(true)}
+        onOpenProfile={() => setIsProfileModalOpen(true)}
+        onSyncCloud={handleSyncCloud}
+        isSyncing={isSyncing}
         onNavigateTab={(tab) => {
           setActiveTab(tab);
           const scrollEl = document.getElementById('smartphone-content-scroll') || document.getElementById('smartphone-screen');
@@ -949,6 +1019,7 @@ export const App: React.FC = () => {
         }}
         onSave={handleSaveTransaction}
         categories={categories}
+        existingTransactions={transactions}
         initialData={editingTransaction}
         initialType={txModalInitialType}
         isFixedDefault={txModalIsFixedDefault}
@@ -963,6 +1034,7 @@ export const App: React.FC = () => {
           setEditingInstallment(null);
         }}
         onSave={handleSaveInstallment}
+        existingInstallments={installments}
         initialData={editingInstallment}
         competence={currentYearMonth}
         parcelCategories={parcelCategories}
@@ -991,6 +1063,7 @@ export const App: React.FC = () => {
       <ExportImportModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
+        userId={currentUser?.id}
         transactions={transactions}
         categories={categories}
         budgets={budgets}
@@ -1008,6 +1081,15 @@ export const App: React.FC = () => {
         description={deleteModalState.description}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteModalState((prev) => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* Profile Modal */}
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        user={currentUser}
+        onUpdateUser={(updatedUser) => setCurrentUser(updatedUser)}
+        onLogout={handleLogout}
       />
 
       {/* PWA Offline Toast */}

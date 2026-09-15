@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Target, Edit2, CheckCircle2, ShieldAlert, Trash2, Plus, X, Tag } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Target, Edit2, CheckCircle2, ShieldAlert, Trash2, Plus, X, Tag, Search, Check } from 'lucide-react';
 import { Budget, Category, Transaction } from '../types';
 import { formatCurrency } from '../utils/formatters';
 import { CategoryIcon } from './CategoryIcon';
@@ -37,7 +37,53 @@ export const BudgetsSection: React.FC<BudgetsSectionProps> = ({
   const [formData, setFormData] = useState<BudgetFormData | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formError, setFormError] = useState('');
+  const [successFeedback, setSuccessFeedback] = useState<string | null>(null);
   const [deletingBudgetId, setDeletingBudgetId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [lastSaved, setLastSaved] = useState<{
+    name: string;
+    categoryId: string;
+    limit: number;
+    timestamp: number;
+  } | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const successTimerRef = useRef<any>(null);
+  const errorTimerRef = useRef<any>(null);
+
+  const triggerError = (msg: string) => {
+    setFormError(msg);
+    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    errorTimerRef.current = setTimeout(() => {
+      setFormError('');
+    }, 3000);
+  };
+
+  const triggerSuccess = (msg: string) => {
+    setSuccessFeedback(msg);
+    if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    successTimerRef.current = setTimeout(() => {
+      setSuccessFeedback(null);
+    }, 3000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    };
+  }, []);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Filter and sort expense categories alphabetically
   const expenseCategories = categories
@@ -61,6 +107,25 @@ export const BudgetsSection: React.FC<BudgetsSectionProps> = ({
   const totalSpentInBudgeted = budgets.reduce((sum, b) => sum + (spentPerCategory[b.categoryId] || 0), 0);
   const overallBudgetPercent = totalBudgeted > 0 ? (totalSpentInBudgeted / totalBudgeted) * 100 : 0;
 
+  // Autocomplete suggestions based on existing budget names and category names
+  const autocompleteSuggestions = Array.from(
+    new Set(
+      budgets
+        .map((b) => b.name || categoryMap.get(b.categoryId)?.name || '')
+        .filter((name) => name.trim() && name.toLowerCase().includes(searchQuery.toLowerCase().trim()))
+    )
+  ).slice(0, 5);
+
+  // Filter budgets by search query
+  const filteredBudgets = budgets.filter((b) => {
+    if (!searchQuery.trim()) return true;
+    const term = searchQuery.toLowerCase().trim();
+    const cat = categoryMap.get(b.categoryId);
+    const matchName = b.name ? b.name.toLowerCase().includes(term) : false;
+    const matchCat = cat?.name ? cat.name.toLowerCase().includes(term) : false;
+    return matchName || matchCat;
+  });
+
   const handleOpenCreate = () => {
     const defaultCat = expenseCategories[0];
     setFormData({
@@ -69,6 +134,7 @@ export const BudgetsSection: React.FC<BudgetsSectionProps> = ({
       monthlyLimit: '500,00',
     });
     setFormError('');
+    setSuccessFeedback(null);
     setIsFormOpen(true);
   };
 
@@ -81,6 +147,7 @@ export const BudgetsSection: React.FC<BudgetsSectionProps> = ({
       monthlyLimit: formatCurrencyInput(budget.monthlyLimit),
     });
     setFormError('');
+    setSuccessFeedback(null);
     setIsFormOpen(true);
   };
 
@@ -88,6 +155,7 @@ export const BudgetsSection: React.FC<BudgetsSectionProps> = ({
     setFormData(null);
     setIsFormOpen(false);
     setFormError('');
+    setSuccessFeedback(null);
   };
 
   const handleCategoryChange = (newCatId: string) => {
@@ -107,29 +175,49 @@ export const BudgetsSection: React.FC<BudgetsSectionProps> = ({
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData) return;
+    setSuccessFeedback(null);
 
     const trimmedName = formData.name.trim();
     if (!trimmedName) {
-      setFormError('Por favor, informe o nome do teto.');
+      triggerError('Por favor, informe o nome do teto.');
       return;
     }
 
     if (trimmedName.length > MAX_NAME_LENGTH) {
-      setFormError(`O nome do teto não pode exceder ${MAX_NAME_LENGTH} caracteres.`);
+      triggerError(`O nome do teto não pode exceder ${MAX_NAME_LENGTH} caracteres.`);
       return;
     }
 
     if (!formData.categoryId) {
-      setFormError('Por favor, selecione uma categoria vinculada.');
+      triggerError('Por favor, selecione uma categoria vinculada.');
       return;
     }
 
     const limit = parseCurrencyInput(formData.monthlyLimit);
     if (limit <= 0) {
-      setFormError('Por favor, informe um valor de limite mensal maior que zero.');
+      triggerError('Por favor, informe um valor de limite mensal maior que zero.');
       return;
     }
 
+    // Protection against duplicate records
+    const isDuplicate = budgets.some((b) => {
+      if (formData.id && b.id === formData.id) return false;
+      const sameCat = b.categoryId === formData.categoryId;
+      const sameName = b.name && b.name.trim().toLowerCase() === trimmedName.toLowerCase();
+      return sameCat || sameName;
+    }) || (
+      lastSaved &&
+      lastSaved.name.toLowerCase() === trimmedName.toLowerCase() &&
+      lastSaved.categoryId === formData.categoryId &&
+      lastSaved.limit === limit
+    );
+
+    if (isDuplicate) {
+      triggerError('Este registro já existe no sistema.');
+      return;
+    }
+
+    const now = Date.now();
     onSaveBudget({
       id: formData.id || `b-${Date.now()}`,
       name: trimmedName,
@@ -137,7 +225,28 @@ export const BudgetsSection: React.FC<BudgetsSectionProps> = ({
       monthlyLimit: limit,
     });
 
-    handleCloseForm();
+    setLastSaved({
+      name: trimmedName,
+      categoryId: formData.categoryId,
+      limit,
+      timestamp: now,
+    });
+
+    if (formData.id) {
+      triggerSuccess('Teto de gastos atualizado com sucesso!');
+      setFormError('');
+    } else {
+      // Keep modal open for next budget, advance to next unused category if possible
+      triggerSuccess('Teto salvo com sucesso! O modal continua aberto para definir novos tetos.');
+      setFormError('');
+      const unusedCat = expenseCategories.find((c) => !budgets.some((b) => b.categoryId === c.id && b.categoryId !== formData.categoryId));
+      const nextCat = unusedCat || expenseCategories[0];
+      setFormData({
+        name: nextCat ? nextCat.name : '',
+        categoryId: nextCat ? nextCat.id : '',
+        monthlyLimit: '500,00',
+      });
+    }
   };
 
   return (
@@ -209,6 +318,15 @@ export const BudgetsSection: React.FC<BudgetsSectionProps> = ({
             </div>
 
             <form onSubmit={handleSave} className="p-4 space-y-3.5">
+              {successFeedback && (
+                <div id="budget-success-message" className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                    <Check className="w-3 h-3" />
+                  </div>
+                  <span>{successFeedback}</span>
+                </div>
+              )}
+
               {formError && (
                 <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-medium">
                   {formError}
@@ -315,13 +433,13 @@ export const BudgetsSection: React.FC<BudgetsSectionProps> = ({
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
                 <button
                   type="button"
                   onClick={handleCloseForm}
                   className="px-3 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
                 >
-                  Cancelar
+                  {successFeedback ? 'Concluir e Fechar' : 'Cancelar'}
                 </button>
                 <button
                   type="submit"
@@ -367,6 +485,55 @@ export const BudgetsSection: React.FC<BudgetsSectionProps> = ({
         </div>
       )}
 
+      {/* Name Filter with Autocomplete for Tetos */}
+      {budgets.length > 0 && (
+        <div ref={searchContainerRef} className="relative z-10">
+          <div className="relative">
+            <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-2.5 pointer-events-none" />
+            <input
+              type="text"
+              id="input-search-budgets"
+              placeholder="Buscar teto por nome..."
+              value={searchQuery}
+              onFocus={() => setShowSuggestions(true)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowSuggestions(true);
+              }}
+              className="w-full pl-9 pr-8 py-2 text-xs font-medium text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:bg-white dark:focus:bg-neutral-800 focus:border-indigo-500 focus:outline-hidden transition-all placeholder:text-neutral-400"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-2.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-0.5 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Autocomplete suggestions dropdown */}
+          {showSuggestions && searchQuery.trim() && autocompleteSuggestions.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl overflow-hidden z-30 py-1">
+              {autocompleteSuggestions.map((suggestion, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery(suggestion);
+                    setShowSuggestions(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs text-neutral-800 dark:text-neutral-200 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 flex items-center justify-between cursor-pointer"
+                >
+                  <span>{suggestion}</span>
+                  <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">Selecionar</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Category Budgets List */}
       <div id="budgets-grid" className="flex flex-col gap-3 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
         {budgets.length === 0 ? (
@@ -382,8 +549,20 @@ export const BudgetsSection: React.FC<BudgetsSectionProps> = ({
               + Criar primeiro teto de gastos
             </button>
           </div>
+        ) : filteredBudgets.length === 0 ? (
+          <div className="p-6 text-center rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 bg-neutral-50/50 dark:bg-neutral-800/30">
+            <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
+              Nenhum teto encontrado para &quot;{searchQuery}&quot;.
+            </p>
+            <button
+              onClick={() => setSearchQuery('')}
+              className="mt-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+            >
+              Limpar busca
+            </button>
+          </div>
         ) : (
-          budgets.map((budget) => {
+          filteredBudgets.map((budget) => {
             const cat = categoryMap.get(budget.categoryId);
             const spent = spentPerCategory[budget.categoryId] || 0;
             const percentage = budget.monthlyLimit > 0 ? (spent / budget.monthlyLimit) * 100 : 0;

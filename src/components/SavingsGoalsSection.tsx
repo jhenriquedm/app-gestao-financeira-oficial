@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { PiggyBank, Plus, Trophy, Calendar, Trash2, Edit2, Check, X, AlertCircle } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { PiggyBank, Plus, Trophy, Calendar, Trash2, Edit2, Check, X, AlertCircle, Search } from 'lucide-react';
 import { SavingsGoal } from '../types';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { CategoryIcon } from './CategoryIcon';
@@ -29,6 +29,66 @@ export const SavingsGoalsSection: React.FC<SavingsGoalsSectionProps> = ({
   const [currentAmount, setCurrentAmount] = useState('');
   const [targetDate, setTargetDate] = useState('');
   const [createError, setCreateError] = useState('');
+  const [successFeedback, setSuccessFeedback] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [lastSaved, setLastSaved] = useState<{
+    title: string;
+    targetAmount: number;
+    timestamp: number;
+  } | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const successTimerRef = useRef<any>(null);
+  const errorTimerRef = useRef<any>(null);
+
+  const triggerCreateError = (msg: string) => {
+    setCreateError(msg);
+    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    errorTimerRef.current = setTimeout(() => {
+      setCreateError('');
+    }, 3000);
+  };
+
+  const triggerSuccess = (msg: string) => {
+    setSuccessFeedback(msg);
+    if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    successTimerRef.current = setTimeout(() => {
+      setSuccessFeedback(null);
+    }, 3000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    };
+  }, []);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter goals by search query
+  const filteredGoals = goals.filter((g) => {
+    if (!searchQuery.trim()) return true;
+    return g.title.toLowerCase().includes(searchQuery.toLowerCase().trim());
+  });
+
+  // Autocomplete suggestions based on existing goal titles
+  const autocompleteSuggestions = Array.from(
+    new Set(
+      goals
+        .map((g) => g.title)
+        .filter((t) => t.toLowerCase().includes(searchQuery.toLowerCase().trim()))
+    )
+  ).slice(0, 5);
 
   // Editing state
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
@@ -40,15 +100,29 @@ export const SavingsGoalsSection: React.FC<SavingsGoalsSectionProps> = ({
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
+    setSuccessFeedback(null);
+
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
-      setCreateError('Por favor, informe o título da meta.');
+      triggerCreateError('Por favor, informe o título da meta.');
       return;
     }
 
     const target = parseCurrencyInput(targetAmount);
     if (target <= 0) {
-      setCreateError('O valor alvo deve ser maior que zero (Ex: R$ 5.000,00).');
+      triggerCreateError('O valor alvo deve ser maior que zero (Ex: R$ 5.000,00).');
+      return;
+    }
+
+    // Protection against duplicate records
+    const isDuplicate = goals.some((g) => g.title.trim().toLowerCase() === trimmedTitle.toLowerCase()) || (
+      lastSaved &&
+      lastSaved.title.toLowerCase() === trimmedTitle.toLowerCase() &&
+      lastSaved.targetAmount === target
+    );
+
+    if (isDuplicate) {
+      triggerCreateError('Este registro já existe no sistema.');
       return;
     }
 
@@ -63,12 +137,20 @@ export const SavingsGoalsSection: React.FC<SavingsGoalsSectionProps> = ({
       iconName: 'ShieldCheck',
     });
 
+    const now = Date.now();
+    setLastSaved({
+      title: trimmedTitle,
+      targetAmount: target,
+      timestamp: now,
+    });
+
+    // Keep form open as requested, reset inputs and show success message
+    triggerSuccess('Meta cadastrada com sucesso! O formulário continua aberto para novos objetivos.');
     setTitle('');
     setTargetAmount('');
     setCurrentAmount('');
     setTargetDate('');
     setCreateError('');
-    setIsAdding(false);
   };
 
   const handleStartEdit = (goal: SavingsGoal) => {
@@ -139,6 +221,15 @@ export const SavingsGoalsSection: React.FC<SavingsGoalsSectionProps> = ({
         <form onSubmit={handleCreate} className="p-3.5 bg-teal-50/50 dark:bg-teal-950/20 border border-teal-200/80 dark:border-teal-800/60 rounded-2xl space-y-3">
           <h4 className="text-xs font-bold text-teal-900 dark:text-teal-300 uppercase tracking-wider">Criar Novo Objetivo</h4>
           
+          {successFeedback && (
+            <div id="goal-success-message" className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                <Check className="w-3 h-3" />
+              </div>
+              <span>{successFeedback}</span>
+            </div>
+          )}
+
           {createError && (
             <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-[11px] font-medium flex items-center gap-1.5">
               <AlertCircle className="w-3.5 h-3.5 shrink-0" />
@@ -219,10 +310,11 @@ export const SavingsGoalsSection: React.FC<SavingsGoalsSectionProps> = ({
               onClick={() => {
                 setIsAdding(false);
                 setCreateError('');
+                setSuccessFeedback(null);
               }}
               className="px-3 py-1.5 text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
             >
-              Cancelar
+              {successFeedback ? 'Concluir e Fechar' : 'Cancelar'}
             </button>
             <button
               type="submit"
@@ -234,10 +326,72 @@ export const SavingsGoalsSection: React.FC<SavingsGoalsSectionProps> = ({
         </form>
       )}
 
+      {/* Name Filter with Autocomplete for Goals */}
+      {goals.length > 0 && (
+        <div ref={searchContainerRef} className="relative z-10">
+          <div className="relative">
+            <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-2.5 pointer-events-none" />
+            <input
+              type="text"
+              id="input-search-goals"
+              placeholder="Buscar meta por nome..."
+              value={searchQuery}
+              onFocus={() => setShowSuggestions(true)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowSuggestions(true);
+              }}
+              className="w-full pl-9 pr-8 py-2 text-xs font-medium text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:bg-white dark:focus:bg-neutral-800 focus:border-teal-500 focus:outline-hidden transition-all placeholder:text-neutral-400"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-2.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-0.5 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Autocomplete suggestions dropdown */}
+          {showSuggestions && searchQuery.trim() && autocompleteSuggestions.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl overflow-hidden z-30 py-1">
+              {autocompleteSuggestions.map((suggestion, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery(suggestion);
+                    setShowSuggestions(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs text-neutral-800 dark:text-neutral-200 hover:bg-teal-50 dark:hover:bg-teal-950/40 flex items-center justify-between cursor-pointer"
+                >
+                  <span>{suggestion}</span>
+                  <span className="text-[10px] text-teal-600 dark:text-teal-400 font-semibold">Selecionar</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Goals Grid */}
       <div id="goals-grid" className="flex flex-col gap-3 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
         {goals.length > 0 ? (
-          goals.map((goal) => {
+          filteredGoals.length === 0 ? (
+            <div className="p-6 text-center rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 bg-neutral-50/50 dark:bg-neutral-800/30">
+              <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
+                Nenhuma meta encontrada para &quot;{searchQuery}&quot;.
+              </p>
+              <button
+                onClick={() => setSearchQuery('')}
+                className="mt-2 text-xs font-semibold text-teal-600 dark:text-teal-400 hover:underline cursor-pointer"
+              >
+                Limpar busca
+              </button>
+            </div>
+          ) : (
+            filteredGoals.map((goal) => {
             const isEditing = editingGoalId === goal.id;
             const progress = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
             const remaining = Math.max(0, goal.targetAmount - goal.currentAmount);
@@ -464,7 +618,7 @@ export const SavingsGoalsSection: React.FC<SavingsGoalsSectionProps> = ({
               </div>
             );
           })
-        ) : (
+        )) : (
           <div className="p-8 text-center flex flex-col items-center justify-center">
             <PiggyBank className="w-10 h-10 text-neutral-300 dark:text-neutral-700 mb-2" />
             <h4 className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Nenhum objetivo cadastrado</h4>

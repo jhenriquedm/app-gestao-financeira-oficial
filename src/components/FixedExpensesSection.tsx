@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Building2, 
   Plus, 
@@ -9,7 +9,9 @@ import {
   Calendar,
   CheckCheck,
   RotateCcw,
-  ArrowDownUp
+  ArrowDownUp,
+  Search,
+  X
 } from 'lucide-react';
 import { Transaction, Category } from '../types';
 import { formatCurrency } from '../utils/formatters';
@@ -41,28 +43,59 @@ export const FixedExpensesSection: React.FC<FixedExpensesSectionProps> = ({
   isBalanceHidden = false,
 }) => {
   const [sortOrder, setSortOrder] = useState<'amount-desc' | 'amount-asc' | 'dueDay-asc'>('amount-desc');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Filter fixed expenses active in the current month
   const rawFixedExpenses = transactions.filter(
     (t) => t.type === 'expense' && t.isFixed && (!t.deletedFromMonthYear || currentYearMonth < t.deletedFromMonthYear)
   );
 
+  const categoryMap = new Map(categories.map((c) => [c.id, c]));
+
+  // Autocomplete suggestions based on fixed expense names and categories
+  const autocompleteSuggestions = Array.from(
+    new Set(
+      rawFixedExpenses
+        .map((t) => t.description)
+        .filter((desc) => desc.toLowerCase().includes(searchQuery.toLowerCase().trim()))
+    )
+  ).slice(0, 5);
+
+  // Filter by search query
+  const filteredRawExpenses = rawFixedExpenses.filter((t) => {
+    if (!searchQuery.trim()) return true;
+    const term = searchQuery.toLowerCase().trim();
+    const cat = categoryMap.get(t.categoryId);
+    return t.description.toLowerCase().includes(term) || (cat && cat.name.toLowerCase().includes(term));
+  });
+
   // Default sort: highest amount to lowest (do maior para o menor!)
-  const fixedExpenses = [...rawFixedExpenses].sort((a, b) => {
+  const fixedExpenses = [...filteredRawExpenses].sort((a, b) => {
     if (sortOrder === 'amount-desc') return b.amount - a.amount;
     if (sortOrder === 'amount-asc') return a.amount - b.amount;
     if (sortOrder === 'dueDay-asc') return (a.dueDay || 1) - (b.dueDay || 1);
     return 0;
   });
 
-  const totalFixed = fixedExpenses.reduce((sum, t) => sum + t.amount, 0);
-  const paidFixed = fixedExpenses
+  const totalFixed = rawFixedExpenses.reduce((sum, t) => sum + t.amount, 0);
+  const paidFixed = rawFixedExpenses
     .filter((t) => t.status === 'completed')
     .reduce((sum, t) => sum + t.amount, 0);
   const pendingFixed = totalFixed - paidFixed;
-  const paidCount = fixedExpenses.filter((t) => t.status === 'completed').length;
-
-  const categoryMap = new Map(categories.map((c) => [c.id, c]));
+  const paidCount = rawFixedExpenses.filter((t) => t.status === 'completed').length;
 
   return (
     <div id="section-fixed-expenses-manager" className="space-y-4">
@@ -159,6 +192,55 @@ export const FixedExpensesSection: React.FC<FixedExpensesSectionProps> = ({
 
       {/* Lista de Despesas Fixas */}
       <div className="space-y-2.5">
+        {/* Name Filter with Autocomplete for Fixed Expenses */}
+        {rawFixedExpenses.length > 0 && (
+          <div ref={searchContainerRef} className="relative z-10 px-1">
+            <div className="relative">
+              <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-2.5 pointer-events-none" />
+              <input
+                type="text"
+                id="input-search-fixed-expenses"
+                placeholder="Buscar despesa fixa por nome..."
+                value={searchQuery}
+                onFocus={() => setShowSuggestions(true)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                className="w-full pl-9 pr-8 py-2 text-xs font-medium text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:border-indigo-500 focus:outline-hidden transition-all placeholder:text-neutral-400 shadow-2xs"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-2.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-0.5 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Autocomplete suggestions dropdown */}
+            {showSuggestions && searchQuery.trim() && autocompleteSuggestions.length > 0 && (
+              <div className="absolute top-full left-1 right-1 mt-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl overflow-hidden z-30 py-1">
+                {autocompleteSuggestions.map((suggestion, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery(suggestion);
+                      setShowSuggestions(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs text-neutral-800 dark:text-neutral-200 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 flex items-center justify-between cursor-pointer"
+                  >
+                    <span>{suggestion}</span>
+                    <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">Selecionar</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center gap-1.5">
             <span>Despesas Recorrentes</span>
@@ -179,7 +261,7 @@ export const FixedExpensesSection: React.FC<FixedExpensesSectionProps> = ({
           </div>
         </div>
 
-        {fixedExpenses.length === 0 ? (
+        {rawFixedExpenses.length === 0 ? (
           <div className="p-8 text-center bg-white dark:bg-neutral-900 rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-800 space-y-3">
             <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto">
               <Building2 className="w-6 h-6" />
@@ -198,6 +280,18 @@ export const FixedExpensesSection: React.FC<FixedExpensesSectionProps> = ({
             >
               <Plus className="w-4 h-4" />
               <span>Cadastrar Despesa Fixa</span>
+            </button>
+          </div>
+        ) : fixedExpenses.length === 0 ? (
+          <div className="p-8 text-center bg-white dark:bg-neutral-900 rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-800 space-y-3">
+            <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
+              Nenhuma despesa fixa encontrada para &quot;{searchQuery}&quot;.
+            </p>
+            <button
+              onClick={() => setSearchQuery('')}
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-xl cursor-pointer"
+            >
+              Limpar busca
             </button>
           </div>
         ) : (

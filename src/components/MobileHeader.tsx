@@ -16,7 +16,7 @@ import {
   Tag,
   Calendar,
   X,
-  LogOut
+  LogOut,
 } from 'lucide-react';
 import { formatCurrency, formatMonthYear, getCurrentYearMonth } from '../utils/formatters';
 import { MonthlySummary, User } from '../types';
@@ -53,6 +53,9 @@ interface MobileHeaderProps {
   onOpenNewTransaction: (type?: 'income' | 'expense') => void;
   onOpenExportImport: () => void;
   onNavigateTab: (tab: AppNavTab) => void;
+  onOpenProfile?: () => void;
+  onSyncCloud?: () => void;
+  isSyncing?: boolean;
 }
 
 export const MobileHeader: React.FC<MobileHeaderProps> = ({
@@ -71,6 +74,9 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   onOpenNewTransaction,
   onOpenExportImport,
   onNavigateTab,
+  onOpenProfile,
+  onSyncCloud: _onSyncCloud,
+  isSyncing: _isSyncing = false,
 }) => {
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [year, month] = currentYearMonth.split('-').map(Number);
@@ -127,13 +133,38 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
       
       {/* Top Bar: User Greeting & Quick Settings */}
       <div className={`flex items-center justify-between gap-2 min-w-0 ${isOverview ? 'mb-3.5' : 'mb-0'}`}>
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <div className="w-8.5 h-8.5 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center ring-2 ring-emerald-400/30 shadow-xs shrink-0">
-            {initials}
+        <div 
+          id="btn-header-user-profile"
+          onClick={onOpenProfile}
+          title="Meu Perfil - Toque para gerenciar"
+          aria-label="Abrir gerenciamento de perfil"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onOpenProfile?.();
+            }
+          }}
+          className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer group select-none focus:outline-hidden"
+        >
+          <div 
+            id="btn-header-profile-avatar"
+            className="w-8.5 h-8.5 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center ring-2 ring-emerald-400/30 shadow-xs shrink-0 group-hover:scale-105 group-hover:ring-emerald-400/60 transition-all overflow-hidden"
+          >
+            {user?.photoUrl ? (
+              <img
+                src={user.photoUrl}
+                alt={user.name || 'Foto de perfil'}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              initials
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1 min-w-0">
-              <span className="text-xs sm:text-sm font-bold text-neutral-100 truncate">Olá, {firstName}</span>
+              <span className="text-xs sm:text-sm font-bold text-neutral-100 group-hover:text-emerald-300 transition-colors truncate">Olá, {firstName}</span>
               <span className="text-xs sm:text-sm shrink-0">👋</span>
             </div>
           </div>

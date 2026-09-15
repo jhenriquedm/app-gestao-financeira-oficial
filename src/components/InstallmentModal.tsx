@@ -13,6 +13,7 @@ interface InstallmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (installmentData: Omit<DebtInstallment, 'id' | 'createdAt'>, existingId?: string) => void;
+  existingInstallments?: DebtInstallment[];
   initialData?: DebtInstallment | null;
   competence: string;
   parcelCategories?: string[];
@@ -23,6 +24,7 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
   isOpen,
   onClose,
   onSave,
+  existingInstallments,
   initialData,
   competence,
   parcelCategories = [],
@@ -39,6 +41,42 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
   const [status, setStatus] = useState<TransactionStatus>('pending');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
+  const [successFeedback, setSuccessFeedback] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastSaved, setLastSaved] = useState<{
+    description: string;
+    origin: string;
+    monthlyAmount: number;
+    currentInstallment: number;
+    totalInstallments: number;
+    timestamp: number;
+  } | null>(null);
+
+  const successTimerRef = React.useRef<any>(null);
+  const errorTimerRef = React.useRef<any>(null);
+
+  const triggerError = (msg: string) => {
+    setError(msg);
+    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    errorTimerRef.current = setTimeout(() => {
+      setError('');
+    }, 3000);
+  };
+
+  const triggerSuccess = (msg: string) => {
+    setSuccessFeedback(msg);
+    if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    successTimerRef.current = setTimeout(() => {
+      setSuccessFeedback(null);
+    }, 3000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (initialData) {
@@ -63,57 +101,87 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
       setNotes('');
     }
     setError('');
+    setSuccessFeedback(null);
+    if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
   }, [initialData, isOpen, parcelCategories]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!description.trim()) {
-      setError('Informe a descrição da parcela ou dívida.');
+    setSuccessFeedback(null);
+
+    const cleanDesc = description.trim();
+    if (!cleanDesc) {
+      triggerError('Informe a descrição da parcela ou dívida.');
       return;
     }
 
     const parsedAmount = parseCurrencyInput(monthlyAmount);
     if (parsedAmount <= 0) {
-      setError('Informe um valor mensal válido maior que zero.');
+      triggerError('Informe um valor mensal válido maior que zero.');
       return;
     }
 
     const parsedCurrent = parseInt(currentInstallment, 10);
     const parsedTotal = parseInt(totalInstallments, 10);
     if (isNaN(parsedCurrent) || parsedCurrent < 1) {
-      setError('A parcela atual deve ser pelo menos 1.');
+      triggerError('A parcela atual deve ser pelo menos 1.');
       return;
     }
     if (isNaN(parsedTotal) || parsedTotal < parsedCurrent) {
-      setError('O total de parcelas deve ser maior ou igual à parcela atual.');
+      triggerError('O total de parcelas deve ser maior ou igual à parcela atual.');
       return;
     }
 
     const parsedDueDay = parseInt(dueDay, 10);
     if (isNaN(parsedDueDay) || parsedDueDay < 1 || parsedDueDay > 31) {
-      setError('O dia de vencimento deve estar entre 1 e 31.');
+      triggerError('O dia de vencimento deve estar entre 1 e 31.');
       return;
     }
 
-    if (!origin.trim()) {
-      setError('Por favor, informe a origem ou banco da parcela.');
+    const cleanOrigin = origin.trim();
+    if (!cleanOrigin) {
+      triggerError('Por favor, informe a origem ou banco da parcela.');
       return;
     }
 
     if (!category.trim()) {
-      setError('Por favor, cadastre e selecione uma categoria para esta parcela.');
+      triggerError('Por favor, cadastre e selecione uma categoria para esta parcela.');
       return;
     }
 
+    // Protection against duplicate records
+    const isDuplicate = (!initialData && existingInstallments && existingInstallments.some((inst) => {
+      const sameDesc = inst.description.trim().toLowerCase() === cleanDesc.toLowerCase();
+      const sameOrigin = inst.origin.trim().toLowerCase() === cleanOrigin.toLowerCase();
+      const sameAmount = Math.abs(inst.monthlyAmount - parsedAmount) < 0.01;
+      const sameInstallment = inst.currentInstallment === parsedCurrent && inst.totalInstallments === parsedTotal;
+      return sameDesc && (sameOrigin || sameAmount || sameInstallment);
+    })) || (
+      lastSaved &&
+      lastSaved.description.toLowerCase() === cleanDesc.toLowerCase() &&
+      lastSaved.origin.toLowerCase() === cleanOrigin.toLowerCase() &&
+      lastSaved.monthlyAmount === parsedAmount &&
+      lastSaved.currentInstallment === parsedCurrent &&
+      lastSaved.totalInstallments === parsedTotal
+    );
+
+    if (isDuplicate) {
+      triggerError('Este registro já existe no sistema.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
     onSave(
       {
-        description: description.trim(),
+        description: cleanDesc,
         category: category.trim(),
         monthlyAmount: parsedAmount,
         currentInstallment: parsedCurrent,
         totalInstallments: parsedTotal,
         dueDay: parsedDueDay,
-        origin: origin.trim(),
+        origin: cleanOrigin,
         status,
         competence: initialData?.competence || competence,
         notes: notes.trim(),
@@ -121,7 +189,30 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
       initialData?.id
     );
 
-    onClose();
+    const now = Date.now();
+    setLastSaved({
+      description: cleanDesc,
+      origin: cleanOrigin,
+      monthlyAmount: parsedAmount,
+      currentInstallment: parsedCurrent,
+      totalInstallments: parsedTotal,
+      timestamp: now,
+    });
+
+    if (initialData) {
+      triggerSuccess('Parcela atualizada com sucesso!');
+      setError('');
+      setIsSubmitting(false);
+    } else {
+      // Keep modal open, reset fields for next installment
+      triggerSuccess('Parcela cadastrada com sucesso! O formulário continua aberto para novos lançamentos.');
+      setError('');
+      setDescription('');
+      setMonthlyAmount('');
+      setOrigin('');
+      setNotes('');
+      setIsSubmitting(false);
+    }
   };
 
   const currentParsed = parseInt(currentInstallment, 10) || 1;
@@ -174,6 +265,15 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
 
             {/* Form Body */}
             <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto flex-1">
+              {successFeedback && (
+                <div id="installment-success-message" className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  </div>
+                  <span>{successFeedback}</span>
+                </div>
+              )}
+
               {error && (
                 <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-medium">
                   {error}
@@ -455,13 +555,14 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
                   onClick={onClose}
                   className="flex-1 py-2.5 text-xs font-bold text-neutral-600 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-xl transition-colors cursor-pointer"
                 >
-                  Cancelar
+                  {successFeedback ? 'Concluir e Fechar' : 'Cancelar'}
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 rounded-xl shadow-md shadow-amber-600/20 transition-all cursor-pointer"
+                  disabled={isSubmitting}
+                  className="flex-1 py-2.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 rounded-xl shadow-md shadow-amber-600/20 transition-all cursor-pointer disabled:opacity-50"
                 >
-                  {initialData ? 'Salvar Alterações' : 'Confirmar Parcela'}
+                  {isSubmitting ? 'Salvando...' : initialData ? 'Salvar Alterações' : 'Salvar Parcela'}
                 </button>
               </div>
             </form>
