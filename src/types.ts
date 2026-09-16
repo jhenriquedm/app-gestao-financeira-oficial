@@ -21,6 +21,15 @@ export interface Category {
   isDeleted?: boolean;
 }
 
+export interface ReceiptAttachment {
+  id: string;
+  name: string;
+  size: number; // Tamanho em bytes
+  type: string; // mimeType (ex: application/pdf, image/jpeg, image/png, application/vnd.openxmlformats-officedocument.wordprocessingml.document)
+  dataUrl: string; // Base64 Data URL para armazenamento local e download
+  uploadedAt: number;
+}
+
 export interface Transaction {
   id: string;
   userId?: string;
@@ -32,6 +41,7 @@ export interface Transaction {
   paymentMethod: PaymentMethod;
   status: TransactionStatus;
   notes?: string;
+  attachment?: ReceiptAttachment;
   isFixed?: boolean; // Despesa Fixa Recorrente (ex: Aluguel, Internet)
   dueDay?: number; // Dia de Vencimento no Mês (1-31)
   startMonthYear?: string; // YYYY-MM quando foi criada
@@ -58,6 +68,7 @@ export interface DebtInstallment {
   deletedFromMonthYear?: string; // YYYY-MM se foi cancelada/excluída a partir deste mês
   paidMonths?: string[]; // Meses em que a parcela foi marcada como paga
   notes?: string;
+  attachment?: ReceiptAttachment;
   createdAt: number;
   syncStatus?: SyncStatus;
   updatedAt?: number;

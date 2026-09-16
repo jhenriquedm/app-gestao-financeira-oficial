@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, CreditCard, Calendar, Landmark, CheckCircle2, Clock, Plus, Tag } from 'lucide-react';
-import { DebtInstallment, TransactionStatus } from '../types';
+import { DebtInstallment, TransactionStatus, ReceiptAttachment } from '../types';
 import { formatCurrencyInput, parseCurrencyInput } from '../utils/currencyMask';
 import { sanitizeTextInput, sanitizeNameInput } from '../utils/textSanitizer';
+import { ReceiptAttachmentField } from './ReceiptAttachmentField';
 
 const MAX_DESC_LENGTH = 60;
 const MAX_NOTES_LENGTH = 150;
@@ -40,6 +41,7 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
   const [origin, setOrigin] = useState('');
   const [status, setStatus] = useState<TransactionStatus>('pending');
   const [notes, setNotes] = useState('');
+  const [attachment, setAttachment] = useState<ReceiptAttachment | undefined>(undefined);
   const [error, setError] = useState('');
   const [successFeedback, setSuccessFeedback] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -89,6 +91,7 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
       setOrigin(initialData.origin || '');
       setStatus(initialData.status);
       setNotes(initialData.notes || '');
+      setAttachment(initialData.attachment);
     } else {
       setDescription('');
       setCategory(categoryOptions[0] || '');
@@ -99,6 +102,7 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
       setOrigin('');
       setStatus('pending');
       setNotes('');
+      setAttachment(undefined);
     }
     setError('');
     setSuccessFeedback(null);
@@ -185,6 +189,7 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
         status,
         competence: initialData?.competence || competence,
         notes: notes.trim(),
+        attachment,
       },
       initialData?.id
     );
@@ -211,6 +216,7 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
       setMonthlyAmount('');
       setOrigin('');
       setNotes('');
+      setAttachment(undefined);
       setIsSubmitting(false);
     }
   };
@@ -547,6 +553,13 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
                   className="w-full px-3 py-2 text-sm font-semibold text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800/90 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 rounded-xl border border-neutral-300 dark:border-neutral-700 focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 resize-none transition-all"
                 />
               </div>
+
+              {/* Anexo de Comprovante */}
+              <ReceiptAttachmentField
+                attachment={attachment}
+                onChange={setAttachment}
+                disabled={isSubmitting}
+              />
 
               {/* Footer Buttons */}
               <div className="pt-2 flex items-center gap-3">

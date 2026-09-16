@@ -31,6 +31,19 @@ public class NativeFileManagerPlugin extends Plugin {
         call.resolve(ret);
     }
 
+    private byte[] getBytesFromContent(String content) {
+        if (content != null && content.startsWith("data:") && content.contains(";base64,")) {
+            try {
+                String base64Part = content.substring(content.indexOf(";base64,") + 8);
+                return android.util.Base64.decode(base64Part, android.util.Base64.DEFAULT);
+            } catch (Exception e) {
+                // Fallback caso ocorra erro na decodificação
+                return content.getBytes(StandardCharsets.UTF_8);
+            }
+        }
+        return content != null ? content.getBytes(StandardCharsets.UTF_8) : new byte[0];
+    }
+
     @PluginMethod
     public void saveToDownloads(PluginCall call) {
         String fileName = call.getString("fileName");
@@ -43,6 +56,8 @@ public class NativeFileManagerPlugin extends Plugin {
         }
 
         try {
+            byte[] fileBytes = getBytesFromContent(content);
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 // Android 10+ (API 29+): Scoped Storage oficial para pasta Download
                 ContentValues values = new ContentValues();
@@ -61,7 +76,7 @@ public class NativeFileManagerPlugin extends Plugin {
                         call.reject("Falha ao abrir canal de gravação do arquivo.");
                         return;
                     }
-                    os.write(content.getBytes(StandardCharsets.UTF_8));
+                    os.write(fileBytes);
                     os.flush();
                 }
 
@@ -80,7 +95,7 @@ public class NativeFileManagerPlugin extends Plugin {
                 }
                 File file = new File(downloadDir, fileName);
                 try (FileOutputStream fos = new FileOutputStream(file)) {
-                    fos.write(content.getBytes(StandardCharsets.UTF_8));
+                    fos.write(fileBytes);
                     fos.flush();
                 }
 
@@ -145,7 +160,7 @@ public class NativeFileManagerPlugin extends Plugin {
                         call.reject("Falha ao abrir o local selecionado para salvar.");
                         return;
                     }
-                    os.write(content.getBytes(StandardCharsets.UTF_8));
+                    os.write(getBytesFromContent(content));
                     os.flush();
 
                     JSObject ret = new JSObject();

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, 
@@ -12,11 +12,15 @@ import {
   CloudOff,
   FolderDown,
   FolderOpen,
-  Share2
+  Share2,
+  Paperclip,
+  FileText,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
-import { Transaction, Category, Budget, SavingsGoal, DebtInstallment } from '../types';
+import { Transaction, Category, Budget, SavingsGoal, DebtInstallment, ReceiptAttachment } from '../types';
 import { downloadCSV, downloadJSON, buildCSVContent, formatMonthYearUppercase } from '../utils/formatters';
-import { shareFile } from '../utils/fileSaver';
+import { shareFile, saveAttachmentFile } from '../utils/fileSaver';
 import { getComputedInstallment } from '../utils/installmentHelpers';
 import { FirestoreSyncService } from '../services/firestoreSyncService';
 import { localDb } from '../db/localDatabase';
@@ -60,6 +64,8 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
   const [isSyncingCloud, setIsSyncingCloud] = useState(false);
   const [isSavingCSV, setIsSavingCSV] = useState(false);
   const [isSavingJSON, setIsSavingJSON] = useState(false);
+  const [isSavingReceipts, setIsSavingReceipts] = useState(false);
+  const [showReceiptsList, setShowReceiptsList] = useState(false);
   const [syncState, setSyncState] = useState<{
     status: 'synced' | 'pending' | 'offline' | 'loading';
     pendingCount: number;
@@ -69,6 +75,61 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
     pendingCount: 0,
     lastSyncTimeText: null,
   });
+
+  // Lista de todos os comprovantes anexados para backup exclusivo
+  const allAttachments = useMemo(() => {
+    const list: Array<{
+      id: string;
+      source: 'transaction' | 'installment';
+      sourceType: string;
+      description: string;
+      dateOrCompetence: string;
+      amount: number;
+      attachment: ReceiptAttachment;
+    }> = [];
+
+    transactions.forEach((t) => {
+      if (t.attachment) {
+        list.push({
+          id: t.id,
+          source: 'transaction',
+          sourceType: t.type === 'income' ? 'Receita' : t.isFixed ? 'Despesa Fixa' : 'Despesa Variável',
+          description: t.description,
+          dateOrCompetence: t.date,
+          amount: t.amount,
+          attachment: t.attachment,
+        });
+      }
+    });
+
+    installments.forEach((i) => {
+      if (i.attachment) {
+        list.push({
+          id: i.id,
+          source: 'installment',
+          sourceType: `Parcelamento (${i.currentInstallment}/${i.totalInstallments})`,
+          description: i.description,
+          dateOrCompetence: i.competence,
+          amount: i.monthlyAmount,
+          attachment: i.attachment,
+        });
+      }
+    });
+
+    return list;
+  }, [transactions, installments]);
+
+  const totalAttachmentsBytes = useMemo(() => {
+    return allAttachments.reduce((sum, item) => sum + (item.attachment.size || 0), 0);
+  }, [allAttachments]);
+
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
 
   const loadSyncStatus = useCallback(async () => {
     if (!userId) {
@@ -302,6 +363,112 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
       });
     } finally {
       setIsSavingJSON(false);
+    }
+  };
+
+  const handleExportReceiptsBackup = async (chooseFolder = false) => {
+    if (allAttachments.length === 0) {
+      setFeedback({ type: 'error', message: 'Nenhum comprovante anexado para exportar.' });
+      return;
+    }
+    setIsSavingReceipts(true);
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const backupData = {
+      version: '1.0',
+      type: 'receipts_backup',
+      exportedAt: new Date().toISOString(),
+      totalAttachments: allAttachments.length,
+      totalBytes: totalAttachmentsBytes,
+      items: allAttachments,
+    };
+    const fileName = `backup-comprovantes-gestao-financeira-${todayStr}.json`;
+
+    try {
+      const res = await downloadJSON(backupData, fileName, { chooseFolder });
+      if (res.success) {
+        setFeedback({
+          type: 'success',
+          message: res.message || `Backup de ${allAttachments.length} comprovante(s) salvo com sucesso!`,
+        });
+      } else {
+        setFeedback({
+          type: 'error',
+          message: res.message || 'Operação cancelada.',
+        });
+      }
+    } catch (err: unknown) {
+      setFeedback({
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Erro ao exportar backup de comprovantes.',
+      });
+    } finally {
+      setIsSavingReceipts(false);
+    }
+  };
+
+  const handleShareReceiptsBackup = async () => {
+    if (allAttachments.length === 0) {
+      setFeedback({ type: 'error', message: 'Nenhum comprovante anexado para compartilhar.' });
+      return;
+    }
+    setIsSavingReceipts(true);
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const backupData = {
+      version: '1.0',
+      type: 'receipts_backup',
+      exportedAt: new Date().toISOString(),
+      totalAttachments: allAttachments.length,
+      totalBytes: totalAttachmentsBytes,
+      items: allAttachments,
+    };
+    const fileName = `backup-comprovantes-gestao-financeira-${todayStr}.json`;
+
+    try {
+      const res = await shareFile({
+        fileName,
+        content: JSON.stringify(backupData, null, 2),
+        mimeType: 'application/json',
+      });
+      if (res.success) {
+        setFeedback({
+          type: 'success',
+          message: 'Menu de compartilhamento aberto com sucesso!',
+        });
+      } else {
+        setFeedback({
+          type: 'error',
+          message: res.message || 'Não foi possível compartilhar.',
+        });
+      }
+    } catch (err: unknown) {
+      setFeedback({
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Erro ao compartilhar backup de comprovantes.',
+      });
+    } finally {
+      setIsSavingReceipts(false);
+    }
+  };
+
+  const handleDownloadSingleAttachment = async (att: ReceiptAttachment) => {
+    try {
+      const res = await saveAttachmentFile(att);
+      if (res.success) {
+        setFeedback({
+          type: 'success',
+          message: res.message || `Arquivo "${att.name}" salvo com sucesso!`,
+        });
+      } else {
+        setFeedback({
+          type: 'error',
+          message: res.message || 'Não foi possível baixar o comprovante.',
+        });
+      }
+    } catch (err: unknown) {
+      setFeedback({
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Erro ao salvar comprovante.',
+      });
     }
   };
 
@@ -604,6 +771,129 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                       <span>Compartilhar</span>
                     </button>
                   </div>
+                </div>
+
+                {/* Backup de Comprovantes & Anexos */}
+                <div
+                  id="card-receipts-backup-export"
+                  className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-800/40 space-y-2.5"
+                >
+                  <div className="flex items-start justify-between gap-2.5">
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
+                        <Paperclip className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold text-neutral-900 dark:text-neutral-100 text-xs">
+                            Backup de Comprovantes & Anexos
+                          </h4>
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300">
+                            {allAttachments.length} {allAttachments.length === 1 ? 'anexo' : 'anexos'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                          {allAttachments.length > 0
+                            ? `${allAttachments.length} comprovante(s) totalizando ${formatBytes(totalAttachmentsBytes)}. Salvos localmente no aparelho.`
+                            : 'Nenhum comprovante anexado. Você pode anexar notas e recibos (PDF, DOCX, JPG, PNG) ao criar despesas ou parcelas.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {allAttachments.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowReceiptsList(!showReceiptsList)}
+                        className="px-2 py-1 text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <span>{showReceiptsList ? 'Ocultar' : 'Ver Todos'}</span>
+                        {showReceiptsList ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                      </button>
+                    )}
+                  </div>
+
+                  {allAttachments.length > 0 && (
+                    <>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 pt-1">
+                        <button
+                          id="btn-export-receipts-download-folder"
+                          onClick={() => handleExportReceiptsBackup(false)}
+                          disabled={isSavingReceipts}
+                          title="Salvar arquivo de backup dos comprovantes na pasta Downloads"
+                          className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-semibold text-[11px] shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          <FolderDown className="w-3.5 h-3.5" />
+                          <span>{isSavingReceipts ? 'Salvando...' : 'Salvar em Downloads'}</span>
+                        </button>
+
+                        <button
+                          id="btn-export-receipts-choose-folder"
+                          onClick={() => handleExportReceiptsBackup(true)}
+                          disabled={isSavingReceipts}
+                          title="Escolher a pasta do telefone onde salvar o backup dos comprovantes"
+                          className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700 active:bg-neutral-200 text-neutral-800 dark:text-neutral-200 font-semibold text-[11px] transition-colors cursor-pointer disabled:opacity-50 shadow-2xs"
+                        >
+                          <FolderOpen className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                          <span>Escolher Pasta</span>
+                        </button>
+
+                        <button
+                          id="btn-export-receipts-share"
+                          onClick={handleShareReceiptsBackup}
+                          disabled={isSavingReceipts}
+                          title="Compartilhar backup dos comprovantes via WhatsApp, Drive ou Email"
+                          className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700 active:bg-neutral-200 text-neutral-700 dark:text-neutral-300 font-medium text-[11px] transition-colors cursor-pointer disabled:opacity-50 shadow-2xs"
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
+                          <span>Compartilhar</span>
+                        </button>
+                      </div>
+
+                      {/* Lista expansível de comprovantes individuais */}
+                      <AnimatePresence>
+                        {showReceiptsList && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="pt-2 border-t border-neutral-200/70 dark:border-neutral-700/60 space-y-1.5 max-h-48 overflow-y-auto"
+                          >
+                            <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider block">
+                              Baixar Comprovantes Individuais:
+                            </span>
+                            {allAttachments.map((item) => (
+                              <div
+                                key={item.id}
+                                className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 gap-2"
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <FileText className="w-4 h-4 text-neutral-500 shrink-0" />
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-semibold text-neutral-900 dark:text-neutral-100 truncate">
+                                      {item.description}
+                                    </p>
+                                    <p className="text-[10px] text-neutral-500 dark:text-neutral-400 truncate">
+                                      {item.attachment.name} • {formatBytes(item.attachment.size)} • {item.sourceType}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadSingleAttachment(item.attachment)}
+                                  title={`Baixar ${item.attachment.name}`}
+                                  className="px-2 py-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-lg hover:bg-emerald-100 transition-colors flex items-center gap-1 shrink-0 cursor-pointer"
+                                >
+                                  <Download className="w-3 h-3" />
+                                  <span>Baixar</span>
+                                </button>
+                              </div>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </>
+                  )}
                 </div>
               </div>
 

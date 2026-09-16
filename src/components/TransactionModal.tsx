@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Check, ArrowUpRight, ArrowDownRight, Tag, Plus } from 'lucide-react';
-import { Transaction, TransactionType, PaymentMethod, TransactionStatus, Category } from '../types';
+import { Transaction, TransactionType, PaymentMethod, TransactionStatus, Category, ReceiptAttachment } from '../types';
 import { PAYMENT_METHOD_LABELS } from '../utils/formatters';
 import { formatCurrencyInput, parseCurrencyInput } from '../utils/currencyMask';
 import { sanitizeTextInput } from '../utils/textSanitizer';
+import { ReceiptAttachmentField } from './ReceiptAttachmentField';
 
 const MAX_DESC_LENGTH = 60;
 const MAX_NOTES_LENGTH = 150;
@@ -44,6 +45,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [isFixed, setIsFixed] = useState(false);
   const [dueDay, setDueDay] = useState('');
   const [notes, setNotes] = useState('');
+  const [attachment, setAttachment] = useState<ReceiptAttachment | undefined>(undefined);
   const [error, setError] = useState('');
   const [successFeedback, setSuccessFeedback] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -94,6 +96,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setIsFixed(!!initialData.isFixed);
       setDueDay(initialData.dueDay ? initialData.dueDay.toString() : '');
       setNotes(initialData.notes || '');
+      setAttachment(initialData.attachment);
     } else {
       const today = defaultDate || new Date().toISOString().slice(0, 10);
       const parsedDay = new Date().getDate();
@@ -108,6 +111,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setIsFixed(isFixedDefault);
       setDueDay(parsedDay.toString());
       setNotes('');
+      setAttachment(undefined);
     }
     setError('');
     setSuccessFeedback(null);
@@ -195,6 +199,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         isFixed: type === 'expense' ? isFixed : false,
         dueDay: type === 'expense' && isFixed ? (parsedDueDay || new Date(date).getDate()) : undefined,
         notes: notes.trim(),
+        attachment,
       },
       initialData ? initialData.id : undefined
     );
@@ -219,6 +224,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setDescription('');
       setAmount('');
       setNotes('');
+      setAttachment(undefined);
       setIsSubmitting(false);
     }
   };
@@ -574,6 +580,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   className="w-full px-3 py-1.5 text-xs text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-800/90 focus:bg-white dark:focus:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 focus:border-emerald-500 rounded-xl focus:outline-hidden transition-all placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
                 />
               </div>
+
+              {/* Anexo de Comprovante (PDF, DOCX, JPG, PNG) */}
+              <ReceiptAttachmentField
+                attachment={attachment}
+                onChange={setAttachment}
+                disabled={isSubmitting}
+              />
             </form>
 
             {/* Sticky Action Footer */}

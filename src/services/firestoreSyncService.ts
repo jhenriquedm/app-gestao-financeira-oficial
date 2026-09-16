@@ -325,7 +325,18 @@ export class FirestoreSyncService {
             updatedAt: now,
             isDeleted: false,
           };
-          await setDoc(docRef, sanitizeForFirestore(syncedTx), { merge: true });
+
+          // Firestore tem limite de 1MB por documento. Se o dataUrl for maior que 600KB,
+          // envia a metadata do anexo para nuvem com dataUrl vazio, preservando o arquivo completo no IndexedDB local.
+          const firestorePayload = { ...syncedTx };
+          if (firestorePayload.attachment && firestorePayload.attachment.dataUrl && firestorePayload.attachment.dataUrl.length > 600000) {
+            firestorePayload.attachment = {
+              ...firestorePayload.attachment,
+              dataUrl: '',
+            };
+          }
+
+          await setDoc(docRef, sanitizeForFirestore(firestorePayload), { merge: true });
           await localDb.transactions.put(syncedTx);
         }
         totalUploaded++;
@@ -353,7 +364,16 @@ export class FirestoreSyncService {
             updatedAt: now,
             isDeleted: false,
           };
-          await setDoc(docRef, sanitizeForFirestore(syncedInst), { merge: true });
+
+          const firestorePayload = { ...syncedInst };
+          if (firestorePayload.attachment && firestorePayload.attachment.dataUrl && firestorePayload.attachment.dataUrl.length > 600000) {
+            firestorePayload.attachment = {
+              ...firestorePayload.attachment,
+              dataUrl: '',
+            };
+          }
+
+          await setDoc(docRef, sanitizeForFirestore(firestorePayload), { merge: true });
           await localDb.installments.put(syncedInst);
         }
         totalUploaded++;
@@ -519,12 +539,25 @@ export class FirestoreSyncService {
     });
 
     // 2. Download transactions
+    const localTxExisting = await localDb.transactions.where('userId').equals(userId).toArray().catch(() => []);
+    const localTxAttachmentMap = new Map<string, any>();
+    localTxExisting.forEach((t) => {
+      if (t.attachment?.dataUrl) localTxAttachmentMap.set(t.id, t.attachment);
+    });
+
     const txSnapshot = await getDocs(this.collectionRef(userId, 'transactions'));
     const remoteTx: Transaction[] = [];
     txSnapshot.forEach((d) => {
       const item = d.data() as Transaction;
       const isDeletedRecord = item.isDeleted || (item as any).status === 'inactive' || tombstoneSet.has(d.id);
       if (!isDeletedRecord) {
+        // Preserva dataUrl local se o remoto veio apenas com metadados
+        if (item.attachment && (!item.attachment.dataUrl || item.attachment.dataUrl === '')) {
+          const localAtt = localTxAttachmentMap.get(d.id);
+          if (localAtt?.dataUrl) {
+            item.attachment.dataUrl = localAtt.dataUrl;
+          }
+        }
         remoteTx.push({ ...item, id: d.id, userId, syncStatus: 'synced' });
         downloadedCount++;
       } else {
@@ -534,12 +567,24 @@ export class FirestoreSyncService {
     });
 
     // 3. Download installments
+    const localInstExisting = await localDb.installments.where('userId').equals(userId).toArray().catch(() => []);
+    const localInstAttachmentMap = new Map<string, any>();
+    localInstExisting.forEach((i) => {
+      if (i.attachment?.dataUrl) localInstAttachmentMap.set(i.id, i.attachment);
+    });
+
     const instSnapshot = await getDocs(this.collectionRef(userId, 'installments'));
     const remoteInst: DebtInstallment[] = [];
     instSnapshot.forEach((d) => {
       const item = d.data() as DebtInstallment;
       const isDeletedRecord = item.isDeleted || (item as any).status === 'inactive' || tombstoneSet.has(d.id);
       if (!isDeletedRecord) {
+        if (item.attachment && (!item.attachment.dataUrl || item.attachment.dataUrl === '')) {
+          const localAtt = localInstAttachmentMap.get(d.id);
+          if (localAtt?.dataUrl) {
+            item.attachment.dataUrl = localAtt.dataUrl;
+          }
+        }
         remoteInst.push({ ...item, id: d.id, userId, syncStatus: 'synced' });
         downloadedCount++;
       } else {

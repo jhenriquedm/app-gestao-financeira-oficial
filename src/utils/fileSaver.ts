@@ -168,7 +168,13 @@ export async function saveFile(options: {
 
   // Fallback padrão Web com Blob e link <a>
   try {
-    const blob = new Blob([content], { type: `${mimeType};charset=utf-8;` });
+    let blob: Blob;
+    if (content.startsWith('data:')) {
+      const fetchRes = await fetch(content);
+      blob = await fetchRes.blob();
+    } else {
+      blob = new Blob([content], { type: `${mimeType};charset=utf-8;` });
+    }
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
@@ -188,6 +194,22 @@ export async function saveFile(options: {
       message: `Falha ao realizar download: ${err instanceof Error ? err.message : String(err)}`,
     };
   }
+}
+
+/**
+ * Salva ou faz o download de um comprovante anexado (PDF, DOCX, Imagem).
+ */
+export async function saveAttachmentFile(attachment: {
+  name: string;
+  type: string;
+  dataUrl: string;
+}): Promise<SaveResult> {
+  return saveFile({
+    fileName: attachment.name,
+    content: attachment.dataUrl,
+    mimeType: attachment.type || 'application/octet-stream',
+    chooseFolder: false,
+  });
 }
 
 /**
