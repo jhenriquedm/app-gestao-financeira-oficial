@@ -95,8 +95,10 @@ export class FirestoreSyncService {
           id: userRecord.id,
           name: userRecord.name,
           email: userRecord.email,
-          cpf: userRecord.cpf,
-          passwordHash: userRecord.passwordHash,
+          cpf: userRecord.cpf || '',
+          passwordHash: userRecord.passwordHash || '',
+          photoUrl: userRecord.photoUrl || '',
+          authProvider: userRecord.authProvider || 'password',
           createdAt: userRecord.createdAt,
           updatedAt: Date.now(),
         }),
@@ -124,6 +126,8 @@ export class FirestoreSyncService {
             email: docData.email || '',
             cpf: docData.cpf || filter.cpf,
             passwordHash: docData.passwordHash || '',
+            photoUrl: docData.photoUrl || undefined,
+            authProvider: docData.authProvider || 'password',
             createdAt: docData.createdAt || Date.now(),
           };
         }
@@ -140,6 +144,8 @@ export class FirestoreSyncService {
             email: docData.email || filter.email,
             cpf: docData.cpf || '',
             passwordHash: docData.passwordHash || '',
+            photoUrl: docData.photoUrl || undefined,
+            authProvider: docData.authProvider || 'password',
             createdAt: docData.createdAt || Date.now(),
           };
         }
@@ -156,6 +162,8 @@ export class FirestoreSyncService {
             email: data.email || '',
             cpf: data.cpf,
             passwordHash: data.passwordHash || '',
+            photoUrl: data.photoUrl || undefined,
+            authProvider: data.authProvider || 'password',
             createdAt: data.createdAt || Date.now(),
           };
         }
@@ -166,6 +174,8 @@ export class FirestoreSyncService {
             email: data.email,
             cpf: data.cpf || '',
             passwordHash: data.passwordHash || '',
+            photoUrl: data.photoUrl || undefined,
+            authProvider: data.authProvider || 'password',
             createdAt: data.createdAt || Date.now(),
           };
         }

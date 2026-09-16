@@ -1,4 +1,6 @@
 import Dexie, { Table } from 'dexie';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { auth } from '../services/firebase';
 import {
   Transaction,
   DebtInstallment,
@@ -214,12 +216,143 @@ export const authOperations = {
           email: userRecord.email,
           cpf: userRecord.cpf,
           photoUrl: userRecord.photoUrl,
+          authProvider: userRecord.authProvider || 'password',
           createdAt: userRecord.createdAt,
         },
       };
     } catch (err: any) {
       console.error('Login error:', err);
       return { success: false, error: 'Erro ao autenticar usuário.' };
+    }
+  },
+
+  /**
+   * Autenticação com a Conta Google (Popup seguro).
+   * - Se o e-mail da conta Google já estiver cadastrado (local ou nuvem), reconhece e conecta
+   *   mantendo intactos todos os dados, transações, categorias e comprovantes existentes do usuário!
+   * - Se for um usuário novo, realiza o cadastro completo de forma transparente.
+   */
+  async loginWithGoogle(): Promise<{ success: boolean; user?: User; isNewUser?: boolean; error?: string }> {
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+
+      const authResult = await signInWithPopup(auth, provider);
+      const fbUser = authResult.user;
+
+      if (!fbUser || !fbUser.email) {
+        return { success: false, error: 'Não foi possível obter o e-mail da sua conta Google.' };
+      }
+
+      const cleanEmail = fbUser.email.trim().toLowerCase();
+      const cleanName = fbUser.displayName?.trim() || cleanEmail.split('@')[0] || 'Usuário Google';
+      const photoUrl = fbUser.photoURL || undefined;
+
+      // 1. Procurar usuário local existente por e-mail (reconhecimento de contas existentes)
+      let userRecord = await localDb.users.where('email').equalsIgnoreCase(cleanEmail).first();
+
+      // 2. Se não estiver no IndexedDB deste dispositivo, pesquisa na nuvem Firestore
+      if (!userRecord) {
+        const cloudUser = await FirestoreSyncService.findUserInCloud({ email: cleanEmail });
+        if (cloudUser) {
+          userRecord = cloudUser;
+          await localDb.users.put(userRecord);
+        }
+      }
+
+      // 3. Caso o usuário JÁ EXISTA:
+      // Mantemos estritamente o id existente para preservar 100% de todas as transações,
+      // parcelas, categorias, comprovantes e metas vinculadas a ele!
+      if (userRecord) {
+        let hasUpdates = false;
+        if (photoUrl && !userRecord.photoUrl) {
+          userRecord.photoUrl = photoUrl;
+          hasUpdates = true;
+        }
+        if (!userRecord.authProvider) {
+          userRecord.authProvider = 'google';
+          hasUpdates = true;
+        }
+
+        if (hasUpdates) {
+          await localDb.users.put(userRecord);
+          FirestoreSyncService.saveUserAccount(userRecord).catch(console.warn);
+        }
+
+        // Salva a sessão ativa para este usuário
+        await localDb.settings.put({ key: 'active_session_user_id', value: userRecord.id });
+
+        return {
+          success: true,
+          user: {
+            id: userRecord.id,
+            name: userRecord.name,
+            email: userRecord.email,
+            cpf: userRecord.cpf,
+            photoUrl: userRecord.photoUrl,
+            authProvider: userRecord.authProvider || 'google',
+            createdAt: userRecord.createdAt,
+          },
+          isNewUser: false,
+        };
+      }
+
+      // 4. Caso seja um NOVO CADASTRO via Google:
+      // Cria a conta com o ID seguro do Firebase
+      const newUserId = fbUser.uid || ('user_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7));
+      const newUserRecord: UserRecord = {
+        id: newUserId,
+        name: cleanName,
+        email: cleanEmail,
+        cpf: '',
+        passwordHash: '',
+        photoUrl,
+        authProvider: 'google',
+        createdAt: Date.now(),
+      };
+
+      await localDb.transaction('rw', [localDb.users, localDb.settings], async () => {
+        await localDb.users.put(newUserRecord);
+        await localDb.settings.put({ key: `user_${newUserId}_currentMonth`, value: getCurrentYearMonth() });
+        await localDb.settings.put({ key: `user_${newUserId}_isDarkMode`, value: false });
+        await localDb.settings.put({ key: `user_${newUserId}_isBalanceHidden`, value: false });
+        await localDb.settings.put({ key: 'active_session_user_id', value: newUserId });
+      });
+
+      // Salva imediatamente no Firestore
+      FirestoreSyncService.saveUserAccount(newUserRecord).catch(console.warn);
+
+      return {
+        success: true,
+        user: {
+          id: newUserRecord.id,
+          name: newUserRecord.name,
+          email: newUserRecord.email,
+          cpf: '',
+          photoUrl: newUserRecord.photoUrl,
+          authProvider: 'google',
+          createdAt: newUserRecord.createdAt,
+        },
+        isNewUser: true,
+      };
+    } catch (err: any) {
+      console.error('Google login error:', err);
+      if (err?.code === 'auth/popup-closed-by-user') {
+        return { success: false, error: 'A janela de autenticação do Google foi fechada antes da conclusão.' };
+      }
+      if (err?.code === 'auth/popup-blocked') {
+        return { success: false, error: 'O navegador bloqueou a janela pop-up do Google. Por favor, autorize pop-ups para continuar.' };
+      }
+      if (err?.code === 'auth/cancelled-popup-request') {
+        return { success: false, error: 'Solicitação cancelada.' };
+      }
+      if (err?.code === 'auth/network-request-failed') {
+        return { success: false, error: 'Falha de conexão com os servidores do Google. Verifique sua conexão e tente novamente.' };
+      }
+      if (err?.code === 'auth/unauthorized-domain') {
+        return { success: false, error: 'Domínio da aplicação não autorizado no Firebase Authentication.' };
+      }
+      return { success: false, error: err?.message || 'Falha ao autenticar com a Conta Google.' };
     }
   },
 
@@ -318,7 +451,7 @@ export const authOperations = {
       if (!emailRegex.test(cleanEmail)) {
         return { success: false, error: 'Informe um e-mail válido.' };
       }
-      if (!cleanCpf || cleanCpf.length !== 11 || !validateCpf(cleanCpf)) {
+      if (cleanCpf && (cleanCpf.length !== 11 || !validateCpf(cleanCpf))) {
         return { success: false, error: 'Informe um CPF válido com 11 dígitos.' };
       }
 
@@ -329,9 +462,11 @@ export const authOperations = {
       }
 
       // Check if CPF is used by another user
-      const otherCpf = await localDb.users.where('cpf').equals(cleanCpf).first();
-      if (otherCpf && otherCpf.id !== userId) {
-        return { success: false, error: 'Este CPF já pertence a outro usuário.' };
+      if (cleanCpf) {
+        const otherCpf = await localDb.users.where('cpf').equals(cleanCpf).first();
+        if (otherCpf && otherCpf.id !== userId) {
+          return { success: false, error: 'Este CPF já pertence a outro usuário.' };
+        }
       }
 
       user.name = cleanName;
@@ -407,6 +542,9 @@ export const authOperations = {
   async logout(): Promise<void> {
     try {
       await localDb.settings.delete('active_session_user_id');
+      try {
+        await auth.signOut();
+      } catch (_) {}
     } catch (e) {
       console.error('Logout error:', e);
     }

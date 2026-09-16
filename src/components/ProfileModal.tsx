@@ -196,7 +196,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     }
 
     const cleanCpf = unmaskCpf(cpf);
-    if (!cleanCpf || cleanCpf.length !== 11 || !validateCpf(cleanCpf)) {
+    if (cleanCpf && (cleanCpf.length !== 11 || !validateCpf(cleanCpf))) {
       setTimedFeedback({ type: 'error', message: 'O CPF informado é inválido. Verifique os números digitados.' });
       return;
     }

@@ -130,6 +130,7 @@ export interface User {
   email: string;
   cpf?: string;
   photoUrl?: string;
+  authProvider?: 'password' | 'google';
   createdAt: number;
 }
 
@@ -137,9 +138,10 @@ export interface UserRecord {
   id: string;
   name: string;
   email: string;
-  cpf: string;
+  cpf?: string;
   passwordHash: string;
   photoUrl?: string;
+  authProvider?: 'password' | 'google';
   createdAt: number;
 }
 
