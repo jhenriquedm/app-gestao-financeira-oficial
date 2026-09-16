@@ -1,5 +1,5 @@
 import Dexie, { Table } from 'dexie';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import {
   Transaction,
@@ -227,114 +227,127 @@ export const authOperations = {
   },
 
   /**
-   * Autenticação com a Conta Google (Popup seguro).
-   * - Se o e-mail da conta Google já estiver cadastrado (local ou nuvem), reconhece e conecta
-   *   mantendo intactos todos os dados, transações, categorias e comprovantes existentes do usuário!
-   * - Se for um usuário novo, realiza o cadastro completo de forma transparente.
+   * Processa o login do usuário retornado pelo Firebase Auth (Google)
+   */
+  async processFirebaseUser(fbUser: any): Promise<{ success: boolean; user?: User; isNewUser?: boolean; error?: string }> {
+    if (!fbUser || !fbUser.email) {
+      return { success: false, error: 'Não foi possível obter o e-mail da sua conta Google.' };
+    }
+
+    const cleanEmail = fbUser.email.trim().toLowerCase();
+    const cleanName = fbUser.displayName?.trim() || cleanEmail.split('@')[0] || 'Usuário Google';
+    const photoUrl = fbUser.photoURL || undefined;
+
+    // 1. Procurar usuário local existente por e-mail (reconhecimento de contas existentes)
+    let userRecord = await localDb.users.where('email').equalsIgnoreCase(cleanEmail).first();
+
+    // 2. Se não estiver no IndexedDB deste dispositivo, pesquisa na nuvem Firestore
+    if (!userRecord) {
+      const cloudUser = await FirestoreSyncService.findUserInCloud({ email: cleanEmail });
+      if (cloudUser) {
+        userRecord = cloudUser;
+        await localDb.users.put(userRecord);
+      }
+    }
+
+    // 3. Caso o usuário JÁ EXISTA:
+    if (userRecord) {
+      let hasUpdates = false;
+      if (photoUrl && !userRecord.photoUrl) {
+        userRecord.photoUrl = photoUrl;
+        hasUpdates = true;
+      }
+      if (!userRecord.authProvider) {
+        userRecord.authProvider = 'google';
+        hasUpdates = true;
+      }
+
+      if (hasUpdates) {
+        await localDb.users.put(userRecord);
+        FirestoreSyncService.saveUserAccount(userRecord).catch(console.warn);
+      }
+
+      // Salva a sessão ativa para este usuário
+      await localDb.settings.put({ key: 'active_session_user_id', value: userRecord.id });
+
+      return {
+        success: true,
+        user: {
+          id: userRecord.id,
+          name: userRecord.name,
+          email: userRecord.email,
+          cpf: userRecord.cpf,
+          photoUrl: userRecord.photoUrl,
+          authProvider: userRecord.authProvider || 'google',
+          createdAt: userRecord.createdAt,
+        },
+        isNewUser: false,
+      };
+    }
+
+    // 4. Caso seja um NOVO CADASTRO via Google:
+    const newUserId = fbUser.uid || ('user_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7));
+    const newUserRecord: UserRecord = {
+      id: newUserId,
+      name: cleanName,
+      email: cleanEmail,
+      cpf: '',
+      passwordHash: '',
+      photoUrl,
+      authProvider: 'google',
+      createdAt: Date.now(),
+    };
+
+    await localDb.transaction('rw', [localDb.users, localDb.settings], async () => {
+      await localDb.users.put(newUserRecord);
+      await localDb.settings.put({ key: `user_${newUserId}_currentMonth`, value: getCurrentYearMonth() });
+      await localDb.settings.put({ key: `user_${newUserId}_isDarkMode`, value: false });
+      await localDb.settings.put({ key: `user_${newUserId}_isBalanceHidden`, value: false });
+      await localDb.settings.put({ key: 'active_session_user_id', value: newUserId });
+    });
+
+    // Salva imediatamente no Firestore
+    FirestoreSyncService.saveUserAccount(newUserRecord).catch(console.warn);
+
+    return {
+      success: true,
+      user: {
+        id: newUserRecord.id,
+        name: newUserRecord.name,
+        email: newUserRecord.email,
+        cpf: '',
+        photoUrl: newUserRecord.photoUrl,
+        authProvider: 'google',
+        createdAt: newUserRecord.createdAt,
+      },
+      isNewUser: true,
+    };
+  },
+
+  /**
+   * Autenticação com a Conta Google (Popup com Fallback de Redirect).
    */
   async loginWithGoogle(): Promise<{ success: boolean; user?: User; isNewUser?: boolean; error?: string }> {
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
 
-      const authResult = await signInWithPopup(auth, provider);
-      const fbUser = authResult.user;
-
-      if (!fbUser || !fbUser.email) {
-        return { success: false, error: 'Não foi possível obter o e-mail da sua conta Google.' };
+      try {
+        const authResult = await signInWithPopup(auth, provider);
+        return await this.processFirebaseUser(authResult.user);
+      } catch (popupErr: any) {
+        // Fallback para signInWithRedirect em webviews móveis ou popups bloqueados
+        if (
+          popupErr?.code === 'auth/popup-blocked' ||
+          popupErr?.code === 'auth/operation-not-supported-in-this-environment' ||
+          popupErr?.code === 'auth/popup-closed-by-user'
+        ) {
+          console.warn('Popup login impedido, redirecionando com signInWithRedirect...', popupErr);
+          await signInWithRedirect(auth, provider);
+          return { success: false, error: 'Redirecionando para o login seguro do Google...' };
+        }
+        throw popupErr;
       }
-
-      const cleanEmail = fbUser.email.trim().toLowerCase();
-      const cleanName = fbUser.displayName?.trim() || cleanEmail.split('@')[0] || 'Usuário Google';
-      const photoUrl = fbUser.photoURL || undefined;
-
-      // 1. Procurar usuário local existente por e-mail (reconhecimento de contas existentes)
-      let userRecord = await localDb.users.where('email').equalsIgnoreCase(cleanEmail).first();
-
-      // 2. Se não estiver no IndexedDB deste dispositivo, pesquisa na nuvem Firestore
-      if (!userRecord) {
-        const cloudUser = await FirestoreSyncService.findUserInCloud({ email: cleanEmail });
-        if (cloudUser) {
-          userRecord = cloudUser;
-          await localDb.users.put(userRecord);
-        }
-      }
-
-      // 3. Caso o usuário JÁ EXISTA:
-      // Mantemos estritamente o id existente para preservar 100% de todas as transações,
-      // parcelas, categorias, comprovantes e metas vinculadas a ele!
-      if (userRecord) {
-        let hasUpdates = false;
-        if (photoUrl && !userRecord.photoUrl) {
-          userRecord.photoUrl = photoUrl;
-          hasUpdates = true;
-        }
-        if (!userRecord.authProvider) {
-          userRecord.authProvider = 'google';
-          hasUpdates = true;
-        }
-
-        if (hasUpdates) {
-          await localDb.users.put(userRecord);
-          FirestoreSyncService.saveUserAccount(userRecord).catch(console.warn);
-        }
-
-        // Salva a sessão ativa para este usuário
-        await localDb.settings.put({ key: 'active_session_user_id', value: userRecord.id });
-
-        return {
-          success: true,
-          user: {
-            id: userRecord.id,
-            name: userRecord.name,
-            email: userRecord.email,
-            cpf: userRecord.cpf,
-            photoUrl: userRecord.photoUrl,
-            authProvider: userRecord.authProvider || 'google',
-            createdAt: userRecord.createdAt,
-          },
-          isNewUser: false,
-        };
-      }
-
-      // 4. Caso seja um NOVO CADASTRO via Google:
-      // Cria a conta com o ID seguro do Firebase
-      const newUserId = fbUser.uid || ('user_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7));
-      const newUserRecord: UserRecord = {
-        id: newUserId,
-        name: cleanName,
-        email: cleanEmail,
-        cpf: '',
-        passwordHash: '',
-        photoUrl,
-        authProvider: 'google',
-        createdAt: Date.now(),
-      };
-
-      await localDb.transaction('rw', [localDb.users, localDb.settings], async () => {
-        await localDb.users.put(newUserRecord);
-        await localDb.settings.put({ key: `user_${newUserId}_currentMonth`, value: getCurrentYearMonth() });
-        await localDb.settings.put({ key: `user_${newUserId}_isDarkMode`, value: false });
-        await localDb.settings.put({ key: `user_${newUserId}_isBalanceHidden`, value: false });
-        await localDb.settings.put({ key: 'active_session_user_id', value: newUserId });
-      });
-
-      // Salva imediatamente no Firestore
-      FirestoreSyncService.saveUserAccount(newUserRecord).catch(console.warn);
-
-      return {
-        success: true,
-        user: {
-          id: newUserRecord.id,
-          name: newUserRecord.name,
-          email: newUserRecord.email,
-          cpf: '',
-          photoUrl: newUserRecord.photoUrl,
-          authProvider: 'google',
-          createdAt: newUserRecord.createdAt,
-        },
-        isNewUser: true,
-      };
     } catch (err: any) {
       console.error('Google login error:', err);
       if (err?.code === 'auth/popup-closed-by-user') {
@@ -347,12 +360,32 @@ export const authOperations = {
         return { success: false, error: 'Solicitação cancelada.' };
       }
       if (err?.code === 'auth/network-request-failed') {
-        return { success: false, error: 'Falha de conexão com os servidores do Google. Verifique sua conexão e tente novamente.' };
+        return { success: false, error: 'Falha de conexão com os servidores do Google. Verifique sua conexão com a internet.' };
       }
       if (err?.code === 'auth/unauthorized-domain') {
-        return { success: false, error: 'Domínio da aplicação não autorizado no Firebase Authentication.' };
+        const currentDomain = typeof window !== 'undefined' ? window.location.hostname : 'este aplicativo';
+        return {
+          success: false,
+          error: `O domínio (${currentDomain}) precisa ser adicionado no Firebase Console > Authentication > Settings > Authorized Domains, ou utilize o acesso direto por E-mail e Senha.`,
+        };
       }
       return { success: false, error: err?.message || 'Falha ao autenticar com a Conta Google.' };
+    }
+  },
+
+  /**
+   * Verifica se o usuário concluiu um login por redirecionamento no Google
+   */
+  async checkGoogleRedirectResult(): Promise<{ success: boolean; user?: User; isNewUser?: boolean; error?: string } | null> {
+    try {
+      const result = await getRedirectResult(auth);
+      if (result && result.user) {
+        return await this.processFirebaseUser(result.user);
+      }
+      return null;
+    } catch (err: any) {
+      console.error('Check Google redirect result error:', err);
+      return null;
     }
   },
 

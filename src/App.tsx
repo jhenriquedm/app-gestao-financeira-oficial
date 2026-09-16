@@ -84,7 +84,9 @@ export const App: React.FC = () => {
     let isMounted = true;
     async function initSession() {
       try {
-        const activeUser = await authOperations.getActiveSessionUser();
+        // Verifica se o usuário concluiu um login por redirecionamento do Google
+        const redirectResult = await authOperations.checkGoogleRedirectResult();
+        let activeUser = redirectResult?.success && redirectResult.user ? redirectResult.user : await authOperations.getActiveSessionUser();
         if (!isMounted) return;
 
         if (activeUser) {
