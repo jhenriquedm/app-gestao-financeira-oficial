@@ -89,31 +89,39 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
     }> = [];
 
     transactions.forEach((t) => {
-      if (t.attachment) {
+      const atts: ReceiptAttachment[] = (t.attachments && t.attachments.length > 0)
+        ? t.attachments
+        : t.attachment ? [t.attachment] : [];
+
+      atts.forEach((att, idx) => {
         list.push({
-          id: t.id,
+          id: `${t.id}_att_${idx}`,
           source: 'transaction',
           sourceType: t.type === 'income' ? 'Receita' : t.isFixed ? 'Despesa Fixa' : 'Despesa Variável',
-          description: t.description,
+          description: atts.length > 1 ? `${t.description} (${idx + 1}/${atts.length})` : t.description,
           dateOrCompetence: t.date,
           amount: t.amount,
-          attachment: t.attachment,
+          attachment: att,
         });
-      }
+      });
     });
 
     installments.forEach((i) => {
-      if (i.attachment) {
+      const atts: ReceiptAttachment[] = (i.attachments && i.attachments.length > 0)
+        ? i.attachments
+        : i.attachment ? [i.attachment] : [];
+
+      atts.forEach((att, idx) => {
         list.push({
-          id: i.id,
+          id: `${i.id}_att_${idx}`,
           source: 'installment',
           sourceType: `Parcelamento (${i.currentInstallment}/${i.totalInstallments})`,
-          description: i.description,
+          description: atts.length > 1 ? `${i.description} (${idx + 1}/${atts.length})` : i.description,
           dateOrCompetence: i.competence,
           amount: i.monthlyAmount,
-          attachment: i.attachment,
+          attachment: att,
         });
-      }
+      });
     });
 
     return list;

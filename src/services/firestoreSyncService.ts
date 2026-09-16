@@ -326,10 +326,18 @@ export class FirestoreSyncService {
             isDeleted: false,
           };
 
-          // Firestore tem limite de 1MB por documento. Se o dataUrl for maior que 600KB,
+          // Firestore tem limite de 1MB por documento. Se o dataUrl for maior que 350KB,
           // envia a metadata do anexo para nuvem com dataUrl vazio, preservando o arquivo completo no IndexedDB local.
           const firestorePayload = { ...syncedTx };
-          if (firestorePayload.attachment && firestorePayload.attachment.dataUrl && firestorePayload.attachment.dataUrl.length > 600000) {
+          if (firestorePayload.attachments && Array.isArray(firestorePayload.attachments)) {
+            firestorePayload.attachments = firestorePayload.attachments.map((a) => {
+              if (a.dataUrl && a.dataUrl.length > 350000) {
+                return { ...a, dataUrl: '' };
+              }
+              return a;
+            });
+          }
+          if (firestorePayload.attachment && firestorePayload.attachment.dataUrl && firestorePayload.attachment.dataUrl.length > 350000) {
             firestorePayload.attachment = {
               ...firestorePayload.attachment,
               dataUrl: '',
@@ -366,7 +374,15 @@ export class FirestoreSyncService {
           };
 
           const firestorePayload = { ...syncedInst };
-          if (firestorePayload.attachment && firestorePayload.attachment.dataUrl && firestorePayload.attachment.dataUrl.length > 600000) {
+          if (firestorePayload.attachments && Array.isArray(firestorePayload.attachments)) {
+            firestorePayload.attachments = firestorePayload.attachments.map((a) => {
+              if (a.dataUrl && a.dataUrl.length > 350000) {
+                return { ...a, dataUrl: '' };
+              }
+              return a;
+            });
+          }
+          if (firestorePayload.attachment && firestorePayload.attachment.dataUrl && firestorePayload.attachment.dataUrl.length > 350000) {
             firestorePayload.attachment = {
               ...firestorePayload.attachment,
               dataUrl: '',
@@ -541,8 +557,10 @@ export class FirestoreSyncService {
     // 2. Download transactions
     const localTxExisting = await localDb.transactions.where('userId').equals(userId).toArray().catch(() => []);
     const localTxAttachmentMap = new Map<string, any>();
+    const localTxAttachmentsMap = new Map<string, any[]>();
     localTxExisting.forEach((t) => {
       if (t.attachment?.dataUrl) localTxAttachmentMap.set(t.id, t.attachment);
+      if (t.attachments && t.attachments.length > 0) localTxAttachmentsMap.set(t.id, t.attachments);
     });
 
     const txSnapshot = await getDocs(this.collectionRef(userId, 'transactions'));
@@ -552,6 +570,18 @@ export class FirestoreSyncService {
       const isDeletedRecord = item.isDeleted || (item as any).status === 'inactive' || tombstoneSet.has(d.id);
       if (!isDeletedRecord) {
         // Preserva dataUrl local se o remoto veio apenas com metadados
+        if (item.attachments && Array.isArray(item.attachments)) {
+          const localList = localTxAttachmentsMap.get(d.id) || [];
+          item.attachments = item.attachments.map((att, idx) => {
+            if (!att.dataUrl || att.dataUrl === '') {
+              const matchingLocal = localList.find((l) => l.id === att.id) || localList[idx];
+              if (matchingLocal?.dataUrl) {
+                return { ...att, dataUrl: matchingLocal.dataUrl };
+              }
+            }
+            return att;
+          });
+        }
         if (item.attachment && (!item.attachment.dataUrl || item.attachment.dataUrl === '')) {
           const localAtt = localTxAttachmentMap.get(d.id);
           if (localAtt?.dataUrl) {
@@ -569,8 +599,10 @@ export class FirestoreSyncService {
     // 3. Download installments
     const localInstExisting = await localDb.installments.where('userId').equals(userId).toArray().catch(() => []);
     const localInstAttachmentMap = new Map<string, any>();
+    const localInstAttachmentsMap = new Map<string, any[]>();
     localInstExisting.forEach((i) => {
       if (i.attachment?.dataUrl) localInstAttachmentMap.set(i.id, i.attachment);
+      if (i.attachments && i.attachments.length > 0) localInstAttachmentsMap.set(i.id, i.attachments);
     });
 
     const instSnapshot = await getDocs(this.collectionRef(userId, 'installments'));
@@ -579,6 +611,18 @@ export class FirestoreSyncService {
       const item = d.data() as DebtInstallment;
       const isDeletedRecord = item.isDeleted || (item as any).status === 'inactive' || tombstoneSet.has(d.id);
       if (!isDeletedRecord) {
+        if (item.attachments && Array.isArray(item.attachments)) {
+          const localList = localInstAttachmentsMap.get(d.id) || [];
+          item.attachments = item.attachments.map((att, idx) => {
+            if (!att.dataUrl || att.dataUrl === '') {
+              const matchingLocal = localList.find((l) => l.id === att.id) || localList[idx];
+              if (matchingLocal?.dataUrl) {
+                return { ...att, dataUrl: matchingLocal.dataUrl };
+              }
+            }
+            return att;
+          });
+        }
         if (item.attachment && (!item.attachment.dataUrl || item.attachment.dataUrl === '')) {
           const localAtt = localInstAttachmentMap.get(d.id);
           if (localAtt?.dataUrl) {

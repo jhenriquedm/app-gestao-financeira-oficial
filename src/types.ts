@@ -41,7 +41,8 @@ export interface Transaction {
   paymentMethod: PaymentMethod;
   status: TransactionStatus;
   notes?: string;
-  attachment?: ReceiptAttachment;
+  attachment?: ReceiptAttachment; // mantido para compatibilidade retroativa
+  attachments?: ReceiptAttachment[]; // até 4 comprovantes anexados
   isFixed?: boolean; // Despesa Fixa Recorrente (ex: Aluguel, Internet)
   dueDay?: number; // Dia de Vencimento no Mês (1-31)
   startMonthYear?: string; // YYYY-MM quando foi criada
@@ -68,7 +69,8 @@ export interface DebtInstallment {
   deletedFromMonthYear?: string; // YYYY-MM se foi cancelada/excluída a partir deste mês
   paidMonths?: string[]; // Meses em que a parcela foi marcada como paga
   notes?: string;
-  attachment?: ReceiptAttachment;
+  attachment?: ReceiptAttachment; // mantido para compatibilidade retroativa
+  attachments?: ReceiptAttachment[]; // até 4 comprovantes anexados
   createdAt: number;
   syncStatus?: SyncStatus;
   updatedAt?: number;

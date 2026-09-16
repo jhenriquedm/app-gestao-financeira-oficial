@@ -198,18 +198,25 @@ export async function saveFile(options: {
 
 /**
  * Salva ou faz o download de um comprovante anexado (PDF, DOCX, Imagem).
+ * Forçado diretamente para a pasta de downloads de qualquer smartphone por debaixo dos panos,
+ * sem exibir detalhes de pastas ou diretórios ao usuário.
  */
 export async function saveAttachmentFile(attachment: {
   name: string;
   type: string;
   dataUrl: string;
 }): Promise<SaveResult> {
-  return saveFile({
+  const res = await saveFile({
     fileName: attachment.name,
     content: attachment.dataUrl,
     mimeType: attachment.type || 'application/octet-stream',
-    chooseFolder: false,
+    chooseFolder: false, // Força diretamente para Downloads
   });
+
+  return {
+    ...res,
+    message: res.success ? 'Comprovante baixado com sucesso!' : (res.message || 'Falha ao baixar comprovante.'),
+  };
 }
 
 /**

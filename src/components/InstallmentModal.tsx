@@ -41,7 +41,7 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
   const [origin, setOrigin] = useState('');
   const [status, setStatus] = useState<TransactionStatus>('pending');
   const [notes, setNotes] = useState('');
-  const [attachment, setAttachment] = useState<ReceiptAttachment | undefined>(undefined);
+  const [attachments, setAttachments] = useState<ReceiptAttachment[]>([]);
   const [error, setError] = useState('');
   const [successFeedback, setSuccessFeedback] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -91,7 +91,12 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
       setOrigin(initialData.origin || '');
       setStatus(initialData.status);
       setNotes(initialData.notes || '');
-      setAttachment(initialData.attachment);
+      const loadedAtts = (initialData.attachments && initialData.attachments.length > 0)
+        ? initialData.attachments
+        : initialData.attachment
+        ? [initialData.attachment]
+        : [];
+      setAttachments(loadedAtts);
     } else {
       setDescription('');
       setCategory(categoryOptions[0] || '');
@@ -102,7 +107,7 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
       setOrigin('');
       setStatus('pending');
       setNotes('');
-      setAttachment(undefined);
+      setAttachments([]);
     }
     setError('');
     setSuccessFeedback(null);
@@ -189,7 +194,8 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
         status,
         competence: initialData?.competence || competence,
         notes: notes.trim(),
-        attachment,
+        attachments: attachments.length > 0 ? attachments : undefined,
+        attachment: attachments[0] || undefined,
       },
       initialData?.id
     );
@@ -216,7 +222,7 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
       setMonthlyAmount('');
       setOrigin('');
       setNotes('');
-      setAttachment(undefined);
+      setAttachments([]);
       setIsSubmitting(false);
     }
   };
@@ -554,10 +560,10 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
                 />
               </div>
 
-              {/* Anexo de Comprovante */}
+              {/* Anexos de Comprovantes (Até 4 arquivos) */}
               <ReceiptAttachmentField
-                attachment={attachment}
-                onChange={setAttachment}
+                attachments={attachments}
+                onChange={setAttachments}
                 disabled={isSubmitting}
               />
 

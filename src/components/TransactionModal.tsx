@@ -45,7 +45,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [isFixed, setIsFixed] = useState(false);
   const [dueDay, setDueDay] = useState('');
   const [notes, setNotes] = useState('');
-  const [attachment, setAttachment] = useState<ReceiptAttachment | undefined>(undefined);
+  const [attachments, setAttachments] = useState<ReceiptAttachment[]>([]);
   const [error, setError] = useState('');
   const [successFeedback, setSuccessFeedback] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -96,7 +96,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setIsFixed(!!initialData.isFixed);
       setDueDay(initialData.dueDay ? initialData.dueDay.toString() : '');
       setNotes(initialData.notes || '');
-      setAttachment(initialData.attachment);
+      const loadedAtts = (initialData.attachments && initialData.attachments.length > 0)
+        ? initialData.attachments
+        : initialData.attachment
+        ? [initialData.attachment]
+        : [];
+      setAttachments(loadedAtts);
     } else {
       const today = defaultDate || new Date().toISOString().slice(0, 10);
       const parsedDay = new Date().getDate();
@@ -111,7 +116,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setIsFixed(isFixedDefault);
       setDueDay(parsedDay.toString());
       setNotes('');
-      setAttachment(undefined);
+      setAttachments([]);
     }
     setError('');
     setSuccessFeedback(null);
@@ -199,7 +204,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         isFixed: type === 'expense' ? isFixed : false,
         dueDay: type === 'expense' && isFixed ? (parsedDueDay || new Date(date).getDate()) : undefined,
         notes: notes.trim(),
-        attachment,
+        attachments: attachments.length > 0 ? attachments : undefined,
+        attachment: attachments[0] || undefined,
       },
       initialData ? initialData.id : undefined
     );
@@ -224,7 +230,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setDescription('');
       setAmount('');
       setNotes('');
-      setAttachment(undefined);
+      setAttachments([]);
       setIsSubmitting(false);
     }
   };
@@ -581,10 +587,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 />
               </div>
 
-              {/* Anexo de Comprovante (PDF, DOCX, JPG, PNG) */}
+              {/* Anexos de Comprovantes (Até 4 arquivos: PDF, DOCX, JPG, PNG) */}
               <ReceiptAttachmentField
-                attachment={attachment}
-                onChange={setAttachment}
+                attachments={attachments}
+                onChange={setAttachments}
                 disabled={isSubmitting}
               />
             </form>
