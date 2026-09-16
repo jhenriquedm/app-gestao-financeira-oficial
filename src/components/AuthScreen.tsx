@@ -50,10 +50,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Password Recovery via CPF Modal States
+  // Password Recovery via E-mail or CPF Modal States
   const [isRecoveryModalOpen, setIsRecoveryModalOpen] = useState(false);
   const [recoveryStep, setRecoveryStep] = useState<1 | 2>(1);
   const [recoveryCpf, setRecoveryCpf] = useState('');
+  const [recoveryIdentifier, setRecoveryIdentifier] = useState('');
   const [recoveryUserName, setRecoveryUserName] = useState('');
   const [recoveryNewPassword, setRecoveryNewPassword] = useState('');
   const [recoveryConfirmPassword, setRecoveryConfirmPassword] = useState('');
@@ -75,10 +76,15 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     return unmasked.length === 11 && validateCpf(unmasked);
   }, [cpf]);
 
-  const isRecoveryCpfValid = useMemo(() => {
-    const unmasked = unmaskCpf(recoveryCpf);
+  const isRecoveryInputValid = useMemo(() => {
+    const val = (recoveryIdentifier || recoveryCpf).trim();
+    if (!val) return false;
+    if (val.includes('@')) {
+      return emailRegex.test(val.toLowerCase());
+    }
+    const unmasked = unmaskCpf(val);
     return unmasked.length === 11 && validateCpf(unmasked);
-  }, [recoveryCpf]);
+  }, [recoveryIdentifier, recoveryCpf, emailRegex]);
 
   const isPasswordValidLength = useMemo(() => {
     return password.length >= 6 && password.length <= 32;
@@ -119,11 +125,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     if (errorMessage) setErrorMessage(null);
   };
 
-  const handleRecoveryCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatCpf(e.target.value);
-    setRecoveryCpf(formatted);
+  const handleRecoveryIdentifierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    if (!raw.includes('@') && /^[0-9.\-\s]+$/.test(raw)) {
+      const formatted = formatCpf(raw);
+      setRecoveryIdentifier(formatted);
+      setRecoveryCpf(formatted);
+    } else {
+      setRecoveryIdentifier(raw);
+      setRecoveryCpf(raw);
+    }
     if (recoveryError) setRecoveryError(null);
   };
+
+  const handleRecoveryCpfChange = handleRecoveryIdentifierChange;
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPassword(e.target.value);
@@ -141,28 +156,40 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     e.preventDefault();
     setRecoveryError(null);
 
-    const cleanCpf = unmaskCpf(recoveryCpf);
-    if (!cleanCpf || cleanCpf.length !== 11) {
-      setRecoveryError('Digite os 11 dígitos do CPF para consultar.');
+    const inputVal = (recoveryIdentifier || recoveryCpf).trim();
+    if (!inputVal) {
+      setRecoveryError('Informe o e-mail ou CPF cadastrado para continuar.');
       return;
     }
 
-    if (!validateCpf(cleanCpf)) {
-      setRecoveryError('O CPF informado possui dígitos verificadores inválidos.');
-      return;
+    if (inputVal.includes('@')) {
+      if (!emailRegex.test(inputVal.toLowerCase())) {
+        setRecoveryError('Informe um endereço de e-mail válido (ex: usuario@email.com).');
+        return;
+      }
+    } else {
+      const cleanCpf = unmaskCpf(inputVal);
+      if (!cleanCpf || cleanCpf.length !== 11) {
+        setRecoveryError('Digite os 11 dígitos do CPF ou informe seu e-mail.');
+        return;
+      }
+      if (!validateCpf(cleanCpf)) {
+        setRecoveryError('O CPF informado possui dígitos verificadores inválidos.');
+        return;
+      }
     }
 
     setRecoveryLoading(true);
     try {
-      const result = await authOperations.verifyCpfForRecovery(cleanCpf);
+      const result = await authOperations.verifyUserForRecovery(inputVal);
       if (result.exists) {
         setRecoveryUserName(result.userName || 'Usuário');
         setRecoveryStep(2);
       } else {
-        setRecoveryError(result.error || 'Nenhum usuário cadastrado com este CPF foi encontrado no banco de dados local.');
+        setRecoveryError(result.error || 'Nenhum usuário cadastrado com este e-mail ou CPF foi localizado.');
       }
     } catch (err: any) {
-      setRecoveryError(err?.message || 'Erro ao consultar banco de dados local.');
+      setRecoveryError(err?.message || 'Erro ao consultar banco de dados.');
     } finally {
       setRecoveryLoading(false);
     }
@@ -189,11 +216,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
     setRecoveryLoading(true);
     try {
-      const result = await authOperations.resetPasswordWithCpf(recoveryCpf, recoveryNewPassword);
+      const inputVal = (recoveryIdentifier || recoveryCpf).trim();
+      const result = await authOperations.resetPasswordForUser(inputVal, recoveryNewPassword);
       if (result.success) {
         setIsRecoveryModalOpen(false);
         setMode('login');
         setSuccessMessage('Senha alterada com sucesso! Faça login com a sua nova senha.');
+        setRecoveryIdentifier('');
         setRecoveryCpf('');
         setRecoveryNewPassword('');
         setRecoveryConfirmPassword('');
@@ -824,7 +853,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                     {recoveryStep === 1 ? 'Recuperar Senha' : 'Criar Nova Senha'}
                   </h3>
                   <p className="text-[11px] sm:text-xs text-slate-400 truncate">
-                    {recoveryStep === 1 ? 'Passo 1 de 2: Identificação por CPF' : 'Passo 2 de 2: Nova Senha de Acesso'}
+                    {recoveryStep === 1 ? 'Passo 1 de 2: Identificação da Conta' : 'Passo 2 de 2: Nova Senha de Acesso'}
                   </p>
                 </div>
               </div>
@@ -856,30 +885,33 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                 </div>
               )}
 
-              {/* Step 1: Input CPF */}
+              {/* Step 1: Input E-mail or CPF */}
               {recoveryStep === 1 && (
                 <form onSubmit={handleVerifyCpfForRecovery} className="space-y-4">
                   <div>
                     <p className="text-xs text-slate-300 mb-3 leading-relaxed">
-                      Digite o número do seu CPF cadastrado. O sistema fará a busca no seu banco de dados local para permitir a alteração da sua senha.
+                      Informe o seu e-mail ou CPF cadastrado. O sistema fará a busca local e na nuvem para identificar sua conta e permitir a alteração da sua senha.
                     </p>
                     <label className="text-xs font-medium text-slate-300 block mb-1.5">
-                      CPF Cadastrado <span className="text-rose-400">*</span>
+                      E-mail ou CPF Cadastrado <span className="text-rose-400">*</span>
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                        <CreditCard className="w-4 h-4" />
+                        {recoveryCpf.includes('@') ? (
+                          <Mail className="w-4 h-4" />
+                        ) : (
+                          <CreditCard className="w-4 h-4" />
+                        )}
                       </div>
                       <input
                         type="text"
-                        id="input-recovery-cpf"
+                        id="input-recovery-identifier"
                         required
                         autoFocus
-                        maxLength={14}
-                        inputMode="numeric"
+                        maxLength={80}
                         value={recoveryCpf}
                         onChange={handleRecoveryCpfChange}
-                        placeholder="000.000.000-00"
+                        placeholder="seu.email@exemplo.com ou 000.000.000-00"
                         className="w-full pl-10 pr-4 py-3 min-h-[44px] bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:ring-inset transition-all"
                       />
                     </div>
@@ -898,15 +930,15 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                     </button>
                     <button
                       type="submit"
-                      id="btn-verify-cpf-recovery"
-                      disabled={recoveryLoading || !isRecoveryCpfValid}
+                      id="btn-verify-recovery-identifier"
+                      disabled={recoveryLoading || !isRecoveryInputValid}
                       className="flex-1 py-2.5 px-3 min-h-[44px] bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
                     >
                       {recoveryLoading ? (
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       ) : (
                         <>
-                          <span>Buscar CPF</span>
+                          <span>Buscar Conta</span>
                           <ArrowRight className="w-4 h-4" />
                         </>
                       )}

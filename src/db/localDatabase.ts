@@ -356,40 +356,70 @@ export const authOperations = {
     }
   },
 
-  async verifyCpfForRecovery(cpf: string): Promise<{ exists: boolean; userName?: string; error?: string }> {
+  async verifyUserForRecovery(identifier: string): Promise<{ exists: boolean; userName?: string; error?: string }> {
     try {
-      const cleanCpf = unmaskCpf(cpf);
-      if (!cleanCpf || cleanCpf.length !== 11) {
-        return { exists: false, error: 'Digite os 11 dígitos do CPF.' };
+      const cleanInput = identifier.trim();
+      if (!cleanInput) {
+        return { exists: false, error: 'Informe o e-mail ou CPF do seu cadastro.' };
       }
-      if (!validateCpf(cleanCpf)) {
-        return { exists: false, error: 'CPF com formato ou dígitos verificadores inválidos.' };
-      }
-      let user = await localDb.users.where('cpf').equals(cleanCpf).first();
-      // Seamless cloud check without alerting user
-      if (!user) {
-        const cloudUser = await FirestoreSyncService.findUserInCloud({ cpf: cleanCpf });
-        if (cloudUser) {
-          await localDb.users.put(cloudUser);
-          user = cloudUser;
+
+      const isEmail = cleanInput.includes('@');
+      let user: UserRecord | null | undefined = null;
+
+      if (isEmail) {
+        const cleanEmail = cleanInput.toLowerCase();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(cleanEmail)) {
+          return { exists: false, error: 'Informe um endereço de e-mail válido.' };
+        }
+
+        user = await localDb.users.where('email').equalsIgnoreCase(cleanEmail).first();
+        if (!user) {
+          const cloudUser = await FirestoreSyncService.findUserInCloud({ email: cleanEmail });
+          if (cloudUser) {
+            await localDb.users.put(cloudUser);
+            user = cloudUser;
+          }
+        }
+
+        if (!user) {
+          return { exists: false, error: 'E-mail não encontrado no sistema ou na nuvem.' };
+        }
+      } else {
+        const cleanCpf = unmaskCpf(cleanInput);
+        if (!cleanCpf || cleanCpf.length !== 11) {
+          return { exists: false, error: 'Digite os 11 dígitos do CPF ou informe seu e-mail cadastrado.' };
+        }
+        if (!validateCpf(cleanCpf)) {
+          return { exists: false, error: 'CPF com formato ou dígitos verificadores inválidos.' };
+        }
+
+        user = await localDb.users.where('cpf').equals(cleanCpf).first();
+        if (!user) {
+          const cloudUser = await FirestoreSyncService.findUserInCloud({ cpf: cleanCpf });
+          if (cloudUser) {
+            await localDb.users.put(cloudUser);
+            user = cloudUser;
+          }
+        }
+
+        if (!user) {
+          return { exists: false, error: 'CPF não encontrado no sistema ou na nuvem.' };
         }
       }
 
-      if (!user) {
-        return { exists: false, error: 'CPF não encontrado no sistema.' };
-      }
       return { exists: true, userName: user.name };
     } catch (err: any) {
-      console.error('CPF verification error:', err);
+      console.error('User recovery verification error:', err);
       return { exists: false, error: 'Erro ao consultar banco de dados.' };
     }
   },
 
-  async resetPasswordWithCpf(cpf: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+  async resetPasswordForUser(identifier: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const cleanCpf = unmaskCpf(cpf);
-      if (!cleanCpf || !validateCpf(cleanCpf)) {
-        return { success: false, error: 'CPF inválido.' };
+      const cleanInput = identifier.trim();
+      if (!cleanInput) {
+        return { success: false, error: 'Identificação do usuário inválida.' };
       }
       if (!newPassword || newPassword.length < 6) {
         return { success: false, error: 'A nova senha deve ter no mínimo 6 caracteres.' };
@@ -398,16 +428,31 @@ export const authOperations = {
         return { success: false, error: 'A nova senha deve ter no máximo 32 caracteres.' };
       }
 
-      let user = await localDb.users.where('cpf').equals(cleanCpf).first();
-      if (!user) {
-        const cloudUser = await FirestoreSyncService.findUserInCloud({ cpf: cleanCpf });
-        if (cloudUser) {
-          user = cloudUser;
+      const isEmail = cleanInput.includes('@');
+      let user: UserRecord | null | undefined = null;
+
+      if (isEmail) {
+        const cleanEmail = cleanInput.toLowerCase();
+        user = await localDb.users.where('email').equalsIgnoreCase(cleanEmail).first();
+        if (!user) {
+          const cloudUser = await FirestoreSyncService.findUserInCloud({ email: cleanEmail });
+          if (cloudUser) {
+            user = cloudUser;
+          }
+        }
+      } else {
+        const cleanCpf = unmaskCpf(cleanInput);
+        user = await localDb.users.where('cpf').equals(cleanCpf).first();
+        if (!user) {
+          const cloudUser = await FirestoreSyncService.findUserInCloud({ cpf: cleanCpf });
+          if (cloudUser) {
+            user = cloudUser;
+          }
         }
       }
 
       if (!user) {
-        return { success: false, error: 'CPF não encontrado no banco de dados.' };
+        return { success: false, error: 'Usuário não localizado no banco de dados.' };
       }
 
       const passwordHash = await hashPassword(newPassword);
@@ -422,6 +467,14 @@ export const authOperations = {
       console.error('Password reset error:', err);
       return { success: false, error: err?.message || 'Erro ao redefinir a senha.' };
     }
+  },
+
+  async verifyCpfForRecovery(cpf: string): Promise<{ exists: boolean; userName?: string; error?: string }> {
+    return this.verifyUserForRecovery(cpf);
+  },
+
+  async resetPasswordWithCpf(cpf: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+    return this.resetPasswordForUser(cpf, newPassword);
   },
 
   async updateProfile(

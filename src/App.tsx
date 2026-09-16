@@ -182,6 +182,53 @@ export const App: React.FC = () => {
     setGoals([]);
   };
 
+  // Continuous & Automatic Background Synchronization for all user data (transactions, attachments, categories, budgets, goals)
+  useEffect(() => {
+    if (!currentUser) return;
+
+    let isSyncing = false;
+
+    const performAutoSync = async () => {
+      if (isSyncing || !navigator.onLine) return;
+      isSyncing = true;
+      try {
+        const result = await FirestoreSyncService.fullSync(currentUser.id);
+        if (result.success && result.downloadedCount > 0) {
+          const refreshed = await loadUserData(currentUser.id);
+          setCategories(refreshed.categories || []);
+          setParcelCategories(refreshed.parcelCategories || []);
+          setTransactions(refreshed.transactions || []);
+          setInstallments(refreshed.installments || []);
+          setBudgets(refreshed.budgets || []);
+          setGoals(refreshed.savingsGoals || []);
+        }
+      } catch (err) {
+        console.warn('Auto sync check failed:', err);
+      } finally {
+        isSyncing = false;
+      }
+    };
+
+    // 1. Initial sync trigger
+    performAutoSync();
+
+    // 2. Continuous interval sync every 20 seconds
+    const syncInterval = setInterval(performAutoSync, 20000);
+
+    // 3. Sync immediately when connection recovers or app window regains focus
+    const handleOnline = () => performAutoSync();
+    const handleFocus = () => performAutoSync();
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(syncInterval);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [currentUser]);
+
   // Theme synchronization
   useEffect(() => {
     if (isDarkMode) {
