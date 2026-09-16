@@ -9,10 +9,14 @@ import {
   Check, 
   Cloud, 
   RefreshCw,
-  CloudOff
+  CloudOff,
+  FolderDown,
+  FolderOpen,
+  Share2
 } from 'lucide-react';
 import { Transaction, Category, Budget, SavingsGoal, DebtInstallment } from '../types';
-import { downloadCSV, downloadJSON, formatMonthYearUppercase } from '../utils/formatters';
+import { downloadCSV, downloadJSON, buildCSVContent, formatMonthYearUppercase } from '../utils/formatters';
+import { shareFile } from '../utils/fileSaver';
 import { getComputedInstallment } from '../utils/installmentHelpers';
 import { FirestoreSyncService } from '../services/firestoreSyncService';
 import { localDb } from '../db/localDatabase';
@@ -54,6 +58,8 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isSyncingCloud, setIsSyncingCloud] = useState(false);
+  const [isSavingCSV, setIsSavingCSV] = useState(false);
+  const [isSavingJSON, setIsSavingJSON] = useState(false);
   const [syncState, setSyncState] = useState<{
     status: 'synced' | 'pending' | 'offline' | 'loading';
     pendingCount: number;
@@ -153,15 +159,64 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
 
   const totalMonthlyItems = csvTransactions.length + activeInstallmentsCount;
 
-  const handleExportCSV = () => {
-    downloadCSV(csvTransactions, categories, activeMonth, installments);
-    setFeedback({ 
-      type: 'success', 
-      message: `Relatório CSV do mês ${activeMonth} (${totalMonthlyItems} lançamentos: avulsas, fixas e parcelas) exportado com sucesso!` 
-    });
+  const handleExportCSV = async (chooseFolder = false) => {
+    setIsSavingCSV(true);
+    try {
+      const res = await downloadCSV(csvTransactions, categories, activeMonth, installments, { chooseFolder });
+      if (res.success) {
+        setFeedback({ 
+          type: 'success', 
+          message: res.message || `Relatório CSV do mês ${activeMonth} salvo com sucesso!` 
+        });
+      } else {
+        setFeedback({ 
+          type: 'error', 
+          message: res.message || 'Operação cancelada.' 
+        });
+      }
+    } catch (err: unknown) {
+      setFeedback({ 
+        type: 'error', 
+        message: err instanceof Error ? err.message : 'Erro ao exportar CSV.' 
+      });
+    } finally {
+      setIsSavingCSV(false);
+    }
   };
 
-  const handleExportJSON = () => {
+  const handleShareCSV = async () => {
+    setIsSavingCSV(true);
+    try {
+      const content = buildCSVContent(csvTransactions, categories, activeMonth, installments);
+      const fileName = `gestao-financeira-${activeMonth}.csv`;
+      const res = await shareFile({
+        fileName,
+        content,
+        mimeType: 'text/csv',
+      });
+      if (res.success) {
+        setFeedback({ 
+          type: 'success', 
+          message: 'Menu de compartilhamento aberto com sucesso!' 
+        });
+      } else {
+        setFeedback({ 
+          type: 'error', 
+          message: res.message || 'Não foi possível compartilhar.' 
+        });
+      }
+    } catch (err: unknown) {
+      setFeedback({ 
+        type: 'error', 
+        message: err instanceof Error ? err.message : 'Erro ao compartilhar CSV.' 
+      });
+    } finally {
+      setIsSavingCSV(false);
+    }
+  };
+
+  const handleExportJSON = async (chooseFolder = false) => {
+    setIsSavingJSON(true);
     const todayStr = new Date().toISOString().slice(0, 10);
     const backupTransactions = transactions.filter(t => t.date <= todayStr);
 
@@ -178,11 +233,76 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
       goals,
       installments,
     };
-    downloadJSON(backup, `backup-gestao-financeira-ate-${todayStr}.json`);
-    setFeedback({ 
-      type: 'success', 
-      message: `Backup JSON gerado com sucesso contendo todos os dados até ${todayStr} (${backupTransactions.length} transações)!` 
-    });
+    const fileName = `backup-gestao-financeira-ate-${todayStr}.json`;
+
+    try {
+      const res = await downloadJSON(backup, fileName, { chooseFolder });
+      if (res.success) {
+        setFeedback({ 
+          type: 'success', 
+          message: res.message || `Backup JSON gerado com sucesso!` 
+        });
+      } else {
+        setFeedback({ 
+          type: 'error', 
+          message: res.message || 'Operação cancelada.' 
+        });
+      }
+    } catch (err: unknown) {
+      setFeedback({ 
+        type: 'error', 
+        message: err instanceof Error ? err.message : 'Erro ao exportar Backup JSON.' 
+      });
+    } finally {
+      setIsSavingJSON(false);
+    }
+  };
+
+  const handleShareJSON = async () => {
+    setIsSavingJSON(true);
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const backupTransactions = transactions.filter(t => t.date <= todayStr);
+
+    const backup = {
+      version: '1.3',
+      exportedAt: new Date().toISOString(),
+      coverage: {
+        upToDate: todayStr,
+        upToMonth: activeMonth,
+      },
+      transactions: backupTransactions,
+      categories,
+      budgets,
+      goals,
+      installments,
+    };
+    const fileName = `backup-gestao-financeira-ate-${todayStr}.json`;
+
+    try {
+      const res = await shareFile({
+        fileName,
+        content: JSON.stringify(backup, null, 2),
+        mimeType: 'application/json',
+      });
+      if (res.success) {
+        setFeedback({ 
+          type: 'success', 
+          message: 'Menu de compartilhamento aberto com sucesso!' 
+        });
+      } else {
+        setFeedback({ 
+          type: 'error', 
+          message: res.message || 'Não foi possível compartilhar.' 
+        });
+      }
+    } catch (err: unknown) {
+      setFeedback({ 
+        type: 'error', 
+        message: err instanceof Error ? err.message : 'Erro ao compartilhar Backup JSON.' 
+      });
+    } finally {
+      setIsSavingJSON(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -377,44 +497,114 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
               </div>
 
               {/* Export options */}
-              <div className="space-y-2.5">
+              <div className="space-y-3">
                 <span className="font-semibold text-neutral-700 dark:text-neutral-300 block uppercase tracking-wider text-[11px]">
-                  Exportar Dados
+                  Exportar & Salvar Arquivos
                 </span>
 
-                <button
-                  id="btn-export-csv-action"
-                  onClick={handleExportCSV}
-                  className="w-full flex items-center justify-between p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 transition-colors text-left cursor-pointer"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center">
+                {/* Planilha CSV */}
+                <div className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-800/40 space-y-2.5">
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
                       <FileSpreadsheet className="w-4 h-4" />
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-neutral-900 dark:text-neutral-100 text-xs">Planilha CSV do Mês ({formatMonthYearUppercase(activeMonth)})</h4>
-                      <p className="text-[11px] text-neutral-500 dark:text-neutral-400">Exporta {totalMonthlyItems} lançamentos (despesas avulsas, fixas e parcelas)</p>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-neutral-900 dark:text-neutral-100 text-xs">
+                        Planilha CSV do Mês ({formatMonthYearUppercase(activeMonth)})
+                      </h4>
+                      <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                        {totalMonthlyItems} lançamentos para abrir no Excel ou Google Planilhas.
+                      </p>
                     </div>
                   </div>
-                  <Download className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
-                </button>
 
-                <button
-                  id="btn-export-json-action"
-                  onClick={handleExportJSON}
-                  className="w-full flex items-center justify-between p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 transition-colors text-left cursor-pointer"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 flex items-center justify-center">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 pt-1">
+                    <button
+                      id="btn-export-csv-download-folder"
+                      onClick={() => handleExportCSV(false)}
+                      disabled={isSavingCSV}
+                      title="Salvar diretamente na pasta Download do telefone"
+                      className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold text-[11px] shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <FolderDown className="w-3.5 h-3.5" />
+                      <span>{isSavingCSV ? 'Salvando...' : 'Salvar em Downloads'}</span>
+                    </button>
+
+                    <button
+                      id="btn-export-csv-choose-folder"
+                      onClick={() => handleExportCSV(true)}
+                      disabled={isSavingCSV}
+                      title="Escolher a pasta do telefone onde salvar"
+                      className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700 active:bg-neutral-200 text-neutral-800 dark:text-neutral-200 font-semibold text-[11px] transition-colors cursor-pointer disabled:opacity-50 shadow-2xs"
+                    >
+                      <FolderOpen className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>Escolher Pasta</span>
+                    </button>
+
+                    <button
+                      id="btn-export-csv-share"
+                      onClick={handleShareCSV}
+                      disabled={isSavingCSV}
+                      title="Compartilhar via WhatsApp, Drive ou Email"
+                      className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700 active:bg-neutral-200 text-neutral-700 dark:text-neutral-300 font-medium text-[11px] transition-colors cursor-pointer disabled:opacity-50 shadow-2xs"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      <span>Compartilhar</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Backup JSON */}
+                <div className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-800/40 space-y-2.5">
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 flex items-center justify-center shrink-0">
                       <Download className="w-4 h-4" />
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-neutral-900 dark:text-neutral-100 text-xs">Backup Histórico (JSON)</h4>
-                      <p className="text-[11px] text-neutral-500 dark:text-neutral-400">Salva todos os dados históricos acumulados até hoje</p>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-neutral-900 dark:text-neutral-100 text-xs">
+                        Backup Histórico Completo (JSON)
+                      </h4>
+                      <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                        Salva todos os dados históricos acumulados até hoje para segurança e restauração.
+                      </p>
                     </div>
                   </div>
-                  <Download className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
-                </button>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 pt-1">
+                    <button
+                      id="btn-export-json-download-folder"
+                      onClick={() => handleExportJSON(false)}
+                      disabled={isSavingJSON}
+                      title="Salvar diretamente na pasta Download do telefone"
+                      className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold text-[11px] shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <FolderDown className="w-3.5 h-3.5" />
+                      <span>{isSavingJSON ? 'Salvando...' : 'Salvar em Downloads'}</span>
+                    </button>
+
+                    <button
+                      id="btn-export-json-choose-folder"
+                      onClick={() => handleExportJSON(true)}
+                      disabled={isSavingJSON}
+                      title="Escolher a pasta do telefone onde salvar"
+                      className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700 active:bg-neutral-200 text-neutral-800 dark:text-neutral-200 font-semibold text-[11px] transition-colors cursor-pointer disabled:opacity-50 shadow-2xs"
+                    >
+                      <FolderOpen className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                      <span>Escolher Pasta</span>
+                    </button>
+
+                    <button
+                      id="btn-export-json-share"
+                      onClick={handleShareJSON}
+                      disabled={isSavingJSON}
+                      title="Compartilhar via WhatsApp, Drive ou Email"
+                      className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700 active:bg-neutral-200 text-neutral-700 dark:text-neutral-300 font-medium text-[11px] transition-colors cursor-pointer disabled:opacity-50 shadow-2xs"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      <span>Compartilhar</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Import options */}

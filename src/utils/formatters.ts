@@ -1,5 +1,6 @@
 import { PaymentMethod, Transaction, Category, DebtInstallment } from '../types';
 import { getComputedInstallment } from './installmentHelpers';
+import { saveFile, SaveResult } from './fileSaver';
 
 export const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('pt-BR', {
@@ -58,12 +59,12 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   other: 'Outro',
 };
 
-export const downloadCSV = (
+export const buildCSVContent = (
   transactions: Transaction[],
   categories: Category[],
   currentMonthYear?: string,
   installments?: DebtInstallment[]
-) => {
+): string => {
   const categoryMap = new Map(categories.map(c => [c.id, c.name]));
   
   // Filter by target month if specified
@@ -156,27 +157,39 @@ export const downloadCSV = (
     `"${(r.notes && r.notes.trim() ? r.notes : '-').replace(/"/g, '""')}"`
   ]);
 
-  const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\r\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.setAttribute('href', url);
-  const fileSuffix = currentMonthYear ? `-${currentMonthYear}` : `-${new Date().toISOString().slice(0, 10)}`;
-  link.setAttribute('download', `gestao-financeira${fileSuffix}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  return '\uFEFF' + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\r\n');
 };
 
-export const downloadJSON = (data: unknown, filename = 'backup-gestao-financeira.json') => {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.setAttribute('href', url);
-  link.setAttribute('download', filename);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+export const downloadCSV = async (
+  transactions: Transaction[],
+  categories: Category[],
+  currentMonthYear?: string,
+  installments?: DebtInstallment[],
+  options?: { chooseFolder?: boolean }
+): Promise<SaveResult> => {
+  const csvContent = buildCSVContent(transactions, categories, currentMonthYear, installments);
+  const fileSuffix = currentMonthYear ? `-${currentMonthYear}` : `-${new Date().toISOString().slice(0, 10)}`;
+  const fileName = `gestao-financeira${fileSuffix}.csv`;
+
+  return saveFile({
+    fileName,
+    content: csvContent,
+    mimeType: 'text/csv',
+    chooseFolder: options?.chooseFolder ?? false,
+  });
 };
+
+export const downloadJSON = async (
+  data: unknown,
+  filename = 'backup-gestao-financeira.json',
+  options?: { chooseFolder?: boolean }
+): Promise<SaveResult> => {
+  const content = JSON.stringify(data, null, 2);
+  return saveFile({
+    fileName: filename,
+    content,
+    mimeType: 'application/json',
+    chooseFolder: options?.chooseFolder ?? false,
+  });
+};
+
