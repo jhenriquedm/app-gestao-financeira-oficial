@@ -18,7 +18,7 @@ import { User } from '../types';
 import { authOperations } from '../db/localDatabase';
 import { sanitizePersonName } from '../utils/textSanitizer';
 import { formatCpf, unmaskCpf, validateCpf } from '../utils/cpfValidator';
-import { APP_VERSION, APP_BUILD_NUMBER } from '../version';
+import { APP_VERSION } from '../version';
 
 interface AuthScreenProps {
   onLoginSuccess: (user: User) => void;
@@ -720,7 +720,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
         {/* App Version */}
         <div className="mt-3 text-center">
           <span className="text-[11px] font-medium text-slate-500">
-            Versão {APP_VERSION} (Build {APP_BUILD_NUMBER})
+            Versão {APP_VERSION}
           </span>
         </div>
       </div>

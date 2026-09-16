@@ -25,7 +25,7 @@ import { formatCpf, unmaskCpf, validateCpf } from '../utils/cpfValidator';
 import { FirestoreSyncService } from '../services/firestoreSyncService';
 import { ImageCropperModal } from './ImageCropperModal';
 import { validateImageSize, validateImageType } from '../utils/photoValidator';
-import { APP_VERSION, APP_BUILD_NUMBER } from '../version';
+import { APP_VERSION } from '../version';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -561,7 +561,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             {/* Version Information */}
             <div className="pt-2 text-center">
               <span className="text-[11px] font-medium text-neutral-400 dark:text-neutral-500">
-                Gestão Financeira • Versão {APP_VERSION} (Build {APP_BUILD_NUMBER})
+                Gestão Financeira • Versão {APP_VERSION}
               </span>
             </div>
           </form>
