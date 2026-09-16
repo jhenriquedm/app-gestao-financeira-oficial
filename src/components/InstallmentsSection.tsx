@@ -8,13 +8,12 @@ import {
   Trash2, 
   Landmark, 
   Calendar,
-  ArrowUpRight,
   ArrowDownUp,
   Search,
   X
 } from 'lucide-react';
 import { DebtInstallment, TransactionStatus } from '../types';
-import { formatCurrency } from '../utils/formatters';
+import { formatCurrency, formatMonthYearUppercase } from '../utils/formatters';
 import { getComputedInstallment, ComputedInstallment } from '../utils/installmentHelpers';
 
 interface InstallmentsSectionProps {
@@ -25,7 +24,7 @@ interface InstallmentsSectionProps {
   onEdit: (installment: DebtInstallment) => void;
   onDelete: (id: string) => void;
   onToggleStatus: (id: string) => void;
-  onAdvanceInstallment: (id: string) => void;
+  onAdvanceInstallment?: (id: string) => void;
   isBalanceHidden?: boolean;
 }
 
@@ -37,7 +36,7 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
   onEdit,
   onDelete,
   onToggleStatus,
-  onAdvanceInstallment,
+  onAdvanceInstallment: _onAdvanceInstallment,
   isBalanceHidden = false,
 }) => {
   const [sortOrder, setSortOrder] = useState<'amount-desc' | 'amount-asc' | 'dueDay-asc'>('amount-desc');
@@ -128,7 +127,7 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
             <div>
               <h2 className="text-sm font-bold leading-tight">Parcelas & Empréstimos</h2>
               <p className="text-[11px] text-amber-100/80">
-                Compromissos ativos no mês ({currentYearMonth})
+                Compromissos ativos no mês ({formatMonthYearUppercase(currentYearMonth)})
               </p>
             </div>
           </div>
@@ -429,18 +428,6 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
                     </div>
 
                     <div className="flex items-center gap-1">
-                      {/* Botão Avançar Parcela (+1) */}
-                      {current < total && (
-                        <button
-                          onClick={() => onAdvanceInstallment(inst.id)}
-                          title="Avançar uma parcela paga"
-                          className="px-2 py-1 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/80 text-amber-700 dark:text-amber-300 text-[10.5px] font-bold rounded-lg border border-amber-200 dark:border-amber-800 transition-colors flex items-center gap-0.5 cursor-pointer"
-                        >
-                          <ArrowUpRight className="w-3 h-3" />
-                          <span>+1 Parcela</span>
-                        </button>
-                      )}
-
                       {/* Editar */}
                       <button
                         onClick={() => onEdit(inst)}

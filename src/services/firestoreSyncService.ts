@@ -36,6 +36,31 @@ export interface SyncResult {
 }
 
 /**
+ * Deeply strips `undefined` fields from objects/arrays because Firestore's setDoc
+ * rejects `undefined` values with: "Unsupported field value: undefined"
+ */
+export function sanitizeForFirestore<T>(data: T): T {
+  if (data === null || data === undefined) {
+    return null as unknown as T;
+  }
+  if (Array.isArray(data)) {
+    return data
+      .filter((item) => item !== undefined)
+      .map((item) => sanitizeForFirestore(item)) as unknown as T;
+  }
+  if (typeof data === 'object') {
+    const cleaned: Record<string, any> = {};
+    for (const [key, value] of Object.entries(data as Record<string, any>)) {
+      if (value !== undefined) {
+        cleaned[key] = sanitizeForFirestore(value);
+      }
+    }
+    return cleaned as T;
+  }
+  return data;
+}
+
+/**
  * Firestore synchronization service following the feira-mensal-app architecture:
  * - Each user has isolated collections under /users/{userId}/...
  * - Bidirectional sync: uploads locally pending items and downloads remote items
@@ -65,7 +90,7 @@ export class FirestoreSyncService {
       const userRef = this.userDocRef(userRecord.id);
       await setDoc(
         userRef,
-        {
+        sanitizeForFirestore({
           id: userRecord.id,
           name: userRecord.name,
           email: userRecord.email,
@@ -73,7 +98,7 @@ export class FirestoreSyncService {
           passwordHash: userRecord.passwordHash,
           createdAt: userRecord.createdAt,
           updatedAt: Date.now(),
-        },
+        }),
         { merge: true }
       );
     } catch (e) {
@@ -157,7 +182,7 @@ export class FirestoreSyncService {
   static async updateUserPasswordInCloud(userId: string, newHash: string): Promise<void> {
     try {
       const userRef = this.userDocRef(userId);
-      await setDoc(userRef, { passwordHash: newHash, updatedAt: Date.now() }, { merge: true });
+      await setDoc(userRef, sanitizeForFirestore({ passwordHash: newHash, updatedAt: Date.now() }), { merge: true });
     } catch (e) {
       console.warn('Failed to update password in cloud:', e);
     }
@@ -181,7 +206,7 @@ export class FirestoreSyncService {
       if (profile.passwordHash) {
         updateData.passwordHash = profile.passwordHash;
       }
-      await setDoc(userRef, updateData, { merge: true });
+      await setDoc(userRef, sanitizeForFirestore(updateData), { merge: true });
     } catch (e) {
       console.warn('Failed to update user profile in cloud:', e);
     }
@@ -288,21 +313,25 @@ export class FirestoreSyncService {
     );
 
     for (const tx of pendingTx) {
-      const docRef = doc(firestore, 'users', userId, 'transactions', tx.id);
-      if (tx.syncStatus === 'pendingDelete' || tx.isDeleted) {
-        await deleteDoc(docRef).catch(() => {});
-        await localDb.transactions.delete(tx.id);
-      } else {
-        const syncedTx: Transaction = {
-          ...tx,
-          syncStatus: 'synced',
-          updatedAt: now,
-          isDeleted: false,
-        };
-        await setDoc(docRef, syncedTx, { merge: true });
-        await localDb.transactions.put(syncedTx);
+      try {
+        const docRef = doc(firestore, 'users', userId, 'transactions', tx.id);
+        if (tx.syncStatus === 'pendingDelete' || tx.isDeleted) {
+          await deleteDoc(docRef).catch(() => {});
+          await localDb.transactions.delete(tx.id);
+        } else {
+          const syncedTx: Transaction = {
+            ...tx,
+            syncStatus: 'synced',
+            updatedAt: now,
+            isDeleted: false,
+          };
+          await setDoc(docRef, sanitizeForFirestore(syncedTx), { merge: true });
+          await localDb.transactions.put(syncedTx);
+        }
+        totalUploaded++;
+      } catch (err) {
+        console.warn(`Error syncing transaction ${tx.id}:`, err);
       }
-      totalUploaded++;
     }
 
     // 2. Installments
@@ -312,21 +341,25 @@ export class FirestoreSyncService {
     );
 
     for (const inst of pendingInst) {
-      const docRef = doc(firestore, 'users', userId, 'installments', inst.id);
-      if (inst.syncStatus === 'pendingDelete' || inst.isDeleted) {
-        await deleteDoc(docRef).catch(() => {});
-        await localDb.installments.delete(inst.id);
-      } else {
-        const syncedInst: DebtInstallment = {
-          ...inst,
-          syncStatus: 'synced',
-          updatedAt: now,
-          isDeleted: false,
-        };
-        await setDoc(docRef, syncedInst, { merge: true });
-        await localDb.installments.put(syncedInst);
+      try {
+        const docRef = doc(firestore, 'users', userId, 'installments', inst.id);
+        if (inst.syncStatus === 'pendingDelete' || inst.isDeleted) {
+          await deleteDoc(docRef).catch(() => {});
+          await localDb.installments.delete(inst.id);
+        } else {
+          const syncedInst: DebtInstallment = {
+            ...inst,
+            syncStatus: 'synced',
+            updatedAt: now,
+            isDeleted: false,
+          };
+          await setDoc(docRef, sanitizeForFirestore(syncedInst), { merge: true });
+          await localDb.installments.put(syncedInst);
+        }
+        totalUploaded++;
+      } catch (err) {
+        console.warn(`Error syncing installment ${inst.id}:`, err);
       }
-      totalUploaded++;
     }
 
     // 3. Categories
@@ -336,21 +369,25 @@ export class FirestoreSyncService {
     );
 
     for (const cat of pendingCat) {
-      const docRef = doc(firestore, 'users', userId, 'categories', cat.id);
-      if (cat.syncStatus === 'pendingDelete' || cat.isDeleted) {
-        await deleteDoc(docRef).catch(() => {});
-        await localDb.categories.delete(cat.id);
-      } else {
-        const syncedCat: Category = {
-          ...cat,
-          syncStatus: 'synced',
-          updatedAt: now,
-          isDeleted: false,
-        };
-        await setDoc(docRef, syncedCat, { merge: true });
-        await localDb.categories.put(syncedCat);
+      try {
+        const docRef = doc(firestore, 'users', userId, 'categories', cat.id);
+        if (cat.syncStatus === 'pendingDelete' || cat.isDeleted) {
+          await deleteDoc(docRef).catch(() => {});
+          await localDb.categories.delete(cat.id);
+        } else {
+          const syncedCat: Category = {
+            ...cat,
+            syncStatus: 'synced',
+            updatedAt: now,
+            isDeleted: false,
+          };
+          await setDoc(docRef, sanitizeForFirestore(syncedCat), { merge: true });
+          await localDb.categories.put(syncedCat);
+        }
+        totalUploaded++;
+      } catch (err) {
+        console.warn(`Error syncing category ${cat.id}:`, err);
       }
-      totalUploaded++;
     }
 
     // 4. Budgets
@@ -360,21 +397,25 @@ export class FirestoreSyncService {
     );
 
     for (const b of pendingBudgets) {
-      const docRef = doc(firestore, 'users', userId, 'budgets', b.id);
-      if (b.syncStatus === 'pendingDelete' || b.isDeleted) {
-        await deleteDoc(docRef).catch(() => {});
-        await localDb.budgets.delete(b.id);
-      } else {
-        const syncedBudget: Budget = {
-          ...b,
-          syncStatus: 'synced',
-          updatedAt: now,
-          isDeleted: false,
-        };
-        await setDoc(docRef, syncedBudget, { merge: true });
-        await localDb.budgets.put(syncedBudget);
+      try {
+        const docRef = doc(firestore, 'users', userId, 'budgets', b.id);
+        if (b.syncStatus === 'pendingDelete' || b.isDeleted) {
+          await deleteDoc(docRef).catch(() => {});
+          await localDb.budgets.delete(b.id);
+        } else {
+          const syncedBudget: Budget = {
+            ...b,
+            syncStatus: 'synced',
+            updatedAt: now,
+            isDeleted: false,
+          };
+          await setDoc(docRef, sanitizeForFirestore(syncedBudget), { merge: true });
+          await localDb.budgets.put(syncedBudget);
+        }
+        totalUploaded++;
+      } catch (err) {
+        console.warn(`Error syncing budget ${b.id}:`, err);
       }
-      totalUploaded++;
     }
 
     // 5. Savings Goals
@@ -384,42 +425,50 @@ export class FirestoreSyncService {
     );
 
     for (const g of pendingGoals) {
-      const docRef = doc(firestore, 'users', userId, 'savingsGoals', g.id);
-      if (g.syncStatus === 'pendingDelete' || g.isDeleted) {
-        await deleteDoc(docRef).catch(() => {});
-        await localDb.savingsGoals.delete(g.id);
-      } else {
-        const syncedGoal: SavingsGoal = {
-          ...g,
-          syncStatus: 'synced',
-          updatedAt: now,
-          isDeleted: false,
-        };
-        await setDoc(docRef, syncedGoal, { merge: true });
-        await localDb.savingsGoals.put(syncedGoal);
+      try {
+        const docRef = doc(firestore, 'users', userId, 'savingsGoals', g.id);
+        if (g.syncStatus === 'pendingDelete' || g.isDeleted) {
+          await deleteDoc(docRef).catch(() => {});
+          await localDb.savingsGoals.delete(g.id);
+        } else {
+          const syncedGoal: SavingsGoal = {
+            ...g,
+            syncStatus: 'synced',
+            updatedAt: now,
+            isDeleted: false,
+          };
+          await setDoc(docRef, sanitizeForFirestore(syncedGoal), { merge: true });
+          await localDb.savingsGoals.put(syncedGoal);
+        }
+        totalUploaded++;
+      } catch (err) {
+        console.warn(`Error syncing savings goal ${g.id}:`, err);
       }
-      totalUploaded++;
     }
 
     // 6. User root document (parcelCategories, preferences & sync metadata)
-    const parcelCategoriesSetting = await localDb.settings.get(`user_${userId}_parcelCategories`);
-    const isDarkModeSetting = await localDb.settings.get(`user_${userId}_isDarkMode`);
-    const isBalanceHiddenSetting = await localDb.settings.get(`user_${userId}_isBalanceHidden`);
+    try {
+      const parcelCategoriesSetting = await localDb.settings.get(`user_${userId}_parcelCategories`);
+      const isDarkModeSetting = await localDb.settings.get(`user_${userId}_isDarkMode`);
+      const isBalanceHiddenSetting = await localDb.settings.get(`user_${userId}_isBalanceHidden`);
 
-    const userRootDoc = this.userDocRef(userId);
-    await setDoc(
-      userRootDoc,
-      {
-        userId,
-        lastSyncedAt: now,
-        parcelCategories: parcelCategoriesSetting?.value || [],
-        settings: {
-          isDarkMode: isDarkModeSetting?.value ?? false,
-          isBalanceHidden: isBalanceHiddenSetting?.value ?? false,
-        },
-      },
-      { merge: true }
-    );
+      const userRootDoc = this.userDocRef(userId);
+      await setDoc(
+        userRootDoc,
+        sanitizeForFirestore({
+          userId,
+          lastSyncedAt: now,
+          parcelCategories: parcelCategoriesSetting?.value || [],
+          settings: {
+            isDarkMode: isDarkModeSetting?.value ?? false,
+            isBalanceHidden: isBalanceHiddenSetting?.value ?? false,
+          },
+        }),
+        { merge: true }
+      );
+    } catch (rootErr) {
+      console.warn('Error syncing user root preferences:', rootErr);
+    }
 
     return totalUploaded;
   }

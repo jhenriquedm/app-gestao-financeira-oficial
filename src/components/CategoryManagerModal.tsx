@@ -82,6 +82,22 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   const [newColor, setNewColor] = useState(PRESET_COLORS[0]);
   const [newIcon, setNewIcon] = useState(PRESET_ICONS[0]);
   const [addError, setAddError] = useState('');
+  const [successFeedback, setSuccessFeedback] = useState<string | null>(null);
+  const successTimerRef = React.useRef<any>(null);
+
+  const triggerSuccess = (msg: string) => {
+    setSuccessFeedback(msg);
+    if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    successTimerRef.current = setTimeout(() => {
+      setSuccessFeedback(null);
+    }, 2000);
+  };
+
+  React.useEffect(() => {
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    };
+  }, []);
 
   // Edit category state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -189,7 +205,9 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 
     setNewName('');
     setAddError('');
-    setIsAdding(false);
+    // Keep form open for further registrations and notify user
+    setIsAdding(true);
+    triggerSuccess('Registro salvo com sucesso');
   };
 
   const handleStartEdit = (cat: Category) => {
@@ -216,6 +234,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
     });
     setEditingId(null);
     setEditError('');
+    triggerSuccess('Registro salvo com sucesso');
   };
 
   const handleStartEditParcel = (name: string) => {
@@ -236,6 +255,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
     onEditParcelCategory(oldName, editParcelInput.trim());
     setEditingParcelName(null);
     setEditParcelError('');
+    triggerSuccess('Registro salvo com sucesso');
   };
 
   const attemptDeleteCategory = (cat: Category) => {
@@ -346,6 +366,17 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {/* Success Feedback Alert (displays for 2 seconds) */}
+          {successFeedback && (
+            <div
+              id="category-modal-success-feedback"
+              className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700/60 text-emerald-800 dark:text-emerald-200 text-xs font-semibold flex items-center gap-2 shadow-xs animate-in fade-in duration-200"
+            >
+              <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span>{successFeedback}</span>
+            </div>
+          )}
+
           {/* Add Category Button / Form */}
           {!isAdding ? (
             <button

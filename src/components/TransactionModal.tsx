@@ -71,7 +71,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     if (successTimerRef.current) clearTimeout(successTimerRef.current);
     successTimerRef.current = setTimeout(() => {
       setSuccessFeedback(null);
-    }, 3000);
+    }, 2000);
   };
 
   useEffect(() => {
@@ -214,7 +214,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setIsSubmitting(false);
     } else {
       // Keep modal open for next entry as requested, clear specific fields
-      triggerSuccess('Registro salvo com sucesso! O formulário continua aberto para novos lançamentos.');
+      triggerSuccess('Registro salvo com sucesso');
       setError('');
       setDescription('');
       setAmount('');

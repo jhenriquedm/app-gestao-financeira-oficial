@@ -25,6 +25,7 @@ import { formatCpf, unmaskCpf, validateCpf } from '../utils/cpfValidator';
 import { FirestoreSyncService } from '../services/firestoreSyncService';
 import { ImageCropperModal } from './ImageCropperModal';
 import { validateImageSize, validateImageType } from '../utils/photoValidator';
+import { APP_VERSION, APP_BUILD_NUMBER } from '../version';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -344,13 +345,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               </div>
 
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100">Foto de Perfil</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-neutral-200/80 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 font-medium">Local</span>
-                </div>
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 leading-tight">
-                  PNG, JPG, WEBP e outros (máx. 10MB). Mantida apenas localmente.
-                </p>
+                <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100">Foto de Perfil</span>
                 <div className="flex flex-wrap items-center gap-3 pt-1.5">
                   <button
                     type="button"
@@ -561,6 +556,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 <Save className="w-3.5 h-3.5" />
                 <span>{isLoading ? 'Salvando...' : 'Salvar Alterações'}</span>
               </button>
+            </div>
+
+            {/* Version Information */}
+            <div className="pt-2 text-center">
+              <span className="text-[11px] font-medium text-neutral-400 dark:text-neutral-500">
+                Gestão Financeira • Versão {APP_VERSION} (Build {APP_BUILD_NUMBER})
+              </span>
             </div>
           </form>
         </motion.div>

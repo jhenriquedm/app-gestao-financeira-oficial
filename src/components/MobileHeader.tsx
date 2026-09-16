@@ -17,6 +17,7 @@ import {
   Calendar,
   X,
   LogOut,
+  MoreVertical,
 } from 'lucide-react';
 import { formatCurrency, formatMonthYear, getCurrentYearMonth } from '../utils/formatters';
 import { MonthlySummary, User } from '../types';
@@ -85,6 +86,25 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   const [pickerYear, setPickerYear] = useState<number>(year);
   const [pickerMonth, setPickerMonth] = useState<number>(month);
 
+  const [isKebabOpen, setIsKebabOpen] = useState(false);
+  const kebabMenuRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      if (kebabMenuRef.current && !kebabMenuRef.current.contains(e.target as Node)) {
+        setIsKebabOpen(false);
+      }
+    };
+    if (isKebabOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+      document.addEventListener('touchstart', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+    };
+  }, [isKebabOpen]);
+
   const handleOpenMonthPicker = () => {
     setPickerYear(year);
     setPickerMonth(month);
@@ -150,7 +170,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
         >
           <div 
             id="btn-header-profile-avatar"
-            className="w-8.5 h-8.5 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center ring-2 ring-emerald-400/30 shadow-xs shrink-0 group-hover:scale-105 group-hover:ring-emerald-400/60 transition-all overflow-hidden"
+            className="w-9.5 h-9.5 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center ring-2 ring-emerald-400/30 shadow-xs shrink-0 group-hover:scale-105 group-hover:ring-emerald-400/60 transition-all overflow-hidden"
           >
             {user?.photoUrl ? (
               <img
@@ -163,15 +183,15 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1 min-w-0">
-              <span className="text-xs sm:text-sm font-bold text-neutral-100 group-hover:text-emerald-300 transition-colors truncate">Olá, {firstName}</span>
-              <span className="text-xs sm:text-sm shrink-0">👋</span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-base sm:text-lg font-bold text-neutral-100 group-hover:text-emerald-300 transition-colors truncate">Olá, {firstName}</span>
+              <span className="text-base sm:text-lg shrink-0">👋</span>
             </div>
           </div>
         </div>
 
-        {/* Action icons */}
-        <div className="flex items-center gap-1 shrink-0">
+        {/* Action icons: only dark mode, balance privacy, and Kebab menu remain outside */}
+        <div className="flex items-center gap-1.5 shrink-0">
           {onToggleDarkMode && (
             <button
               id="btn-mobile-toggle-theme"
@@ -184,51 +204,101 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
             </button>
           )}
 
-          {onOpenCategoryManager && (
-            <button
-              id="btn-mobile-categories"
-              onClick={onOpenCategoryManager}
-              title="Gerenciar Categorias"
-              aria-label="Gerenciar Categorias"
-              className="w-8 h-8 flex items-center justify-center text-neutral-300 hover:text-emerald-400 bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/50 rounded-xl transition-all cursor-pointer shadow-xs"
-            >
-              <Tag className="w-4 h-4" />
-            </button>
-          )}
-
-          {isOverview && (
-            <button
-              id="btn-mobile-toggle-privacy"
-              onClick={onToggleBalancePrivacy}
-              title={isBalanceHidden ? "Mostrar valores" : "Ocultar valores"}
-              aria-label="Alternar privacidade de saldo"
-              className="w-8 h-8 flex items-center justify-center text-neutral-300 hover:text-white bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/50 rounded-xl transition-all cursor-pointer shadow-xs"
-            >
-              {isBalanceHidden ? <EyeOff className="w-4 h-4 text-emerald-400" /> : <Eye className="w-4 h-4" />}
-            </button>
-          )}
-
           <button
-            id="btn-mobile-export"
-            onClick={onOpenExportImport}
-            title="Exportar CSV ou Restaurar"
-            aria-label="Exportar ou importar dados"
+            id="btn-mobile-toggle-privacy"
+            onClick={onToggleBalancePrivacy}
+            title={isBalanceHidden ? "Mostrar valores" : "Ocultar valores"}
+            aria-label="Alternar privacidade de saldo"
             className="w-8 h-8 flex items-center justify-center text-neutral-300 hover:text-white bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/50 rounded-xl transition-all cursor-pointer shadow-xs"
           >
-            <Download className="w-4 h-4" />
+            {isBalanceHidden ? <EyeOff className="w-4 h-4 text-emerald-400" /> : <Eye className="w-4 h-4" />}
           </button>
 
-          {onLogout && (
+          {/* Kebab Menu */}
+          <div className="relative" ref={kebabMenuRef}>
             <button
-              id="btn-mobile-logout"
-              onClick={onLogout}
-              title="Sair da Conta"
-              aria-label="Sair da Conta"
-              className="w-8 h-8 flex items-center justify-center text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 rounded-xl transition-all cursor-pointer ml-0.5 shadow-xs"
+              id="btn-kebab-menu"
+              onClick={() => setIsKebabOpen((prev) => !prev)}
+              title="Mais opções"
+              aria-label="Mais opções"
+              aria-expanded={isKebabOpen}
+              className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all cursor-pointer shadow-xs border ${
+                isKebabOpen
+                  ? 'bg-neutral-700 text-white border-neutral-600'
+                  : 'text-neutral-300 hover:text-white bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/50'
+              }`}
             >
-              <LogOut className="w-4 h-4" />
+              <MoreVertical className="w-4 h-4" />
             </button>
-          )}
+
+            {isKebabOpen && (
+              <div
+                id="kebab-dropdown-menu"
+                className="absolute right-0 mt-2 w-56 bg-neutral-900/95 border border-neutral-700/80 rounded-2xl shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md"
+              >
+                {onOpenCategoryManager && (
+                  <button
+                    id="kebab-item-categories"
+                    type="button"
+                    onClick={() => {
+                      setIsKebabOpen(false);
+                      onOpenCategoryManager();
+                    }}
+                    className="w-full px-3.5 py-2.5 flex items-center gap-2.5 text-xs font-semibold text-neutral-200 hover:text-white hover:bg-neutral-800/90 transition-colors text-left cursor-pointer"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
+                      <Tag className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold">Categorias / Etiquetas</p>
+                      <p className="text-[10px] text-neutral-400 font-normal">Gerenciar e cadastrar tags</p>
+                    </div>
+                  </button>
+                )}
+
+                <button
+                  id="kebab-item-export"
+                  type="button"
+                  onClick={() => {
+                    setIsKebabOpen(false);
+                    onOpenExportImport();
+                  }}
+                  className="w-full px-3.5 py-2.5 flex items-center gap-2.5 text-xs font-semibold text-neutral-200 hover:text-white hover:bg-neutral-800/90 transition-colors text-left cursor-pointer"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-indigo-500/15 text-indigo-400 flex items-center justify-center shrink-0">
+                    <Download className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">Download CSV e Backup</p>
+                    <p className="text-[10px] text-neutral-400 font-normal">Exportar ou restaurar dados</p>
+                  </div>
+                </button>
+
+                {onLogout && (
+                  <>
+                    <div className="my-1 border-t border-neutral-800" />
+                    <button
+                      id="kebab-item-logout"
+                      type="button"
+                      onClick={() => {
+                        setIsKebabOpen(false);
+                        onLogout();
+                      }}
+                      className="w-full px-3.5 py-2.5 flex items-center gap-2.5 text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/15 transition-colors text-left cursor-pointer"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-rose-500/15 text-rose-400 flex items-center justify-center shrink-0">
+                        <LogOut className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold">Sair da Conta</p>
+                        <p className="text-[10px] text-rose-400/70 font-normal">Encerrar sessão no app</p>
+                      </div>
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

@@ -64,7 +64,7 @@ export const BudgetsSection: React.FC<BudgetsSectionProps> = ({
     if (successTimerRef.current) clearTimeout(successTimerRef.current);
     successTimerRef.current = setTimeout(() => {
       setSuccessFeedback(null);
-    }, 3000);
+    }, 2000);
   };
 
   useEffect(() => {
@@ -237,7 +237,7 @@ export const BudgetsSection: React.FC<BudgetsSectionProps> = ({
       setFormError('');
     } else {
       // Keep modal open for next budget, advance to next unused category if possible
-      triggerSuccess('Teto salvo com sucesso! O modal continua aberto para definir novos tetos.');
+      triggerSuccess('Registro salvo com sucesso');
       setFormError('');
       const unusedCat = expenseCategories.find((c) => !budgets.some((b) => b.categoryId === c.id && b.categoryId !== formData.categoryId));
       const nextCat = unusedCat || expenseCategories[0];

@@ -12,10 +12,11 @@ import {
   CloudOff
 } from 'lucide-react';
 import { Transaction, Category, Budget, SavingsGoal, DebtInstallment } from '../types';
-import { downloadCSV, downloadJSON } from '../utils/formatters';
+import { downloadCSV, downloadJSON, formatMonthYearUppercase } from '../utils/formatters';
 import { getComputedInstallment } from '../utils/installmentHelpers';
 import { FirestoreSyncService } from '../services/firestoreSyncService';
 import { localDb } from '../db/localDatabase';
+import { APP_VERSION, APP_BUILD_NUMBER } from '../version';
 
 interface ExportImportModalProps {
   isOpen: boolean;
@@ -391,17 +392,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                       <FileSpreadsheet className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-semibold text-neutral-900 dark:text-neutral-100 text-xs">Planilha CSV do Mês ({activeMonth})</h4>
-                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-medium ${
-                          syncState.status === 'synced'
-                            ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
-                            : 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${syncState.status === 'synced' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                          {syncState.status === 'synced' ? 'Nuvem Atualizada' : `${syncState.pendingCount} Pendente(s)`}
-                        </span>
-                      </div>
+                      <h4 className="font-semibold text-neutral-900 dark:text-neutral-100 text-xs">Planilha CSV do Mês ({formatMonthYearUppercase(activeMonth)})</h4>
                       <p className="text-[11px] text-neutral-500 dark:text-neutral-400">Exporta {totalMonthlyItems} lançamentos (despesas avulsas, fixas e parcelas)</p>
                     </div>
                   </div>
@@ -485,6 +476,13 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                   </div>
                   <RefreshCw className={`w-4 h-4 text-neutral-400 dark:text-neutral-500 ${isSyncingCloud ? 'animate-spin text-emerald-500' : ''}`} />
                 </button>
+              </div>
+
+              {/* Version & Data Safety Info */}
+              <div className="pt-2 text-center">
+                <span className="text-[11px] font-medium text-neutral-400 dark:text-neutral-500">
+                  Gestão Financeira • Versão {APP_VERSION} (Build {APP_BUILD_NUMBER})
+                </span>
               </div>
             </div>
           </motion.div>

@@ -68,7 +68,7 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
     if (successTimerRef.current) clearTimeout(successTimerRef.current);
     successTimerRef.current = setTimeout(() => {
       setSuccessFeedback(null);
-    }, 3000);
+    }, 2000);
   };
 
   useEffect(() => {
@@ -205,7 +205,7 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
       setIsSubmitting(false);
     } else {
       // Keep modal open, reset fields for next installment
-      triggerSuccess('Parcela cadastrada com sucesso! O formulário continua aberto para novos lançamentos.');
+      triggerSuccess('Registro salvo com sucesso');
       setError('');
       setDescription('');
       setMonthlyAmount('');

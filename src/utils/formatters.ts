@@ -41,6 +41,14 @@ export const formatMonthYearShort = (yearMonthStr: string): string => {
   return `${shortNames[monthIdx] || month}/${year.slice(2)}`;
 };
 
+export const formatMonthYearUppercase = (yearMonthStr: string): string => {
+  if (!yearMonthStr) return '';
+  const [year, month] = yearMonthStr.split('-');
+  const monthIdx = parseInt(month, 10) - 1;
+  const shortUpperNames = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+  return `${shortUpperNames[monthIdx] || month}/${year}`;
+};
+
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   pix: 'PIX',
   credit_card: 'Cartão de Crédito',

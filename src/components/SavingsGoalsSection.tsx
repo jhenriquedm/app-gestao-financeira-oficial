@@ -54,7 +54,7 @@ export const SavingsGoalsSection: React.FC<SavingsGoalsSectionProps> = ({
     if (successTimerRef.current) clearTimeout(successTimerRef.current);
     successTimerRef.current = setTimeout(() => {
       setSuccessFeedback(null);
-    }, 3000);
+    }, 2000);
   };
 
   useEffect(() => {
@@ -145,7 +145,7 @@ export const SavingsGoalsSection: React.FC<SavingsGoalsSectionProps> = ({
     });
 
     // Keep form open as requested, reset inputs and show success message
-    triggerSuccess('Meta cadastrada com sucesso! O formulário continua aberto para novos objetivos.');
+    triggerSuccess('Registro salvo com sucesso');
     setTitle('');
     setTargetAmount('');
     setCurrentAmount('');
