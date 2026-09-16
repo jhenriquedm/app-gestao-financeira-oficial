@@ -8,6 +8,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { firestore } from './firebase';
+import { FirebaseStorageService } from './firebaseStorageService';
 import {
   Transaction,
   DebtInstallment,
@@ -319,25 +320,39 @@ export class FirestoreSyncService {
           await deleteDoc(docRef).catch(() => {});
           await localDb.transactions.delete(tx.id);
         } else {
-          const syncedTx: Transaction = {
+          let syncedTx: Transaction = {
             ...tx,
             syncStatus: 'synced',
             updatedAt: now,
             isDeleted: false,
           };
 
-          // Firestore tem limite de 1MB por documento. Se o dataUrl for maior que 350KB,
-          // envia a metadata do anexo para nuvem com dataUrl vazio, preservando o arquivo completo no IndexedDB local.
+          // 1. Envia comprovantes para o Firebase Storage (5 GB gratuitos)
+          if (syncedTx.attachments && syncedTx.attachments.length > 0) {
+            const uploadedAtts = await Promise.all(
+              syncedTx.attachments.map((att) => FirebaseStorageService.uploadAttachment(userId, att))
+            );
+            syncedTx.attachments = uploadedAtts;
+            if (uploadedAtts[0]) {
+              syncedTx.attachment = uploadedAtts[0];
+            }
+          } else if (syncedTx.attachment) {
+            const uploadedAtt = await FirebaseStorageService.uploadAttachment(userId, syncedTx.attachment);
+            syncedTx.attachment = uploadedAtt;
+          }
+
+          // 2. Prepara payload do Firestore: se já subiu para o Storage (possui fileUrl),
+          // limpamos o dataUrl para manter o documento leve e rápido.
           const firestorePayload = { ...syncedTx };
           if (firestorePayload.attachments && Array.isArray(firestorePayload.attachments)) {
             firestorePayload.attachments = firestorePayload.attachments.map((a) => {
-              if (a.dataUrl && a.dataUrl.length > 350000) {
+              if (a.fileUrl || (a.dataUrl && a.dataUrl.length > 300000)) {
                 return { ...a, dataUrl: '' };
               }
               return a;
             });
           }
-          if (firestorePayload.attachment && firestorePayload.attachment.dataUrl && firestorePayload.attachment.dataUrl.length > 350000) {
+          if (firestorePayload.attachment && (firestorePayload.attachment.fileUrl || (firestorePayload.attachment.dataUrl && firestorePayload.attachment.dataUrl.length > 300000))) {
             firestorePayload.attachment = {
               ...firestorePayload.attachment,
               dataUrl: '',
@@ -345,6 +360,7 @@ export class FirestoreSyncService {
           }
 
           await setDoc(docRef, sanitizeForFirestore(firestorePayload), { merge: true });
+          // Mantém no IndexedDB com cache de dados e URLs da nuvem
           await localDb.transactions.put(syncedTx);
         }
         totalUploaded++;
@@ -366,23 +382,38 @@ export class FirestoreSyncService {
           await deleteDoc(docRef).catch(() => {});
           await localDb.installments.delete(inst.id);
         } else {
-          const syncedInst: DebtInstallment = {
+          let syncedInst: DebtInstallment = {
             ...inst,
             syncStatus: 'synced',
             updatedAt: now,
             isDeleted: false,
           };
 
+          // 1. Envia comprovantes do parcelamento para o Firebase Storage
+          if (syncedInst.attachments && syncedInst.attachments.length > 0) {
+            const uploadedAtts = await Promise.all(
+              syncedInst.attachments.map((att) => FirebaseStorageService.uploadAttachment(userId, att))
+            );
+            syncedInst.attachments = uploadedAtts;
+            if (uploadedAtts[0]) {
+              syncedInst.attachment = uploadedAtts[0];
+            }
+          } else if (syncedInst.attachment) {
+            const uploadedAtt = await FirebaseStorageService.uploadAttachment(userId, syncedInst.attachment);
+            syncedInst.attachment = uploadedAtt;
+          }
+
+          // 2. Prepara payload do Firestore
           const firestorePayload = { ...syncedInst };
           if (firestorePayload.attachments && Array.isArray(firestorePayload.attachments)) {
             firestorePayload.attachments = firestorePayload.attachments.map((a) => {
-              if (a.dataUrl && a.dataUrl.length > 350000) {
+              if (a.fileUrl || (a.dataUrl && a.dataUrl.length > 300000)) {
                 return { ...a, dataUrl: '' };
               }
               return a;
             });
           }
-          if (firestorePayload.attachment && firestorePayload.attachment.dataUrl && firestorePayload.attachment.dataUrl.length > 350000) {
+          if (firestorePayload.attachment && (firestorePayload.attachment.fileUrl || (firestorePayload.attachment.dataUrl && firestorePayload.attachment.dataUrl.length > 300000))) {
             firestorePayload.attachment = {
               ...firestorePayload.attachment,
               dataUrl: '',

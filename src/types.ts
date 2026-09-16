@@ -26,7 +26,9 @@ export interface ReceiptAttachment {
   name: string;
   size: number; // Tamanho em bytes
   type: string; // mimeType (ex: application/pdf, image/jpeg, image/png, application/vnd.openxmlformats-officedocument.wordprocessingml.document)
-  dataUrl: string; // Base64 Data URL para armazenamento local e download
+  dataUrl?: string; // Base64 Data URL para armazenamento local e download rápido
+  fileUrl?: string; // URL pública/segura do Firebase Storage para acesso em múltiplos dispositivos ou nova instalação
+  storagePath?: string; // Caminho no bucket do Firebase Storage (ex: users/{userId}/attachments/{id}_{name})
   uploadedAt: number;
 }
 

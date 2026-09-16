@@ -248,16 +248,17 @@ export const ReceiptAttachmentField: React.FC<ReceiptAttachmentFieldProps> = ({
               >
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   {/* Ícone ou miniatura */}
-                  {isImage && item.dataUrl ? (
+                  {isImage && (item.dataUrl || item.fileUrl) ? (
                     <div
                       onClick={() => setPreviewAttachment(item)}
                       className="w-9 h-9 rounded-lg overflow-hidden bg-neutral-200 dark:bg-neutral-700 shrink-0 cursor-pointer border border-neutral-300 dark:border-neutral-600 relative group"
                       title="Clique para ampliar"
                     >
                       <img
-                        src={item.dataUrl}
+                        src={item.dataUrl || item.fileUrl}
                         alt={item.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        referrerPolicy="no-referrer"
                       />
                     </div>
                   ) : isPdf ? (
@@ -374,7 +375,7 @@ export const ReceiptAttachmentField: React.FC<ReceiptAttachmentFieldProps> = ({
       )}
 
       {/* Modal de Pré-Visualização de Imagem */}
-      {previewAttachment && checkIsImage(previewAttachment) && previewAttachment.dataUrl && (
+      {previewAttachment && checkIsImage(previewAttachment) && (previewAttachment.dataUrl || previewAttachment.fileUrl) && (
         <div
           id="modal-preview-backdrop"
           onClick={() => setPreviewAttachment(null)}
@@ -408,9 +409,10 @@ export const ReceiptAttachmentField: React.FC<ReceiptAttachmentFieldProps> = ({
             </div>
             <div className="p-2 overflow-auto flex items-center justify-center bg-neutral-950 flex-1 min-h-[250px]">
               <img
-                src={previewAttachment.dataUrl}
+                src={previewAttachment.dataUrl || previewAttachment.fileUrl}
                 alt={previewAttachment.name}
                 className="max-w-full max-h-[70vh] object-contain rounded-lg"
+                referrerPolicy="no-referrer"
               />
             </div>
           </div>

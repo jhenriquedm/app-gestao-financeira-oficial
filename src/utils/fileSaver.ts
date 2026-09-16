@@ -200,15 +200,48 @@ export async function saveFile(options: {
  * Salva ou faz o download de um comprovante anexado (PDF, DOCX, Imagem).
  * Forçado diretamente para a pasta de downloads de qualquer smartphone por debaixo dos panos,
  * sem exibir detalhes de pastas ou diretórios ao usuário.
+ * Suporta tanto dataUrl local quanto fileUrl do Firebase Storage para novos dispositivos.
  */
 export async function saveAttachmentFile(attachment: {
   name: string;
   type: string;
-  dataUrl: string;
+  dataUrl?: string;
+  fileUrl?: string;
 }): Promise<SaveResult> {
+  let content = attachment.dataUrl || '';
+
+  // Se o dataUrl estiver vazio (ex: recém-baixado da nuvem em novo celular), obtém via fileUrl
+  if (!content && attachment.fileUrl) {
+    try {
+      const resp = await fetch(attachment.fileUrl);
+      if (resp.ok) {
+        const blob = await resp.blob();
+        content = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            if (typeof reader.result === 'string') {
+              resolve(reader.result);
+            } else {
+              reject(new Error('Falha ao processar arquivo baixado.'));
+            }
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      }
+    } catch (e) {
+      console.warn('Erro ao converter anexo de fileUrl para download:', e);
+      // Fallback: se web/navegador, abre link diretamente
+      if (typeof window !== 'undefined' && attachment.fileUrl) {
+        window.open(attachment.fileUrl, '_blank');
+        return { success: true, message: 'Comprovante baixado com sucesso!' };
+      }
+    }
+  }
+
   const res = await saveFile({
     fileName: attachment.name,
-    content: attachment.dataUrl,
+    content,
     mimeType: attachment.type || 'application/octet-stream',
     chooseFolder: false, // Força diretamente para Downloads
   });
