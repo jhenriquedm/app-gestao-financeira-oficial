@@ -1,6 +1,7 @@
 import Dexie, { Table } from 'dexie';
-import { GoogleAuthProvider, signInWithPopup, getRedirectResult } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, signInWithCredential, getRedirectResult } from 'firebase/auth';
 import { auth } from '../services/firebase';
+import firebaseConfig from '../../firebase-applet-config.json';
 import {
   Transaction,
   DebtInstallment,
@@ -325,9 +326,60 @@ export const authOperations = {
   },
 
   /**
-   * Autenticação com a Conta Google (Popup Seguro com suporte a navegadores móveis).
+   * Autenticação com a Conta Google (Via Google Identity Services / GIS token ou Popup Fallback).
    */
   async loginWithGoogle(): Promise<{ success: boolean; user?: User; isNewUser?: boolean; error?: string }> {
+    const oAuthClientId = firebaseConfig.oAuthClientId || '901690992750-jbuc5p2bebr2940uaorqtn5qcp72q6cp.apps.googleusercontent.com';
+
+    // 1. Tenta autenticação direta via Google Identity Services (GIS) para evitar erros de partição do Chrome/Firebase
+    if (typeof window !== 'undefined' && (window as any).google?.accounts?.oauth2) {
+      try {
+        const gisResult = await new Promise<{ success: boolean; user?: User; isNewUser?: boolean; error?: string }>((resolve) => {
+          let tokenReceived = false;
+          const client = (window as any).google.accounts.oauth2.initTokenClient({
+            client_id: oAuthClientId,
+            scope: 'email profile openid',
+            callback: async (tokenResponse: any) => {
+              tokenReceived = true;
+              if (tokenResponse && tokenResponse.access_token) {
+                try {
+                  const credential = GoogleAuthProvider.credential(null, tokenResponse.access_token);
+                  const authResult = await signInWithCredential(auth, credential);
+                  const result = await this.processFirebaseUser(authResult.user);
+                  resolve(result);
+                } catch (credErr: any) {
+                  console.error('signInWithCredential error:', credErr);
+                  resolve({ success: false, error: credErr?.message || 'Falha ao autenticar credenciais do Google.' });
+                }
+              } else {
+                resolve({ success: false, error: 'O login com o Google foi cancelado.' });
+              }
+            },
+            error_callback: (err: any) => {
+              console.warn('GIS error, tentando fallback de popup...', err);
+              tokenReceived = true;
+              resolve({ success: false, error: 'GIS_FALLBACK' });
+            },
+          });
+          client.requestAccessToken();
+
+          // Timeout de segurança caso o modal do GIS não responda
+          setTimeout(() => {
+            if (!tokenReceived) {
+              resolve({ success: false, error: 'GIS_FALLBACK' });
+            }
+          }, 30000);
+        });
+
+        if (gisResult.success || (gisResult.error && gisResult.error !== 'GIS_FALLBACK')) {
+          return gisResult;
+        }
+      } catch (gisErr) {
+        console.warn('Erro ao inicializar GIS, migrando para popup padrão...', gisErr);
+      }
+    }
+
+    // 2. Fallback: signInWithPopup padrão do Firebase Auth
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
