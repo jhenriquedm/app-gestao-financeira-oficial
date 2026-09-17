@@ -126,14 +126,37 @@ export const authOperations = {
         return { success: false, error: 'A senha deve conter no mínimo 6 caracteres.' };
       }
 
-      // Check if user with this email already exists
-      const existingUser = await localDb.users.where('email').equalsIgnoreCase(cleanEmail).first();
-      if (existingUser) {
-        return { success: false, error: 'Este e-mail já está cadastrado no aplicativo.' };
+      // Check if user with this email already exists locally or in cloud
+      let existingUser = await localDb.users.where('email').equalsIgnoreCase(cleanEmail).first();
+      if (!existingUser) {
+        const cloudUser = await FirestoreSyncService.findUserInCloud({ email: cleanEmail });
+        if (cloudUser) {
+          existingUser = cloudUser;
+        }
       }
 
-      // Check if user with this CPF already exists
-      const existingCpf = await localDb.users.where('cpf').equals(cleanCpf).first();
+      if (existingUser) {
+        if (!existingUser.passwordHash) {
+          return {
+            success: false,
+            error: 'Este e-mail já foi cadastrado via Google! Acesse "Entrar na Conta" e clique em "Esqueci minha senha" para criar sua senha de acesso.',
+          };
+        }
+        return {
+          success: false,
+          error: 'Este e-mail já está cadastrado no aplicativo. Acesse a aba "Entrar na Conta" para fazer login.',
+        };
+      }
+
+      // Check if user with this CPF already exists locally or in cloud
+      let existingCpf = await localDb.users.where('cpf').equals(cleanCpf).first();
+      if (!existingCpf) {
+        const cloudUserByCpf = await FirestoreSyncService.findUserInCloud({ cpf: cleanCpf });
+        if (cloudUserByCpf) {
+          existingCpf = cloudUserByCpf;
+        }
+      }
+
       if (existingCpf) {
         return { success: false, error: 'Este CPF já está cadastrado no aplicativo.' };
       }
@@ -203,9 +226,17 @@ export const authOperations = {
         return { success: false, error: 'Credenciais inválidas, tente novamente!' };
       }
 
+      // Se a conta foi criada via Google e ainda não tem hash de senha
+      if (!userRecord.passwordHash) {
+        return {
+          success: false,
+          error: 'Esta conta foi criada com a Conta Google e ainda não possui senha. Clique em "Esqueci minha senha" abaixo para cadastrar uma senha e acessar por E-mail.',
+        };
+      }
+
       const inputHash = await hashPassword(password);
       if (inputHash !== userRecord.passwordHash) {
-        return { success: false, error: 'Credenciais inválidas, tente novamente!' };
+        return { success: false, error: 'Senha incorreta. Verifique os dados digitados ou utilize "Esqueci minha senha".' };
       }
 
       // Save active session
@@ -336,25 +367,48 @@ export const authOperations = {
     // 1. Se estiver rodando no aplicativo Android nativo (Capacitor)
     if (Capacitor.isNativePlatform()) {
       try {
-        GoogleAuth.initialize({
-          clientId: oAuthClientId,
-          scopes: ['profile', 'email'],
-          grantOfflineAccess: false,
-        });
+        try {
+          GoogleAuth.initialize({
+            clientId: oAuthClientId,
+            scopes: ['profile', 'email'],
+            grantOfflineAccess: false,
+          });
+        } catch (initErr) {
+          console.warn('GoogleAuth.initialize warn:', initErr);
+        }
 
         const googleUser = await GoogleAuth.signIn();
-        const idToken = googleUser?.authentication?.idToken || (googleUser as any)?.idToken;
+        const idToken = googleUser?.authentication?.idToken || (googleUser as any)?.idToken || (googleUser as any)?.authentication?.accessToken;
 
         if (idToken) {
-          const credential = GoogleAuthProvider.credential(idToken);
-          const authResult = await signInWithCredential(auth, credential);
-          return await this.processFirebaseUser(authResult.user);
-        } else {
-          return {
-            success: false,
-            error: 'Não foi possível obter a credencial do Google no dispositivo.',
-          };
+          try {
+            const credential = GoogleAuthProvider.credential(idToken);
+            const authResult = await signInWithCredential(auth, credential);
+            return await this.processFirebaseUser(authResult.user);
+          } catch (credErr) {
+            console.warn('signInWithCredential falhou, tentando dados diretos do googleUser:', credErr);
+          }
         }
+
+        // Se idToken falhou ou não veio no payload, mas o GoogleAuth nativo retornou o e-mail do usuário autenticado:
+        const userEmail = googleUser?.email || (googleUser as any)?.user?.email;
+        if (userEmail) {
+          const userName = googleUser?.name || (googleUser as any)?.user?.name || userEmail.split('@')[0];
+          const userPhoto = googleUser?.imageUrl || (googleUser as any)?.user?.imageUrl;
+          const userUid = googleUser?.id || (googleUser as any)?.user?.id;
+
+          return await this.processFirebaseUser({
+            email: userEmail,
+            displayName: userName,
+            photoURL: userPhoto,
+            uid: userUid,
+          });
+        }
+
+        return {
+          success: false,
+          error: 'Não foi possível obter a credencial do Google no dispositivo. Se você já tem conta, utilize E-mail e Senha ou "Esqueci minha senha".',
+        };
       } catch (nativeErr: any) {
         console.warn('Capacitor GoogleAuth nativo falhou:', nativeErr);
 
