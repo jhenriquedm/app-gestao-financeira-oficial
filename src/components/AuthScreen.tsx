@@ -341,15 +341,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
         const cleanCpf = unmaskCpf(cpf);
         const result = await authOperations.register(name, cleanEmail, cleanPassword, cleanCpf);
         if (result.success && result.user) {
-          setSuccessMessage('Cadastro realizado com sucesso! Faça login com seu e-mail e senha para acessar.');
-          setMode('login');
-          setName('');
-          setCpf('');
-          setPassword('');
-          setConfirmPassword('');
-          setTouchedEmail(false);
-          setTouchedCpf(false);
-          setTouchedConfirmPassword(false);
+          setSuccessMessage('Cadastro realizado com sucesso! Redirecionando para seu painel...');
+          setTimeout(() => {
+            onLoginSuccess(result.user!);
+          }, 400);
         } else {
           setErrorMessage(result.error || 'Não foi possível realizar o cadastro.');
         }

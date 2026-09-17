@@ -349,22 +349,39 @@ export const authOperations = {
           return await this.processFirebaseUser(authResult.user);
         }
       } catch (nativeErr: any) {
-        console.error('Capacitor GoogleAuth error:', nativeErr);
+        console.warn('Capacitor GoogleAuth nativo falhou ou cancelado, tentando fallback...', nativeErr);
+
+        const errStr = String(nativeErr?.message || nativeErr?.code || nativeErr || '');
         if (
-          nativeErr?.message?.includes('user Canceled') ||
-          nativeErr?.message?.includes('12501') ||
+          errStr.includes('user Canceled') ||
+          errStr.includes('12501') ||
           nativeErr?.code === '12501'
         ) {
           return { success: false, error: 'O login com o Google foi cancelado.' };
         }
-        return { success: false, error: nativeErr?.message || 'Falha na autenticação nativa do Google.' };
+
+        // Tenta Fallback via Popup do Firebase se o login nativo não puder ser concluído
+        try {
+          const provider = new GoogleAuthProvider();
+          provider.setCustomParameters({ prompt: 'select_account' });
+          const authResult = await signInWithPopup(auth, provider);
+          return await this.processFirebaseUser(authResult.user);
+        } catch (popupErr: any) {
+          console.error('Fallback Popup error:', popupErr);
+          if (popupErr?.code === 'auth/popup-closed-by-user') {
+            return { success: false, error: 'A janela de autenticação do Google foi fechada.' };
+          }
+          return {
+            success: false,
+            error: 'Não foi possível autenticar com o Google neste dispositivo no momento. Por favor, acesse utilizando seu E-mail e Senha.',
+          };
+        }
       }
     }
 
     // 2. Se estiver rodando na Web (Navegador): usa o Popup seguro com seleção obrigatória de conta
     try {
       const provider = new GoogleAuthProvider();
-      // Garante que o Google SEMPRE exiba a tela para o usuário escolher qual conta deseja usar
       provider.setCustomParameters({ prompt: 'select_account' });
 
       const authResult = await signInWithPopup(auth, provider);
@@ -390,7 +407,10 @@ export const authOperations = {
           error: `O domínio (${currentDomain}) precisa ser adicionado no Firebase Console > Authentication > Settings > Authorized Domains, ou utilize o acesso por E-mail e Senha.`,
         };
       }
-      return { success: false, error: err?.message || 'Falha ao autenticar com a Conta Google.' };
+      return {
+        success: false,
+        error: 'Não foi possível autenticar com o Google. Por favor, tente novamente ou entre com E-mail e Senha.',
+      };
     }
   },
 
