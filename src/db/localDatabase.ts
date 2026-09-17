@@ -1,5 +1,7 @@
 import Dexie, { Table } from 'dexie';
 import { GoogleAuthProvider, signInWithPopup, signInWithCredential, getRedirectResult } from 'firebase/auth';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { Capacitor } from '@capacitor/core';
 import { auth } from '../services/firebase';
 import firebaseConfig from '../../firebase-applet-config.json';
 import {
@@ -326,62 +328,43 @@ export const authOperations = {
   },
 
   /**
-   * Autenticação com a Conta Google (Via Google Identity Services / GIS token ou Popup Fallback).
+   * Autenticação com a Conta Google (Nativo no Android via Capacitor + Popup com seleção de conta na Web).
    */
   async loginWithGoogle(): Promise<{ success: boolean; user?: User; isNewUser?: boolean; error?: string }> {
     const oAuthClientId = firebaseConfig.oAuthClientId || '901690992750-jbuc5p2bebr2940uaorqtn5qcp72q6cp.apps.googleusercontent.com';
 
-    // 1. Tenta autenticação direta via Google Identity Services (GIS) para evitar erros de partição do Chrome/Firebase
-    if (typeof window !== 'undefined' && (window as any).google?.accounts?.oauth2) {
+    // 1. Se estiver rodando no aplicativo Android nativo (Capacitor)
+    if (Capacitor.isNativePlatform()) {
       try {
-        const gisResult = await new Promise<{ success: boolean; user?: User; isNewUser?: boolean; error?: string }>((resolve) => {
-          let tokenReceived = false;
-          const client = (window as any).google.accounts.oauth2.initTokenClient({
-            client_id: oAuthClientId,
-            scope: 'email profile openid',
-            callback: async (tokenResponse: any) => {
-              tokenReceived = true;
-              if (tokenResponse && tokenResponse.access_token) {
-                try {
-                  const credential = GoogleAuthProvider.credential(null, tokenResponse.access_token);
-                  const authResult = await signInWithCredential(auth, credential);
-                  const result = await this.processFirebaseUser(authResult.user);
-                  resolve(result);
-                } catch (credErr: any) {
-                  console.error('signInWithCredential error:', credErr);
-                  resolve({ success: false, error: credErr?.message || 'Falha ao autenticar credenciais do Google.' });
-                }
-              } else {
-                resolve({ success: false, error: 'O login com o Google foi cancelado.' });
-              }
-            },
-            error_callback: (err: any) => {
-              console.warn('GIS error, tentando fallback de popup...', err);
-              tokenReceived = true;
-              resolve({ success: false, error: 'GIS_FALLBACK' });
-            },
-          });
-          client.requestAccessToken();
-
-          // Timeout de segurança caso o modal do GIS não responda
-          setTimeout(() => {
-            if (!tokenReceived) {
-              resolve({ success: false, error: 'GIS_FALLBACK' });
-            }
-          }, 30000);
+        GoogleAuth.initialize({
+          clientId: oAuthClientId,
+          scopes: ['profile', 'email'],
+          grantOfflineAccess: true,
         });
 
-        if (gisResult.success || (gisResult.error && gisResult.error !== 'GIS_FALLBACK')) {
-          return gisResult;
+        const googleUser = await GoogleAuth.signIn();
+        if (googleUser && googleUser.authentication?.idToken) {
+          const credential = GoogleAuthProvider.credential(googleUser.authentication.idToken);
+          const authResult = await signInWithCredential(auth, credential);
+          return await this.processFirebaseUser(authResult.user);
         }
-      } catch (gisErr) {
-        console.warn('Erro ao inicializar GIS, migrando para popup padrão...', gisErr);
+      } catch (nativeErr: any) {
+        console.error('Capacitor GoogleAuth error:', nativeErr);
+        if (
+          nativeErr?.message?.includes('user Canceled') ||
+          nativeErr?.message?.includes('12501') ||
+          nativeErr?.code === '12501'
+        ) {
+          return { success: false, error: 'O login com o Google foi cancelado.' };
+        }
+        return { success: false, error: nativeErr?.message || 'Falha na autenticação nativa do Google.' };
       }
     }
 
-    // 2. Fallback: signInWithPopup padrão do Firebase Auth
+    // 2. Se estiver rodando na Web (Navegador): usa o Popup seguro com seleção obrigatória de conta
     try {
       const provider = new GoogleAuthProvider();
+      // Garante que o Google SEMPRE exiba a tela para o usuário escolher qual conta deseja usar
       provider.setCustomParameters({ prompt: 'select_account' });
 
       const authResult = await signInWithPopup(auth, provider);
