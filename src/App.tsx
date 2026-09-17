@@ -11,6 +11,8 @@ import {
 } from './types';
 import { authOperations, loadUserData, dbOperations } from './db/localDatabase';
 import { FirestoreSyncService } from './services/firestoreSyncService';
+import { Capacitor } from '@capacitor/core';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { AuthScreen } from './components/AuthScreen';
 import { SplashScreen } from './components/SplashScreen';
 import { MobileFrame } from './components/MobileFrame';
@@ -84,6 +86,14 @@ export const App: React.FC = () => {
     let isMounted = true;
     async function initSession() {
       try {
+        if (Capacitor.isNativePlatform()) {
+          GoogleAuth.initialize({
+            clientId: '901690992750-jbuc5p2bebr2940uaorqtn5qcp72q6cp.apps.googleusercontent.com',
+            scopes: ['profile', 'email'],
+            grantOfflineAccess: false,
+          }).catch((e) => console.warn('Native GoogleAuth pre-init warn:', e));
+        }
+
         // Verifica se o usuário concluiu um login por redirecionamento do Google
         const redirectResult = await authOperations.checkGoogleRedirectResult();
         let activeUser = redirectResult?.success && redirectResult.user ? redirectResult.user : await authOperations.getActiveSessionUser();

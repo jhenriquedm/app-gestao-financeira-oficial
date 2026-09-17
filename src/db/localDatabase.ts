@@ -368,7 +368,7 @@ export const authOperations = {
     if (Capacitor.isNativePlatform()) {
       try {
         try {
-          GoogleAuth.initialize({
+          await GoogleAuth.initialize({
             clientId: oAuthClientId,
             scopes: ['profile', 'email'],
             grantOfflineAccess: false,
@@ -393,9 +393,9 @@ export const authOperations = {
         // Se idToken falhou ou não veio no payload, mas o GoogleAuth nativo retornou o e-mail do usuário autenticado:
         const userEmail = googleUser?.email || (googleUser as any)?.user?.email;
         if (userEmail) {
-          const userName = googleUser?.name || (googleUser as any)?.user?.name || userEmail.split('@')[0];
-          const userPhoto = googleUser?.imageUrl || (googleUser as any)?.user?.imageUrl;
-          const userUid = googleUser?.id || (googleUser as any)?.user?.id;
+          const userName = googleUser?.name || (googleUser as any)?.user?.name || (googleUser as any)?.displayName || userEmail.split('@')[0];
+          const userPhoto = googleUser?.imageUrl || (googleUser as any)?.user?.imageUrl || (googleUser as any)?.photoUrl;
+          const userUid = googleUser?.id || (googleUser as any)?.user?.id || (googleUser as any)?.id;
 
           return await this.processFirebaseUser({
             email: userEmail,
@@ -407,7 +407,7 @@ export const authOperations = {
 
         return {
           success: false,
-          error: 'Não foi possível obter a credencial do Google no dispositivo. Se você já tem conta, utilize E-mail e Senha ou "Esqueci minha senha".',
+          error: 'Não foi possível obter as informações do perfil do Google. Tente novamente.',
         };
       } catch (nativeErr: any) {
         console.warn('Capacitor GoogleAuth nativo falhou:', nativeErr);
@@ -424,7 +424,7 @@ export const authOperations = {
 
         return {
           success: false,
-          error: 'Não foi possível autenticar com o Google no dispositivo. Se você já possui conta, acesse por E-mail e Senha ou utilize "Esqueci minha senha" para cadastrar uma senha.',
+          error: `Ocorreu uma falha na autenticação com o Google no aplicativo (${nativeErr?.message || errStr || 'Erro nativo'}). Tente novamente.`,
         };
       }
     }
