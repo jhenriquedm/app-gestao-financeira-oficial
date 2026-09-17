@@ -1,5 +1,5 @@
 import Dexie, { Table } from 'dexie';
-import { GoogleAuthProvider, signInWithPopup, signInWithCredential, getRedirectResult } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, signInWithCredential, getRedirectResult, signInWithRedirect } from 'firebase/auth';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { Capacitor } from '@capacitor/core';
 import { auth } from '../services/firebase';
@@ -410,7 +410,7 @@ export const authOperations = {
           error: 'Não foi possível obter as informações do perfil do Google. Tente novamente.',
         };
       } catch (nativeErr: any) {
-        console.warn('Capacitor GoogleAuth nativo falhou:', nativeErr);
+        console.warn('Capacitor GoogleAuth nativo falhou, tentando fallback via Firebase Web Auth:', nativeErr);
 
         const errStr = String(nativeErr?.message || nativeErr?.code || nativeErr || '');
         if (
@@ -421,20 +421,30 @@ export const authOperations = {
         ) {
           return { success: false, error: 'O login com o Google foi cancelado pelo usuário.' };
         }
-
-        return {
-          success: false,
-          error: `Ocorreu uma falha na autenticação com o Google no aplicativo (${nativeErr?.message || errStr || 'Erro nativo'}). Tente novamente.`,
-        };
+        // Se não foi cancelamento do usuário (ex: erro nativo, SHA-1 não cadastrado ou ApiException), prossegue para o Popup do Firebase Web Auth como fallback!
       }
     }
 
-    // 2. Se estiver rodando na Web (Navegador): usa o Popup seguro com seleção obrigatória de conta
+    // 2. Fallback via Firebase Auth (Popup com transição para Redirect se popup for bloqueado no WebView)
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
 
-      const authResult = await signInWithPopup(auth, provider);
+      let authResult;
+      try {
+        authResult = await signInWithPopup(auth, provider);
+      } catch (popupErr: any) {
+        if (
+          popupErr?.code === 'auth/popup-blocked' ||
+          popupErr?.code === 'auth/operation-not-supported-in-this-environment'
+        ) {
+          console.warn('Popup bloqueado no ambiente, iniciando signInWithRedirect...');
+          await signInWithRedirect(auth, provider);
+          return { success: true };
+        }
+        throw popupErr;
+      }
+
       return await this.processFirebaseUser(authResult.user);
     } catch (err: any) {
       console.error('Google login error:', err);
@@ -442,7 +452,7 @@ export const authOperations = {
         return { success: false, error: 'A janela de autenticação do Google foi fechada antes da conclusão.' };
       }
       if (err?.code === 'auth/popup-blocked') {
-        return { success: false, error: 'O navegador bloqueou a janela pop-up do Google. Por favor, permita pop-ups para este site no seu navegador.' };
+        return { success: false, error: 'O navegador ou aplicativo bloqueou a janela pop-up do Google. Tente novamente.' };
       }
       if (err?.code === 'auth/cancelled-popup-request') {
         return { success: false, error: 'Solicitação cancelada.' };
@@ -459,7 +469,7 @@ export const authOperations = {
       }
       return {
         success: false,
-        error: 'Não foi possível autenticar com o Google. Tente novamente ou use a opção "Esqueci minha senha" para criar uma senha para seu e-mail.',
+        error: 'Não foi possível autenticar com o Google. Tente novamente ou utilize seu E-mail e Senha.',
       };
     }
   },
