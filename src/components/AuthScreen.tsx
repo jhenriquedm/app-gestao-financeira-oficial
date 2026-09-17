@@ -50,6 +50,26 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Auto-dismiss error alert after 5 seconds
+  React.useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => {
+        setErrorMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
+
+  // Auto-dismiss success alert after 5 seconds
+  React.useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
   // Password Recovery via E-mail or CPF Modal States
   const [isRecoveryModalOpen, setIsRecoveryModalOpen] = useState(false);
   const [recoveryStep, setRecoveryStep] = useState<1 | 2>(1);
@@ -221,6 +241,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       if (result.success) {
         setIsRecoveryModalOpen(false);
         setMode('login');
+        setErrorMessage(null);
         setSuccessMessage('Senha alterada com sucesso! Faça login com a sua nova senha.');
         setRecoveryIdentifier('');
         setRecoveryCpf('');

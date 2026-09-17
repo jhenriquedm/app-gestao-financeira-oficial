@@ -242,6 +242,9 @@ export const authOperations = {
       // Save active session
       await localDb.settings.put({ key: 'active_session_user_id', value: userRecord.id });
 
+      // Guarantee user account and password hash are synced to Firestore cloud
+      FirestoreSyncService.saveUserAccount(userRecord).catch(console.warn);
+
       return {
         success: true,
         user: {
@@ -410,7 +413,7 @@ export const authOperations = {
           error: 'Não foi possível obter as informações do perfil do Google. Tente novamente.',
         };
       } catch (nativeErr: any) {
-        console.warn('Capacitor GoogleAuth nativo falhou, tentando fallback via Firebase Web Auth:', nativeErr);
+        console.warn('Capacitor GoogleAuth nativo falhou:', nativeErr);
 
         const errStr = String(nativeErr?.message || nativeErr?.code || nativeErr || '');
         if (
@@ -421,7 +424,11 @@ export const authOperations = {
         ) {
           return { success: false, error: 'O login com o Google foi cancelado pelo usuário.' };
         }
-        // Se não foi cancelamento do usuário (ex: erro nativo, SHA-1 não cadastrado ou ApiException), prossegue para o Popup do Firebase Web Auth como fallback!
+
+        return {
+          success: false,
+          error: 'Não foi possível concluir o login com o Google no aplicativo. Se você criou sua conta via Google, utilize "Esqueci minha senha" para cadastrar uma senha e entrar por E-mail.',
+        };
       }
     }
 
@@ -593,8 +600,13 @@ export const authOperations = {
       user.passwordHash = passwordHash;
       await localDb.users.put(user);
 
-      // Seamlessly update cloud
-      FirestoreSyncService.updateUserPasswordInCloud(user.id, passwordHash).catch(console.warn);
+      // Seamlessly update cloud with full user record and password hash
+      try {
+        await FirestoreSyncService.saveUserAccount(user);
+        await FirestoreSyncService.updateUserPasswordInCloud(user.id, passwordHash);
+      } catch (cloudErr) {
+        console.warn('Syncing password to cloud warning:', cloudErr);
+      }
 
       return { success: true };
     } catch (err: any) {
