@@ -373,7 +373,7 @@ export const authOperations = {
           }
           return {
             success: false,
-            error: 'Não foi possível autenticar com o Google neste dispositivo no momento. Por favor, acesse utilizando seu E-mail e Senha.',
+            error: 'Não foi possível autenticar com o Google. Se você já se cadastrou pelo Google, utilize a opção "Esqueci minha senha" para cadastrar uma senha no seu e-mail.',
           };
         }
       }
@@ -409,7 +409,7 @@ export const authOperations = {
       }
       return {
         success: false,
-        error: 'Não foi possível autenticar com o Google. Por favor, tente novamente ou entre com E-mail e Senha.',
+        error: 'Não foi possível autenticar com o Google. Tente novamente ou use a opção "Esqueci minha senha" para criar uma senha para seu e-mail.',
       };
     }
   },
