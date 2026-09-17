@@ -1,5 +1,5 @@
 import Dexie, { Table } from 'dexie';
-import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, getRedirectResult } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import {
   Transaction,
@@ -325,36 +325,22 @@ export const authOperations = {
   },
 
   /**
-   * Autenticação com a Conta Google (Popup com Fallback de Redirect).
+   * Autenticação com a Conta Google (Popup Seguro com suporte a navegadores móveis).
    */
   async loginWithGoogle(): Promise<{ success: boolean; user?: User; isNewUser?: boolean; error?: string }> {
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
 
-      try {
-        const authResult = await signInWithPopup(auth, provider);
-        return await this.processFirebaseUser(authResult.user);
-      } catch (popupErr: any) {
-        // Fallback para signInWithRedirect em webviews móveis ou popups bloqueados
-        if (
-          popupErr?.code === 'auth/popup-blocked' ||
-          popupErr?.code === 'auth/operation-not-supported-in-this-environment' ||
-          popupErr?.code === 'auth/popup-closed-by-user'
-        ) {
-          console.warn('Popup login impedido, redirecionando com signInWithRedirect...', popupErr);
-          await signInWithRedirect(auth, provider);
-          return { success: false, error: 'Redirecionando para o login seguro do Google...' };
-        }
-        throw popupErr;
-      }
+      const authResult = await signInWithPopup(auth, provider);
+      return await this.processFirebaseUser(authResult.user);
     } catch (err: any) {
       console.error('Google login error:', err);
       if (err?.code === 'auth/popup-closed-by-user') {
         return { success: false, error: 'A janela de autenticação do Google foi fechada antes da conclusão.' };
       }
       if (err?.code === 'auth/popup-blocked') {
-        return { success: false, error: 'O navegador bloqueou a janela pop-up do Google. Por favor, autorize pop-ups para continuar.' };
+        return { success: false, error: 'O navegador bloqueou a janela pop-up do Google. Por favor, permita pop-ups para este site no seu navegador.' };
       }
       if (err?.code === 'auth/cancelled-popup-request') {
         return { success: false, error: 'Solicitação cancelada.' };
@@ -366,7 +352,7 @@ export const authOperations = {
         const currentDomain = typeof window !== 'undefined' ? window.location.hostname : 'este aplicativo';
         return {
           success: false,
-          error: `O domínio (${currentDomain}) precisa ser adicionado no Firebase Console > Authentication > Settings > Authorized Domains, ou utilize o acesso direto por E-mail e Senha.`,
+          error: `O domínio (${currentDomain}) precisa ser adicionado no Firebase Console > Authentication > Settings > Authorized Domains, ou utilize o acesso por E-mail e Senha.`,
         };
       }
       return { success: false, error: err?.message || 'Falha ao autenticar com a Conta Google.' };
