@@ -52,6 +52,10 @@ jobs:
       - name: 🔑 Permissão para gradlew
         run: chmod +x ./android/gradlew
 
+      - name: 🔍 Exibir Impressão Digital SHA-1 da Keystore
+        run: |
+          keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android -keypass android | grep -E "SHA1|SHA256" || true
+
       - name: 🔨 Compilar APK Debug
         run: |
           cd android
