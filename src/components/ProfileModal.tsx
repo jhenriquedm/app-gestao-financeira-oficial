@@ -242,9 +242,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
   if (!isOpen || !user) return null;
 
-  const initials = user.name
-    ? user.name
+  const displayPhotoUrl = (photoUrl && !photoUrl.includes('googleusercontent.com')) ? photoUrl : null;
+
+  const initials = (name || user.name)
+    ? (name || user.name)
+        .trim()
         .split(' ')
+        .filter(Boolean)
         .slice(0, 2)
         .map((n) => n.charAt(0).toUpperCase())
         .join('')
@@ -271,8 +275,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           <div className="p-4 sm:p-5 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white font-bold text-sm flex items-center justify-center shadow-md shadow-emerald-600/20 overflow-hidden shrink-0">
-                {photoUrl ? (
-                  <img src={photoUrl} alt="Foto de perfil" className="w-full h-full object-cover" />
+                {displayPhotoUrl ? (
+                  <img src={displayPhotoUrl} alt="Foto de perfil" className="w-full h-full object-cover" />
                 ) : (
                   initials
                 )}
@@ -319,9 +323,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   title="Clique para escolher uma foto"
                   className="w-14 h-14 rounded-full overflow-hidden bg-emerald-600 text-white font-bold text-base flex items-center justify-center ring-2 ring-emerald-500/30 shadow-xs cursor-pointer group-hover:ring-emerald-500/70 transition-all relative"
                 >
-                  {photoUrl ? (
+                  {displayPhotoUrl ? (
                     <img
-                      src={photoUrl}
+                      src={displayPhotoUrl}
                       alt={name || 'Foto de perfil'}
                       className="w-full h-full object-cover"
                     />

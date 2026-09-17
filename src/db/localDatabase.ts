@@ -182,8 +182,12 @@ export const authOperations = {
         await localDb.settings.put({ key: `user_${newUserId}_isBalanceHidden`, value: false });
       });
 
-      // Persist user account to cloud
-      FirestoreSyncService.saveUserAccount(userRecord).catch(console.warn);
+      // Persist user account to cloud immediately
+      try {
+        await FirestoreSyncService.saveUserAccount(userRecord);
+      } catch (cloudErr) {
+        console.warn('Initial cloud save warning:', cloudErr);
+      }
 
       return {
         success: true,
@@ -273,7 +277,9 @@ export const authOperations = {
 
     const cleanEmail = fbUser.email.trim().toLowerCase();
     const cleanName = fbUser.displayName?.trim() || cleanEmail.split('@')[0] || 'Usuário Google';
-    const photoUrl = fbUser.photoURL || undefined;
+    // Do not use Google default avatar URLs so initials from Gmail name are displayed cleanly
+    const rawPhotoUrl = fbUser.photoURL || '';
+    const photoUrl = (rawPhotoUrl && !rawPhotoUrl.includes('googleusercontent.com')) ? rawPhotoUrl : undefined;
 
     // 1. Procurar usuário local existente por e-mail (reconhecimento de contas existentes)
     let userRecord = await localDb.users.where('email').equalsIgnoreCase(cleanEmail).first();
@@ -290,8 +296,9 @@ export const authOperations = {
     // 3. Caso o usuário JÁ EXISTA:
     if (userRecord) {
       let hasUpdates = false;
-      if (photoUrl && !userRecord.photoUrl) {
-        userRecord.photoUrl = photoUrl;
+      // If user had a googleusercontent photo, clear it to display initials
+      if (userRecord.photoUrl && userRecord.photoUrl.includes('googleusercontent.com')) {
+        userRecord.photoUrl = undefined;
         hasUpdates = true;
       }
       if (!userRecord.authProvider) {
@@ -343,8 +350,12 @@ export const authOperations = {
       await localDb.settings.put({ key: 'active_session_user_id', value: newUserId });
     });
 
-    // Salva imediatamente no Firestore
-    FirestoreSyncService.saveUserAccount(newUserRecord).catch(console.warn);
+    // Salva imediatamente no Firestore e aguarda confirmação
+    try {
+      await FirestoreSyncService.saveUserAccount(newUserRecord);
+    } catch (cloudErr) {
+      console.warn('Initial google account cloud save warning:', cloudErr);
+    }
 
     return {
       success: true,
@@ -378,6 +389,13 @@ export const authOperations = {
           });
         } catch (initErr) {
           console.warn('GoogleAuth.initialize warn:', initErr);
+        }
+
+        // Força a exibição do seletor de conta do Google ao tentar logar ou se cadastrar
+        try {
+          await GoogleAuth.signOut();
+        } catch (signOutErr) {
+          // Ignora caso não estivesse logado nativamente
         }
 
         const googleUser = await GoogleAuth.signIn();
@@ -600,10 +618,16 @@ export const authOperations = {
       user.passwordHash = passwordHash;
       await localDb.users.put(user);
 
-      // Seamlessly update cloud with full user record and password hash
+      // Seamlessly update cloud with full user record and password hash (with 3.5s timeout so UI never hangs)
+      const syncTimeout = new Promise((res) => setTimeout(res, 3500));
       try {
-        await FirestoreSyncService.saveUserAccount(user);
-        await FirestoreSyncService.updateUserPasswordInCloud(user.id, passwordHash);
+        await Promise.race([
+          Promise.all([
+            FirestoreSyncService.saveUserAccount(user),
+            FirestoreSyncService.updateUserPasswordInCloud(user.id, passwordHash),
+          ]),
+          syncTimeout,
+        ]);
       } catch (cloudErr) {
         console.warn('Syncing password to cloud warning:', cloudErr);
       }
@@ -744,6 +768,11 @@ export const authOperations = {
       try {
         await auth.signOut();
       } catch (_) {}
+      if (Capacitor.isNativePlatform()) {
+        try {
+          await GoogleAuth.signOut();
+        } catch (_) {}
+      }
     } catch (e) {
       console.error('Logout error:', e);
     }

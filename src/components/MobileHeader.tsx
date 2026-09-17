@@ -172,7 +172,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
             id="btn-header-profile-avatar"
             className="w-9.5 h-9.5 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center ring-2 ring-emerald-400/30 shadow-xs shrink-0 group-hover:scale-105 group-hover:ring-emerald-400/60 transition-all overflow-hidden"
           >
-            {user?.photoUrl ? (
+            {(user?.photoUrl && !user.photoUrl.includes('googleusercontent.com')) ? (
               <img
                 src={user.photoUrl}
                 alt={user.name || 'Foto de perfil'}

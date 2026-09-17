@@ -53,11 +53,6 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           </span>
         </div>
       </motion.div>
-
-      {/* Footer Version Tag */}
-      <div className="absolute bottom-6 text-[10px] text-slate-500 font-semibold tracking-wider uppercase">
-        Versão Oficial • Moto G52 & Multi-plataforma
-      </div>
     </div>
   );
 };
