@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "901690992750-m9tpgql30vpfnsfp2ffbrubdll1gmndl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.gestaofinanceira.app",
+            "certificate_hash": "8d708a2172a69f94b66ee2e986ea54927f125ec2"
+          }
+        },
+        {
           "client_id": "901690992750-jbuc5p2bebr2940uaorqtn5qcp72q6cp.apps.googleusercontent.com",
           "client_type": 3
         }
