@@ -339,43 +339,39 @@ export const authOperations = {
         GoogleAuth.initialize({
           clientId: oAuthClientId,
           scopes: ['profile', 'email'],
-          grantOfflineAccess: true,
+          grantOfflineAccess: false,
         });
 
         const googleUser = await GoogleAuth.signIn();
-        if (googleUser && googleUser.authentication?.idToken) {
-          const credential = GoogleAuthProvider.credential(googleUser.authentication.idToken);
+        const idToken = googleUser?.authentication?.idToken || (googleUser as any)?.idToken;
+
+        if (idToken) {
+          const credential = GoogleAuthProvider.credential(idToken);
           const authResult = await signInWithCredential(auth, credential);
           return await this.processFirebaseUser(authResult.user);
+        } else {
+          return {
+            success: false,
+            error: 'Não foi possível obter a credencial do Google no dispositivo.',
+          };
         }
       } catch (nativeErr: any) {
-        console.warn('Capacitor GoogleAuth nativo falhou ou cancelado, tentando fallback...', nativeErr);
+        console.warn('Capacitor GoogleAuth nativo falhou:', nativeErr);
 
         const errStr = String(nativeErr?.message || nativeErr?.code || nativeErr || '');
         if (
           errStr.includes('user Canceled') ||
           errStr.includes('12501') ||
+          errStr.includes('canceled') ||
           nativeErr?.code === '12501'
         ) {
-          return { success: false, error: 'O login com o Google foi cancelado.' };
+          return { success: false, error: 'O login com o Google foi cancelado pelo usuário.' };
         }
 
-        // Tenta Fallback via Popup do Firebase se o login nativo não puder ser concluído
-        try {
-          const provider = new GoogleAuthProvider();
-          provider.setCustomParameters({ prompt: 'select_account' });
-          const authResult = await signInWithPopup(auth, provider);
-          return await this.processFirebaseUser(authResult.user);
-        } catch (popupErr: any) {
-          console.error('Fallback Popup error:', popupErr);
-          if (popupErr?.code === 'auth/popup-closed-by-user') {
-            return { success: false, error: 'A janela de autenticação do Google foi fechada.' };
-          }
-          return {
-            success: false,
-            error: 'Não foi possível autenticar com o Google. Se você já se cadastrou pelo Google, utilize a opção "Esqueci minha senha" para cadastrar uma senha no seu e-mail.',
-          };
-        }
+        return {
+          success: false,
+          error: 'Não foi possível autenticar com o Google no dispositivo. Se você já possui conta, acesse por E-mail e Senha ou utilize "Esqueci minha senha" para cadastrar uma senha.',
+        };
       }
     }
 
