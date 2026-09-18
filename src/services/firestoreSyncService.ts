@@ -70,6 +70,28 @@ export function sanitizeForFirestore<T>(data: T): T {
 export class FirestoreSyncService {
   static lastSyncError: string | null = null;
   static hasRealSyncFailure: boolean = false;
+  private static quotaExceededUntil: number = 0;
+
+  static checkAndFlagQuotaError(error: any): boolean {
+    const errStr = String(error?.message || error?.code || error || '');
+    if (
+      errStr.includes('resource-exhausted') ||
+      errStr.includes('Quota limit exceeded') ||
+      errStr.includes('quota metric') ||
+      (error && error.code === 'resource-exhausted')
+    ) {
+      // Pause automatic background sync retries for 5 minutes
+      this.quotaExceededUntil = Date.now() + 5 * 60 * 1000;
+      this.lastSyncError = 'Limite de cota de gravações do Firebase excedido.';
+      this.hasRealSyncFailure = true;
+      return true;
+    }
+    return false;
+  }
+
+  static isQuotaExceeded(): boolean {
+    return Date.now() < this.quotaExceededUntil;
+  }
 
   private static userDocRef(userId: string) {
     return doc(firestore, 'users', userId);
@@ -83,29 +105,52 @@ export class FirestoreSyncService {
     return !userId || userId.trim() === '' || userId === 'no_user';
   }
 
+  private static async withTimeout<T>(promise: Promise<T>, ms: number = 4000, fallbackValue?: T): Promise<T> {
+    let timer: any;
+    const timeoutPromise = new Promise<T>((resolve, reject) => {
+      timer = setTimeout(() => {
+        if (fallbackValue !== undefined) {
+          resolve(fallbackValue);
+        } else {
+          reject(new Error('NETWORK_TIMEOUT'));
+        }
+      }, ms);
+    });
+    try {
+      const res = await Promise.race([promise, timeoutPromise]);
+      clearTimeout(timer);
+      return res;
+    } catch (err) {
+      clearTimeout(timer);
+      throw err;
+    }
+  }
+
   /**
    * Saves or updates a user account record in Firestore under /users/{userId}
    */
-  static async saveUserAccount(userRecord: UserRecord): Promise<void> {
+  static async saveUserAccount(userRecord: UserRecord): Promise<{ success: boolean; error?: string }> {
     try {
       const userRef = this.userDocRef(userRecord.id);
-      await setDoc(
-        userRef,
-        sanitizeForFirestore({
-          id: userRecord.id,
-          name: userRecord.name,
-          email: userRecord.email,
-          cpf: userRecord.cpf || '',
-          passwordHash: userRecord.passwordHash || '',
-          photoUrl: userRecord.photoUrl || '',
-          authProvider: userRecord.authProvider || 'password',
-          createdAt: userRecord.createdAt,
-          updatedAt: Date.now(),
-        }),
-        { merge: true }
+      const payload = sanitizeForFirestore({
+        id: userRecord.id,
+        name: userRecord.name,
+        email: userRecord.email,
+        cpf: userRecord.cpf || '',
+        passwordHash: userRecord.passwordHash || '',
+        photoUrl: userRecord.photoUrl || '',
+        authProvider: userRecord.authProvider || 'password',
+        createdAt: userRecord.createdAt,
+        updatedAt: Date.now(),
+      });
+      await this.withTimeout(
+        setDoc(userRef, payload, { merge: true }),
+        6000
       );
-    } catch (e) {
+      return { success: true };
+    } catch (e: any) {
       console.warn('Failed to save user account to cloud:', e);
+      return { success: false, error: e?.message || 'Falha ao salvar conta na nuvem.' };
     }
   }
 
@@ -117,8 +162,8 @@ export class FirestoreSyncService {
       const usersCol = collection(firestore, 'users');
       if (filter.cpf) {
         const q = query(usersCol, where('cpf', '==', filter.cpf));
-        const snap = await getDocs(q);
-        if (!snap.empty) {
+        const snap = await this.withTimeout(getDocs(q), 3500, null as any);
+        if (snap && !snap.empty) {
           const docData = snap.docs[0].data();
           return {
             id: snap.docs[0].id,
@@ -135,8 +180,8 @@ export class FirestoreSyncService {
 
       if (filter.email) {
         const q = query(usersCol, where('email', '==', filter.email.toLowerCase()));
-        const snap = await getDocs(q);
-        if (!snap.empty) {
+        const snap = await this.withTimeout(getDocs(q), 3500, null as any);
+        if (snap && !snap.empty) {
           const docData = snap.docs[0].data();
           return {
             id: snap.docs[0].id,
@@ -151,38 +196,9 @@ export class FirestoreSyncService {
         }
       }
 
-      // Fallback: scan users collection if indexed query is not yet available
-      const allUsersSnap = await getDocs(usersCol);
-      for (const d of allUsersSnap.docs) {
-        const data = d.data();
-        if (filter.cpf && data.cpf === filter.cpf) {
-          return {
-            id: d.id,
-            name: data.name || 'Usuário',
-            email: data.email || '',
-            cpf: data.cpf,
-            passwordHash: data.passwordHash || '',
-            photoUrl: data.photoUrl || undefined,
-            authProvider: data.authProvider || 'password',
-            createdAt: data.createdAt || Date.now(),
-          };
-        }
-        if (filter.email && data.email && data.email.toLowerCase() === filter.email.toLowerCase()) {
-          return {
-            id: d.id,
-            name: data.name || 'Usuário',
-            email: data.email,
-            cpf: data.cpf || '',
-            passwordHash: data.passwordHash || '',
-            photoUrl: data.photoUrl || undefined,
-            authProvider: data.authProvider || 'password',
-            createdAt: data.createdAt || Date.now(),
-          };
-        }
-      }
       return null;
     } catch (e) {
-      console.warn('Cloud user lookup failed:', e);
+      console.warn('Cloud user lookup timeout or error:', e);
       return null;
     }
   }
@@ -193,7 +209,10 @@ export class FirestoreSyncService {
   static async updateUserPasswordInCloud(userId: string, newHash: string): Promise<void> {
     try {
       const userRef = this.userDocRef(userId);
-      await setDoc(userRef, sanitizeForFirestore({ passwordHash: newHash, updatedAt: Date.now() }), { merge: true });
+      await this.withTimeout(
+        setDoc(userRef, sanitizeForFirestore({ passwordHash: newHash, updatedAt: Date.now() }), { merge: true }),
+        3500
+      );
     } catch (e) {
       console.warn('Failed to update password in cloud:', e);
     }
@@ -205,7 +224,7 @@ export class FirestoreSyncService {
   static async updateUserProfileInCloud(
     userId: string,
     profile: { name: string; email: string; cpf: string; passwordHash?: string }
-  ): Promise<void> {
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       const userRef = this.userDocRef(userId);
       const updateData: Record<string, any> = {
@@ -217,9 +236,14 @@ export class FirestoreSyncService {
       if (profile.passwordHash) {
         updateData.passwordHash = profile.passwordHash;
       }
-      await setDoc(userRef, sanitizeForFirestore(updateData), { merge: true });
-    } catch (e) {
+      await this.withTimeout(
+        setDoc(userRef, sanitizeForFirestore(updateData), { merge: true }),
+        6000
+      );
+      return { success: true };
+    } catch (e: any) {
       console.warn('Failed to update user profile in cloud:', e);
+      return { success: false, error: e?.message || 'Falha ao atualizar perfil no Firestore.' };
     }
   }
 
@@ -312,7 +336,7 @@ export class FirestoreSyncService {
    * Uploads all pending local changes for a user to Firestore
    */
   static async uploadPendingChanges(userId: string): Promise<number> {
-    if (this.isInvalidUser(userId)) return 0;
+    if (this.isInvalidUser(userId) || this.isQuotaExceeded()) return 0;
 
     let totalUploaded = 0;
     const now = Date.now();
@@ -742,13 +766,24 @@ export class FirestoreSyncService {
     if (this.isInvalidUser(userId)) {
       return { success: false, uploadedCount: 0, downloadedCount: 0, error: 'Usuário não autenticado.' };
     }
+    if (this.isQuotaExceeded()) {
+      return { success: false, uploadedCount: 0, downloadedCount: 0, error: 'Cota do Firebase excedida. Tentativa pausada temporariamente.' };
+    }
 
     try {
-      // Step 1: Upload all pending items
-      const uploadedCount = await this.uploadPendingChanges(userId);
+      // Step 1: Upload all pending items with max 5s timeout
+      const uploadedCount = await this.withTimeout(this.uploadPendingChanges(userId), 5000, 0);
 
-      // Step 2: Download cloud data
-      const { downloadedCount } = await this.downloadCloudData(userId);
+      // Step 2: Download cloud data with max 5s timeout
+      const downloadRes = await this.withTimeout(this.downloadCloudData(userId), 5000, {
+        downloadedCount: 0,
+        categories: [],
+        transactions: [],
+        installments: [],
+        budgets: [],
+        savingsGoals: [],
+      });
+      const downloadedCount = downloadRes.downloadedCount;
 
       // Step 3: Record last successful sync timestamp
       await localDb.settings.put({
@@ -765,15 +800,77 @@ export class FirestoreSyncService {
         downloadedCount,
       };
     } catch (err: any) {
-      console.warn('Firestore sync error (operating in offline fallback mode):', err);
+      console.warn('Firestore sync timeout/error (operating in offline fallback mode):', err);
       this.hasRealSyncFailure = true;
-      this.lastSyncError = err?.message || 'Falha ao sincronizar com a nuvem.';
+      this.lastSyncError = err?.message || 'Falha de conexão com o servidor de dados na nuvem.';
       return {
         success: false,
         uploadedCount: 0,
         downloadedCount: 0,
         error: err?.message || 'Erro ao sincronizar com o Firebase.',
       };
+    }
+  }
+
+  /**
+   * Resets and deletes all users and all subcollections in Firebase Firestore and clears local Dexie storage
+   */
+  static async wipeAllCloudAndLocalData(): Promise<{ success: boolean; count: number; error?: string }> {
+    try {
+      let deletedDocsCount = 0;
+      const usersCol = collection(firestore, 'users');
+      const usersSnap = await this.withTimeout(getDocs(usersCol), 5000, null as any);
+
+      const subcolNames = [
+        'transactions',
+        'installments',
+        'categories',
+        'budgets',
+        'savingsGoals',
+        'orcamentos',
+        'transacoes',
+        'parcelamentos',
+        'metas',
+        'configuracoes',
+      ];
+
+      if (usersSnap && !usersSnap.empty) {
+        for (const uDoc of usersSnap.docs) {
+          const uId = uDoc.id;
+          // Delete all subcollection docs under this user
+          for (const subName of subcolNames) {
+            try {
+              const subColRef = collection(firestore, 'users', uId, subName);
+              const subSnap = await this.withTimeout(getDocs(subColRef), 3000, null as any);
+              if (subSnap && !subSnap.empty) {
+                for (const sDoc of subSnap.docs) {
+                  await deleteDoc(doc(firestore, 'users', uId, subName, sDoc.id)).catch(() => {});
+                  deletedDocsCount++;
+                }
+              }
+            } catch (e) {
+              console.warn(`Error deleting subcollection ${subName} for user ${uId}:`, e);
+            }
+          }
+          // Delete main user doc
+          await deleteDoc(doc(firestore, 'users', uId)).catch(() => {});
+          deletedDocsCount++;
+        }
+      }
+
+      // Clear local Dexie DB
+      await localDb.transactions.clear().catch(() => {});
+      await localDb.installments.clear().catch(() => {});
+      await localDb.categories.clear().catch(() => {});
+      await localDb.budgets.clear().catch(() => {});
+      await localDb.savingsGoals.clear().catch(() => {});
+      await localDb.users.clear().catch(() => {});
+      await localDb.settings.clear().catch(() => {});
+
+      return { success: true, count: deletedDocsCount };
+    } catch (err: any) {
+      console.error('Failed to wipe all cloud and local data:', err);
+      return { success: false, count: 0, error: err?.message || 'Erro ao limpar banco na nuvem.' };
     }
   }
 }

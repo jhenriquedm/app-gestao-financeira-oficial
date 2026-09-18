@@ -304,10 +304,11 @@ export const FixedExpensesSection: React.FC<FixedExpensesSectionProps> = ({
               <div
                 key={exp.id}
                 id={`fixed-expense-card-${exp.id}`}
-                className={`bg-white dark:bg-neutral-900 rounded-2xl p-3 border transition-all shadow-xs flex items-center justify-between gap-3 ${
+                onClick={() => onEdit(exp)}
+                className={`bg-white dark:bg-neutral-900 rounded-2xl p-3 border transition-all shadow-xs flex items-center justify-between gap-3 cursor-pointer group ${
                   isPaid 
-                    ? 'border-emerald-200/90 dark:border-emerald-800/60 bg-emerald-50/15 dark:bg-emerald-950/10' 
-                    : 'border-neutral-200 dark:border-neutral-800 hover:border-indigo-300 dark:hover:border-indigo-700'
+                    ? 'border-emerald-200/90 dark:border-emerald-800/60 bg-emerald-50/15 dark:bg-emerald-950/10 hover:border-emerald-300' 
+                    : 'border-neutral-200 dark:border-neutral-800 hover:border-indigo-400 dark:hover:border-indigo-600'
                 }`}
               >
                 {/* Ícone da Categoria + Descrição */}
@@ -324,7 +325,7 @@ export const FixedExpensesSection: React.FC<FixedExpensesSectionProps> = ({
 
                   <div className="flex-1 min-w-0">
                     <p
-                      className={`text-xs font-bold truncate ${
+                      className={`text-xs font-bold truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors ${
                         isPaid ? 'line-through text-neutral-400 dark:text-neutral-500' : 'text-neutral-900 dark:text-neutral-100'
                       }`}
                     >
@@ -354,7 +355,10 @@ export const FixedExpensesSection: React.FC<FixedExpensesSectionProps> = ({
                       {isBalanceHidden ? '••••••' : formatCurrency(exp.amount)}
                     </span>
                     <button
-                      onClick={() => onToggleStatus(exp.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleStatus(exp.id);
+                      }}
                       className={`mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
                         isPaid
                           ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-200'
@@ -378,14 +382,20 @@ export const FixedExpensesSection: React.FC<FixedExpensesSectionProps> = ({
                   {/* Actions */}
                   <div className="flex flex-col items-center gap-1 pl-1 border-l border-neutral-100 dark:border-neutral-800">
                     <button
-                      onClick={() => onEdit(exp)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit(exp);
+                      }}
                       title="Editar"
                       className="p-1 rounded-md text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
                     >
                       <Edit2 className="w-3 h-3" />
                     </button>
                     <button
-                      onClick={() => onDelete(exp.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(exp.id);
+                      }}
                       title="Excluir"
                       className="p-1 rounded-md text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
                     >

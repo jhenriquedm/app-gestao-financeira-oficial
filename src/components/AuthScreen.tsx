@@ -367,7 +367,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             onLoginSuccess(result.user!);
           }, 400);
         } else {
-          setErrorMessage(result.error || 'Não foi possível realizar o cadastro.');
+          const errText = result.error || 'Não foi possível realizar o cadastro.';
+          setErrorMessage(errText);
+          if (errText.toLowerCase().includes('cadastrado')) {
+            setTimeout(() => {
+              setMode('login');
+            }, 2000);
+          }
         }
       } else {
         const result = await authOperations.login(cleanEmail, cleanPassword);

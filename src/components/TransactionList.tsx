@@ -265,7 +265,8 @@ export const TransactionList: React.FC<TransactionListProps> = ({
               <div
                 key={tx.id}
                 id={`tx-row-${tx.id}`}
-                className="p-3 sm:p-4 hover:bg-neutral-50/80 dark:hover:bg-neutral-800/50 transition-colors flex items-center justify-between gap-2.5"
+                onClick={() => onEdit(tx)}
+                className="p-3 sm:p-4 hover:bg-neutral-100/80 dark:hover:bg-neutral-800/80 transition-colors flex items-center justify-between gap-2.5 cursor-pointer group"
               >
                 {/* Left: Category Icon */}
                 <div
@@ -281,13 +282,16 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                 {/* Middle: Details */}
                 <div className="flex-1 min-w-0 pr-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-semibold text-xs sm:text-sm text-neutral-900 dark:text-neutral-100 truncate max-w-[150px] sm:max-w-xs">
+                    <span className="font-semibold text-xs sm:text-sm text-neutral-900 dark:text-neutral-100 truncate max-w-[150px] sm:max-w-xs group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
                       {tx.description}
                     </span>
 
                     {/* Status badge & toggle */}
                     <button
-                      onClick={() => onToggleStatus(tx.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleStatus(tx.id);
+                      }}
                       title="Alternar situação"
                       className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md transition-colors cursor-pointer shrink-0 ${
                         tx.status === 'completed'
@@ -340,7 +344,10 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                   <div className="flex items-center gap-0.5">
                     <button
                       id={`btn-edit-${tx.id}`}
-                      onClick={() => onEdit(tx)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit(tx);
+                      }}
                       aria-label="Editar"
                       title="Editar lançamento"
                       className="p-1 text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md transition-colors cursor-pointer"
@@ -349,7 +356,10 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                     </button>
                     <button
                       id={`btn-delete-${tx.id}`}
-                      onClick={() => onDelete(tx.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(tx.id);
+                      }}
                       aria-label="Excluir"
                       title="Excluir lançamento"
                       className="p-1 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 rounded-md transition-colors cursor-pointer"

@@ -311,10 +311,11 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
               <div
                 key={inst.id}
                 id={`installment-card-${inst.id}`}
-                className={`bg-white dark:bg-neutral-900 rounded-2xl p-3.5 border transition-all shadow-xs ${
+                onClick={() => onEdit(inst)}
+                className={`bg-white dark:bg-neutral-900 rounded-2xl p-3.5 border transition-all shadow-xs cursor-pointer group ${
                   isPaid 
-                    ? 'border-emerald-200/90 dark:border-emerald-800/60 bg-emerald-50/20 dark:bg-emerald-950/10' 
-                    : 'border-neutral-200 dark:border-neutral-800 hover:border-amber-300 dark:hover:border-amber-700'
+                    ? 'border-emerald-200/90 dark:border-emerald-800/60 bg-emerald-50/20 dark:bg-emerald-950/10 hover:border-emerald-300' 
+                    : 'border-neutral-200 dark:border-neutral-800 hover:border-amber-400 dark:hover:border-amber-600'
                 }`}
               >
                 {/* Linha 1: Ícone + Título + Tags + Valor + Status Toggle */}
@@ -333,7 +334,7 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span
-                          className={`text-xs font-bold leading-snug break-words ${
+                          className={`text-xs font-bold leading-snug break-words group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors ${
                             isPaid 
                               ? 'line-through text-neutral-400 dark:text-neutral-500' 
                               : 'text-neutral-900 dark:text-neutral-100'
@@ -372,7 +373,10 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
                       {isBalanceHidden ? '••••••' : formatCurrency(inst.monthlyAmount)}
                     </span>
                     <button
-                      onClick={() => onToggleStatus(inst.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleStatus(inst.id);
+                      }}
                       className={`mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
                         isPaid
                           ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-200'
@@ -430,7 +434,10 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
                     <div className="flex items-center gap-1">
                       {/* Editar */}
                       <button
-                        onClick={() => onEdit(inst)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(inst);
+                        }}
                         title="Editar contrato"
                         className="p-1 rounded-lg text-neutral-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
                       >
@@ -439,7 +446,10 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
 
                       {/* Excluir */}
                       <button
-                        onClick={() => onDelete(inst.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(inst.id);
+                        }}
                         title="Excluir contrato"
                         className="p-1 rounded-lg text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
                       >

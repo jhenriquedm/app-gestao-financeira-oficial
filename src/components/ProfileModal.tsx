@@ -224,7 +224,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
       if (result.success && result.user) {
         onUpdateUser(result.user);
-        setTimedFeedback({ type: 'success', message: 'Alterações salvas e sincronizadas com a nuvem com sucesso!' });
+        if ((result as any).syncedToCloud) {
+          setTimedFeedback({ type: 'success', message: 'Alterações salvas e sincronizadas com a nuvem com sucesso!' });
+        } else {
+          const cloudErrMsg = (result as any).cloudError || 'Limite de cota de gravações do Firebase excedido ou sem conexão.';
+          setTimedFeedback({
+            type: 'error',
+            message: `Dados salvos localmente! A nuvem não pôde ser atualizada no momento: ${cloudErrMsg}`,
+          });
+        }
         setNewPassword('');
         setConfirmPassword('');
         FirestoreSyncService.getSyncStatus(result.user.id).then((st) => {
@@ -240,7 +248,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     }
   };
 
-  if (!isOpen || !user) return null;
+  if (!user) return null;
 
   const displayPhotoUrl = (photoUrl && !photoUrl.includes('googleusercontent.com')) ? photoUrl : null;
 
@@ -256,21 +264,28 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div
-        id="profile-modal-backdrop"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) onClose();
-        }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
-      >
+      {isOpen && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.94, y: 14 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.94, y: 14 }}
-          transition={{ duration: 0.2, ease: 'easeOut' }}
-          id="profile-modal-card"
-          className="bg-white dark:bg-neutral-900 rounded-3xl max-w-md w-full shadow-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden flex flex-col max-h-[92vh]"
+          key="profile-modal-backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          id="profile-modal-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) onClose();
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
         >
+          <motion.div
+            key="profile-modal-card"
+            initial={{ opacity: 0, scale: 0.94, y: 14 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.94, y: 14 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            id="profile-modal-card"
+            className="bg-white dark:bg-neutral-900 rounded-3xl max-w-md w-full shadow-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden flex flex-col max-h-[92vh]"
+          >
           {/* Header */}
           <div className="p-4 sm:p-5 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -570,10 +585,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             </div>
           </form>
         </motion.div>
-      </div>
+      </motion.div>
+    )}
 
       {/* Image Cropper & Repositioning Modal */}
       <ImageCropperModal
+        key="profile-image-cropper"
         isOpen={isCropperOpen}
         imageSrc={rawImageForCropping}
         onClose={() => setIsCropperOpen(false)}

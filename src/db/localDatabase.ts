@@ -656,7 +656,7 @@ export const authOperations = {
       photoUrl?: string | null;
       newPassword?: string;
     }
-  ): Promise<{ success: boolean; user?: User; error?: string }> {
+  ): Promise<{ success: boolean; user?: User; syncedToCloud?: boolean; cloudError?: string; error?: string }> {
     try {
       const user = await localDb.users.get(userId);
       if (!user) {
@@ -678,17 +678,25 @@ export const authOperations = {
         return { success: false, error: 'Informe um CPF válido com 11 dígitos.' };
       }
 
-      // Check if email is used by another user
+      // Check if email is used by another user locally or in cloud
       const otherEmail = await localDb.users.where('email').equalsIgnoreCase(cleanEmail).first();
       if (otherEmail && otherEmail.id !== userId) {
-        return { success: false, error: 'Este e-mail já pertence a outro usuário.' };
+        return { success: false, error: 'Este e-mail já pertence a outro usuário cadastrado.' };
+      }
+      const cloudEmailUser = await FirestoreSyncService.findUserInCloud({ email: cleanEmail });
+      if (cloudEmailUser && cloudEmailUser.id !== userId) {
+        return { success: false, error: 'Este e-mail já pertence a outro usuário cadastrado na nuvem.' };
       }
 
-      // Check if CPF is used by another user
+      // Check if CPF is used by another user locally or in cloud
       if (cleanCpf) {
         const otherCpf = await localDb.users.where('cpf').equals(cleanCpf).first();
         if (otherCpf && otherCpf.id !== userId) {
-          return { success: false, error: 'Este CPF já pertence a outro usuário.' };
+          return { success: false, error: 'Este CPF já pertence a outro usuário cadastrado.' };
+        }
+        const cloudCpfUser = await FirestoreSyncService.findUserInCloud({ cpf: cleanCpf });
+        if (cloudCpfUser && cloudCpfUser.id !== userId) {
+          return { success: false, error: 'Este CPF já pertence a outro usuário cadastrado na nuvem.' };
         }
       }
 
@@ -712,20 +720,34 @@ export const authOperations = {
       await localDb.users.put(user);
       await localDb.settings.put({ key: 'active_session_user_id', value: user.id });
 
-      // Sincronização imediata para a nuvem (SEM a foto, conforme solicitado: apenas local)
+      let syncedToCloud = false;
+      let cloudError: string | undefined;
+
       try {
-        await FirestoreSyncService.updateUserProfileInCloud(userId, {
-          name: cleanName,
-          email: cleanEmail,
-          cpf: cleanCpf,
-          passwordHash: newPasswordHash,
-        });
-      } catch (cloudErr) {
+        const [profRes, acctRes] = await Promise.all([
+          FirestoreSyncService.updateUserProfileInCloud(userId, {
+            name: cleanName,
+            email: cleanEmail,
+            cpf: cleanCpf,
+            passwordHash: newPasswordHash,
+          }),
+          FirestoreSyncService.saveUserAccount(user),
+        ]);
+
+        if (profRes.success && acctRes.success) {
+          syncedToCloud = true;
+        } else {
+          cloudError = profRes.error || acctRes.error;
+        }
+      } catch (cloudErr: any) {
         console.warn('Could not immediately sync user profile to cloud:', cloudErr);
+        cloudError = cloudErr?.message || 'Falha de conexão com a nuvem.';
       }
 
       return {
         success: true,
+        syncedToCloud,
+        cloudError,
         user: {
           id: user.id,
           name: user.name,
@@ -865,16 +887,16 @@ export const dbOperations = {
     FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
   },
   async saveTransactions(transactions: Transaction[], userId: string): Promise<void> {
-    const now = Date.now();
     const tagged = transactions.map((t) => ({
       ...t,
       userId,
-      syncStatus: 'pendingUpload' as const,
-      updatedAt: now,
+      syncStatus: t.syncStatus || ('pendingUpload' as const),
       isDeleted: false,
     }));
     await localDb.transactions.bulkPut(tagged);
-    FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
+    if (tagged.some((t) => t.syncStatus === 'pendingUpload')) {
+      FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
+    }
   },
   async deleteTransaction(id: string, userId?: string): Promise<void> {
     await localDb.transactions.delete(id);
@@ -896,16 +918,16 @@ export const dbOperations = {
     FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
   },
   async saveInstallments(installments: DebtInstallment[], userId: string): Promise<void> {
-    const now = Date.now();
     const tagged = installments.map((i) => ({
       ...i,
       userId,
-      syncStatus: 'pendingUpload' as const,
-      updatedAt: now,
+      syncStatus: i.syncStatus || ('pendingUpload' as const),
       isDeleted: false,
     }));
     await localDb.installments.bulkPut(tagged);
-    FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
+    if (tagged.some((i) => i.syncStatus === 'pendingUpload')) {
+      FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
+    }
   },
   async deleteInstallment(id: string, userId?: string): Promise<void> {
     await localDb.installments.delete(id);
@@ -927,16 +949,16 @@ export const dbOperations = {
     FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
   },
   async saveCategories(categories: Category[], userId: string): Promise<void> {
-    const now = Date.now();
     const tagged = categories.map((c) => ({
       ...c,
       userId,
-      syncStatus: 'pendingUpload' as const,
-      updatedAt: now,
+      syncStatus: c.syncStatus || ('pendingUpload' as const),
       isDeleted: false,
     }));
     await localDb.categories.bulkPut(tagged);
-    FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
+    if (tagged.some((c) => c.syncStatus === 'pendingUpload')) {
+      FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
+    }
   },
   async deleteCategory(id: string, userId?: string): Promise<void> {
     await localDb.categories.delete(id);
@@ -958,16 +980,16 @@ export const dbOperations = {
     FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
   },
   async saveBudgets(budgets: Budget[], userId: string): Promise<void> {
-    const now = Date.now();
     const tagged = budgets.map((b) => ({
       ...b,
       userId,
-      syncStatus: 'pendingUpload' as const,
-      updatedAt: now,
+      syncStatus: b.syncStatus || ('pendingUpload' as const),
       isDeleted: false,
     }));
     await localDb.budgets.bulkPut(tagged);
-    FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
+    if (tagged.some((b) => b.syncStatus === 'pendingUpload')) {
+      FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
+    }
   },
   async deleteBudget(id: string, userId?: string): Promise<void> {
     await localDb.budgets.delete(id);
@@ -989,16 +1011,16 @@ export const dbOperations = {
     FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
   },
   async saveGoals(goals: SavingsGoal[], userId: string): Promise<void> {
-    const now = Date.now();
     const tagged = goals.map((g) => ({
       ...g,
       userId,
-      syncStatus: 'pendingUpload' as const,
-      updatedAt: now,
+      syncStatus: g.syncStatus || ('pendingUpload' as const),
       isDeleted: false,
     }));
     await localDb.savingsGoals.bulkPut(tagged);
-    FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
+    if (tagged.some((g) => g.syncStatus === 'pendingUpload')) {
+      FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
+    }
   },
   async deleteGoal(id: string, userId?: string): Promise<void> {
     await localDb.savingsGoals.delete(id);

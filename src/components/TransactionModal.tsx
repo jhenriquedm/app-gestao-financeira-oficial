@@ -169,21 +169,33 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
 
     // Protection against duplicate records
-    const isDuplicate = (!initialData && existingTransactions && existingTransactions.some((t) => {
-      if (t.type !== type) return false;
-      const sameDesc = t.description.trim().toLowerCase() === cleanDesc.toLowerCase();
-      const sameAmount = Math.abs(t.amount - parsedAmount) < 0.01;
-      if (type === 'expense' && isFixed) {
-        return t.isFixed && sameDesc && sameAmount;
-      }
-      return sameDesc && sameAmount && t.date === date && t.categoryId === categoryId;
-    })) || (
-      lastSaved &&
-      lastSaved.description.toLowerCase() === cleanDesc.toLowerCase() &&
-      lastSaved.amount === parsedAmount &&
-      lastSaved.date === date &&
-      lastSaved.type === type
-    );
+    const isEditing = !!initialData;
+    const isDuplicate = isEditing
+      ? (existingTransactions && existingTransactions.some((t) => {
+          if (initialData.id && t.id === initialData.id) return false;
+          if (t.type !== type) return false;
+          const sameDesc = t.description.trim().toLowerCase() === cleanDesc.toLowerCase();
+          const sameAmount = Math.abs(t.amount - parsedAmount) < 0.01;
+          if (type === 'expense' && isFixed) {
+            return t.isFixed && sameDesc && sameAmount;
+          }
+          return sameDesc && sameAmount && t.date === date && t.categoryId === categoryId;
+        }))
+      : ((existingTransactions && existingTransactions.some((t) => {
+          if (t.type !== type) return false;
+          const sameDesc = t.description.trim().toLowerCase() === cleanDesc.toLowerCase();
+          const sameAmount = Math.abs(t.amount - parsedAmount) < 0.01;
+          if (type === 'expense' && isFixed) {
+            return t.isFixed && sameDesc && sameAmount;
+          }
+          return sameDesc && sameAmount && t.date === date && t.categoryId === categoryId;
+        })) || (
+          lastSaved &&
+          lastSaved.description.toLowerCase() === cleanDesc.toLowerCase() &&
+          lastSaved.amount === parsedAmount &&
+          lastSaved.date === date &&
+          lastSaved.type === type
+        ));
 
     if (isDuplicate) {
       triggerError('Este registro já existe no sistema.');
