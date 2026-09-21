@@ -37,7 +37,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
 
         {/* Brand Name */}
         <h1 className="text-2xl font-extrabold tracking-tight text-[#1c2838] dark:text-white">
-          finanças
+          Gestão financeira
         </h1>
         <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold tracking-wide mt-1">
           Gestão Financeira Pessoal

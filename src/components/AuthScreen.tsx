@@ -496,7 +496,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                     value={name}
                     onChange={handleNameChange}
                     placeholder="Nome completo"
-                    className="w-full pl-10 pr-3.5 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 transition-all font-medium"
+                    className="w-full pl-10 pr-3.5 py-3 bg-white dark:bg-[#1c2838] border border-slate-200 dark:border-slate-700 rounded-2xl text-sm text-slate-900 dark:text-white placeholder-slate-400 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-[#1c2838] transition-all font-medium"
                   />
                 </div>
               </div>
@@ -519,12 +519,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                     onChange={handleCpfChange}
                     onBlur={() => setTouchedCpf(true)}
                     placeholder="CPF (000.000.000-00)"
-                    className={`w-full pl-10 pr-9 py-3 bg-slate-50 dark:bg-slate-800/80 border rounded-2xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 transition-all font-medium ${
+                    className={`w-full pl-10 pr-9 py-3 bg-white dark:bg-[#1c2838] border rounded-2xl text-sm text-slate-900 dark:text-white placeholder-slate-400 shadow-xs focus:outline-none focus:ring-2 transition-all font-medium ${
                       touchedCpf && cpf.length > 0
                         ? isCpfValid
                           ? 'border-blue-500 focus:ring-blue-500/20'
                           : 'border-amber-500 focus:ring-amber-500/20'
-                        : 'border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-slate-800'
+                        : 'border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-[#1c2838]'
                     }`}
                   />
                   {touchedCpf && cpf.length > 0 && (
@@ -556,12 +556,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                   onChange={handleEmailChange}
                   onBlur={() => setTouchedEmail(true)}
                   placeholder="E-mail"
-                  className={`w-full pl-10 pr-9 py-3 bg-slate-50 dark:bg-slate-800/80 border rounded-2xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 transition-all font-medium ${
+                  className={`w-full pl-10 pr-9 py-3 bg-white dark:bg-[#1c2838] border rounded-2xl text-sm text-slate-900 dark:text-white placeholder-slate-400 shadow-xs focus:outline-none focus:ring-2 transition-all font-medium ${
                     touchedEmail && email.length > 0
                       ? isEmailValid
                         ? 'border-blue-500 focus:ring-blue-500/20'
                         : 'border-amber-500 focus:ring-amber-500/20'
-                      : 'border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-slate-800'
+                      : 'border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-[#1c2838]'
                   }`}
                 />
                 {touchedEmail && email.length > 0 && (
@@ -591,7 +591,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                   value={password}
                   onChange={handlePasswordChange}
                   placeholder="Senha"
-                  className="w-full pl-10 pr-10 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 transition-all font-medium"
+                  className="w-full pl-10 pr-10 py-3 bg-white dark:bg-[#1c2838] border border-slate-200 dark:border-slate-700 rounded-2xl text-sm text-slate-900 dark:text-white placeholder-slate-400 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-[#1c2838] transition-all font-medium"
                 />
                 <button
                   type="button"
@@ -621,12 +621,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                     onChange={handleConfirmPasswordChange}
                     onBlur={() => setTouchedConfirmPassword(true)}
                     placeholder="Repita sua senha"
-                    className={`w-full pl-10 pr-10 py-3 bg-slate-50 dark:bg-slate-800/80 border rounded-2xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 transition-all font-medium ${
+                    className={`w-full pl-10 pr-10 py-3 bg-white dark:bg-[#1c2838] border rounded-2xl text-sm text-slate-900 dark:text-white placeholder-slate-400 shadow-xs focus:outline-none focus:ring-2 transition-all font-medium ${
                       touchedConfirmPassword && confirmPassword.length > 0
                         ? doPasswordsMatch
                           ? 'border-blue-500 focus:ring-blue-500/20'
                           : 'border-rose-500 focus:ring-rose-500/20'
-                        : 'border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-slate-800'
+                        : 'border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-[#1c2838]'
                     }`}
                   />
                   <button
@@ -668,7 +668,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               type="submit"
               id="btn-auth-submit"
               disabled={isLoading}
-              className="w-full mt-3 py-3.5 px-5 border-2 border-[#1c2838] dark:border-slate-200 text-[#1c2838] dark:text-white hover:bg-[#1c2838] hover:text-white dark:hover:bg-white dark:hover:text-[#1c2838] font-bold text-sm rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs active:scale-[0.98] disabled:opacity-60"
+              className="w-full mt-3 py-3.5 px-5 bg-[#1c2838] hover:bg-[#253549] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#1c2838] font-bold text-sm rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md active:scale-[0.98] disabled:opacity-60"
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -833,7 +833,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                         value={recoveryCpf}
                         onChange={handleRecoveryCpfChange}
                         placeholder="seu.email@exemplo.com ou 000.000.000-00"
-                        className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 transition-all font-medium"
+                        className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1c2838] border border-slate-200 dark:border-slate-700 rounded-2xl text-sm text-slate-900 dark:text-white placeholder-slate-400 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-[#1c2838] transition-all font-medium"
                       />
                     </div>
                   </div>
@@ -902,7 +902,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                         value={recoveryNewPassword}
                         onChange={(e) => setRecoveryNewPassword(e.target.value)}
                         placeholder="Mínimo 6 dígitos"
-                        className="w-full pl-10 pr-10 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 transition-all font-medium"
+                        className="w-full pl-10 pr-10 py-3 bg-white dark:bg-[#1c2838] border border-slate-200 dark:border-slate-700 rounded-2xl text-sm text-slate-900 dark:text-white placeholder-slate-400 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-[#1c2838] transition-all font-medium"
                       />
                       <button
                         type="button"
@@ -935,7 +935,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                         value={recoveryConfirmPassword}
                         onChange={(e) => setRecoveryConfirmPassword(e.target.value)}
                         placeholder="Repita sua nova senha"
-                        className="w-full pl-10 pr-10 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 transition-all font-medium"
+                        className="w-full pl-10 pr-10 py-3 bg-white dark:bg-[#1c2838] border border-slate-200 dark:border-slate-700 rounded-2xl text-sm text-slate-900 dark:text-white placeholder-slate-400 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-[#1c2838] transition-all font-medium"
                       />
                       <button
                         type="button"

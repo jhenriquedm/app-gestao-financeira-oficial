@@ -409,20 +409,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               </div>
             )}
 
-            {/* Sesame Employee Info Card */}
-            <div className="bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-2xl p-3.5 space-y-2.5">
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Empresa</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-100">{user?.company || 'Finanças Pessoais'}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Departamento</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-100">{user?.department || 'Finanças'}</span>
-                </div>
-              </div>
-            </div>
-
             {/* Nome Completo */}
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
