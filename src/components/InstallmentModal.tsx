@@ -80,40 +80,54 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
     };
   }, []);
 
+  const prevIsOpenRef = React.useRef(false);
+  const prevInitialDataIdRef = React.useRef<string | undefined>(undefined);
+
   useEffect(() => {
-    if (initialData) {
-      setDescription(initialData.description);
-      setCategory(initialData.category || (categoryOptions[0] || ''));
-      setMonthlyAmount(formatCurrencyInput(initialData.monthlyAmount));
-      setCurrentInstallment(initialData.currentInstallment.toString());
-      setTotalInstallments(initialData.totalInstallments.toString());
-      setDueDay(initialData.dueDay.toString());
-      setOrigin(initialData.origin || '');
-      setStatus(initialData.status);
-      setNotes(initialData.notes || '');
-      const loadedAtts = (initialData.attachments && initialData.attachments.length > 0)
-        ? initialData.attachments
-        : initialData.attachment
-        ? [initialData.attachment]
-        : [];
-      setAttachments(loadedAtts);
-    } else {
-      setDescription('');
-      setCategory(categoryOptions[0] || '');
-      setMonthlyAmount('');
-      setCurrentInstallment('1');
-      setTotalInstallments('12');
-      setDueDay('5');
-      setOrigin('');
-      setStatus('pending');
-      setNotes('');
-      setAttachments([]);
+    const isOpening = isOpen && !prevIsOpenRef.current;
+    const isDifferentData = isOpen && initialData?.id !== prevInitialDataIdRef.current;
+
+    if (isOpening || isDifferentData) {
+      if (initialData) {
+        setDescription(initialData.description);
+        setCategory(initialData.category || (categoryOptions[0] || ''));
+        setMonthlyAmount(formatCurrencyInput(initialData.monthlyAmount));
+        setCurrentInstallment(initialData.currentInstallment.toString());
+        setTotalInstallments(initialData.totalInstallments.toString());
+        setDueDay(initialData.dueDay.toString());
+        setOrigin(initialData.origin || '');
+        setStatus(initialData.status);
+        setNotes(initialData.notes || '');
+        const loadedAtts = (initialData.attachments && initialData.attachments.length > 0)
+          ? initialData.attachments
+          : initialData.attachment
+          ? [initialData.attachment]
+          : [];
+        setAttachments(loadedAtts);
+      } else {
+        setDescription('');
+        setCategory(categoryOptions[0] || '');
+        setMonthlyAmount('');
+        setCurrentInstallment('1');
+        setTotalInstallments('12');
+        setDueDay('5');
+        setOrigin('');
+        setStatus('pending');
+        setNotes('');
+        setAttachments([]);
+      }
+      setError('');
+      setSuccessFeedback(null);
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    } else if (isOpen && !category && categoryOptions.length > 0) {
+      // Safely set category if empty without wiping other form fields
+      setCategory(categoryOptions[0]);
     }
-    setError('');
-    setSuccessFeedback(null);
-    if (successTimerRef.current) clearTimeout(successTimerRef.current);
-    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
-  }, [initialData, isOpen, parcelCategories]);
+
+    prevIsOpenRef.current = isOpen;
+    prevInitialDataIdRef.current = initialData?.id;
+  }, [isOpen, initialData, categoryOptions, category]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

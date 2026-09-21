@@ -83,46 +83,63 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     };
   }, []);
 
-  // Reset or populate form when opened or initialData changes
+  const prevIsOpenRef = React.useRef(false);
+  const prevInitialDataIdRef = React.useRef<string | undefined>(undefined);
+
+  // Reset or populate form ONLY when opened (transition from false -> true) or initialData changes
   useEffect(() => {
-    if (initialData) {
-      setType(initialData.type);
-      setDescription(initialData.description);
-      setAmount(formatCurrencyInput(initialData.amount));
-      setCategoryId(initialData.categoryId);
-      setDate(initialData.date);
-      setPaymentMethod(initialData.paymentMethod || 'pix');
-      setStatus(initialData.status);
-      setIsFixed(!!initialData.isFixed);
-      setDueDay(initialData.dueDay ? initialData.dueDay.toString() : '');
-      setNotes(initialData.notes || '');
-      const loadedAtts = (initialData.attachments && initialData.attachments.length > 0)
-        ? initialData.attachments
-        : initialData.attachment
-        ? [initialData.attachment]
-        : [];
-      setAttachments(loadedAtts);
-    } else {
-      const today = defaultDate || new Date().toISOString().slice(0, 10);
-      const parsedDay = new Date().getDate();
-      setType(initialType || 'expense');
-      setDescription('');
-      setAmount('');
-      const defaultExpCat = categories.find((c) => c.type === (initialType || 'expense'));
-      setCategoryId(defaultExpCat ? defaultExpCat.id : categories[0]?.id || '');
-      setDate(today);
-      setPaymentMethod('pix');
-      setStatus('completed');
-      setIsFixed(isFixedDefault);
-      setDueDay(parsedDay.toString());
-      setNotes('');
-      setAttachments([]);
+    const isOpening = isOpen && !prevIsOpenRef.current;
+    const isDifferentData = isOpen && initialData?.id !== prevInitialDataIdRef.current;
+
+    if (isOpening || isDifferentData) {
+      if (initialData) {
+        setType(initialData.type);
+        setDescription(initialData.description);
+        setAmount(formatCurrencyInput(initialData.amount));
+        setCategoryId(initialData.categoryId);
+        setDate(initialData.date);
+        setPaymentMethod(initialData.paymentMethod || 'pix');
+        setStatus(initialData.status);
+        setIsFixed(!!initialData.isFixed);
+        setDueDay(initialData.dueDay ? initialData.dueDay.toString() : '');
+        setNotes(initialData.notes || '');
+        const loadedAtts = (initialData.attachments && initialData.attachments.length > 0)
+          ? initialData.attachments
+          : initialData.attachment
+          ? [initialData.attachment]
+          : [];
+        setAttachments(loadedAtts);
+      } else {
+        const today = defaultDate || new Date().toISOString().slice(0, 10);
+        const parsedDay = new Date().getDate();
+        setType(initialType || 'expense');
+        setDescription('');
+        setAmount('');
+        const defaultExpCat = categories.find((c) => c.type === (initialType || 'expense'));
+        setCategoryId(defaultExpCat ? defaultExpCat.id : categories[0]?.id || '');
+        setDate(today);
+        setPaymentMethod('pix');
+        setStatus('completed');
+        setIsFixed(isFixedDefault);
+        setDueDay(parsedDay.toString());
+        setNotes('');
+        setAttachments([]);
+      }
+      setError('');
+      setSuccessFeedback(null);
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    } else if (isOpen && !categoryId && categories.length > 0) {
+      // If modal is open and no category was selected yet, set default without clearing any other inputs
+      const defaultExpCat = categories.find((c) => c.type === type);
+      if (defaultExpCat) {
+        setCategoryId(defaultExpCat.id);
+      }
     }
-    setError('');
-    setSuccessFeedback(null);
-    if (successTimerRef.current) clearTimeout(successTimerRef.current);
-    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
-  }, [initialData, isOpen, defaultDate, categories, initialType, isFixedDefault]);
+
+    prevIsOpenRef.current = isOpen;
+    prevInitialDataIdRef.current = initialData?.id;
+  }, [isOpen, initialData, defaultDate, categories, initialType, isFixedDefault, type, categoryId]);
 
   // When type toggles, default category to matching type
   const handleTypeChange = (newType: TransactionType) => {
