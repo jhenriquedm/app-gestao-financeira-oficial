@@ -249,19 +249,19 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
             exit={{ opacity: 0, scale: 0.94, y: 15 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
             id="modal-card-installment"
-            className="bg-white dark:bg-neutral-900 rounded-3xl max-w-md w-full shadow-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden flex flex-col max-h-[90vh]"
+            className="bg-white dark:bg-[#152238] rounded-3xl max-w-md w-full shadow-2xl border border-slate-200/90 dark:border-slate-700/80 overflow-hidden flex flex-col max-h-[90vh] text-slate-900 dark:text-slate-100"
           >
             {/* Header */}
-            <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center">
+            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700/60 bg-slate-50/60 dark:bg-[#111c2e]/60 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
                   <CreditCard className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 id="modal-title-installment" className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
+                  <h2 id="modal-title-installment" className="text-sm font-bold text-slate-900 dark:text-white">
                     {initialData ? 'Editar Parcela / Dívida' : 'Nova Parcela / Compra Parcelada'}
                   </h2>
-                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
                     Controle de prestações, empréstimos e parcelamentos
                   </p>
                 </div>
@@ -269,14 +269,14 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
               <button
                 id="btn-close-installment-modal"
                 onClick={onClose}
-                className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 flex items-center justify-center text-neutral-600 dark:text-neutral-300 transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-300 transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Form Body */}
-            <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto flex-1">
+            <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
               {successFeedback && (
                 <div id="installment-success-message" className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
                   <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
@@ -287,7 +287,7 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
               )}
 
               {error && (
-                <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-medium">
+                <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-medium">
                   {error}
                 </div>
               )}
@@ -295,11 +295,11 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
               {/* Descrição */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                     Descrição do Contrato / Compra *
                   </label>
                   <span className={`text-[10px] font-medium ${
-                    description.length >= MAX_DESC_LENGTH ? 'text-rose-500 font-bold' : 'text-neutral-400 dark:text-neutral-500'
+                    description.length >= MAX_DESC_LENGTH ? 'text-rose-500 font-bold' : 'text-slate-400 dark:text-slate-500'
                   }`}>
                     {description.length}/{MAX_DESC_LENGTH}
                   </span>
@@ -311,17 +311,17 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
                   placeholder="Ex: Compra parcelada, financiamento, empréstimo..."
                   value={description}
                   onChange={(e) => setDescription(sanitizeTextInput(e.target.value))}
-                  className="w-full px-3 py-2 text-sm font-semibold text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800/90 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 rounded-xl border border-neutral-300 dark:border-neutral-700 focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all"
+                  className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-[#0e1726] placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all"
                 />
               </div>
 
               {/* Valor Mensal (Hero Input) */}
               <div>
-                <label className="block text-xs font-bold text-neutral-800 dark:text-neutral-200 mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Valor da Parcela Mensal (R$) *
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-neutral-500 dark:text-neutral-400">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
                     R$
                   </span>
                   <input
@@ -332,7 +332,7 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
                     maxLength={14}
                     value={monthlyAmount}
                     onChange={(e) => setMonthlyAmount(formatCurrencyInput(e.target.value))}
-                    className="w-full pl-10 pr-3 py-2 text-base font-extrabold text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800/90 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 rounded-xl border border-neutral-300 dark:border-neutral-700 focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all"
+                    className="w-full pl-10 pr-3.5 py-2.5 text-base font-black text-slate-900 dark:text-slate-100 bg-white dark:bg-[#0e1726] placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all"
                   />
                 </div>
               </div>
@@ -340,7 +340,7 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
               {/* Parcela Atual vs Total de Parcelas */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-neutral-800 dark:text-neutral-200 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Parcela Atual *
                   </label>
                   <input
@@ -351,11 +351,11 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
                     required
                     value={currentInstallment}
                     onChange={(e) => setCurrentInstallment(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                    className="w-full px-3 py-2 text-sm font-semibold text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800/90 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 rounded-xl border border-neutral-300 dark:border-neutral-700 focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all"
+                    className="w-full px-3.5 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-[#0e1726] placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-neutral-800 dark:text-neutral-200 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Total de Parcelas *
                   </label>
                   <input
@@ -366,31 +366,31 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
                     required
                     value={totalInstallments}
                     onChange={(e) => setTotalInstallments(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                    className="w-full px-3 py-2 text-sm font-semibold text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800/90 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 rounded-xl border border-neutral-300 dark:border-neutral-700 focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all"
+                    className="w-full px-3.5 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-[#0e1726] placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all"
                   />
                 </div>
               </div>
 
               {/* Card de Cálculo Automático */}
               {amountParsed > 0 && totalParsed > 0 && (
-                <div className="p-3 bg-amber-50/80 dark:bg-amber-950/30 border border-amber-300/80 dark:border-amber-900/60 rounded-xl text-xs space-y-1.5">
-                  <div className="flex justify-between text-neutral-700 dark:text-neutral-300">
+                <div className="p-3.5 bg-amber-500/10 border border-amber-500/25 rounded-2xl text-xs space-y-2">
+                  <div className="flex justify-between text-slate-700 dark:text-slate-300">
                     <span className="font-semibold">Progresso:</span>
-                    <span className="font-bold text-neutral-900 dark:text-neutral-100">
+                    <span className="font-bold text-slate-900 dark:text-slate-100">
                       {currentParsed} de {totalParsed} ({totalParsed - currentParsed} restantes)
                     </span>
                   </div>
-                  <div className="w-full bg-amber-200 dark:bg-neutral-700 h-2 rounded-full overflow-hidden">
+                  <div className="w-full bg-amber-200/50 dark:bg-slate-700/80 h-2 rounded-full overflow-hidden">
                     <div
-                      className="bg-amber-600 h-full rounded-full transition-all"
+                      className="bg-amber-500 h-full rounded-full transition-all"
                       style={{ width: `${Math.min(100, (currentParsed / totalParsed) * 100)}%` }}
                     />
                   </div>
                   <div className="flex justify-between pt-1 text-[11px] items-center flex-wrap gap-1">
-                    <span className="text-neutral-700 dark:text-neutral-300">
-                      Dívida Total: <strong className="text-neutral-900 dark:text-neutral-100 font-bold">R$ {totalDebt.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                    <span className="text-slate-700 dark:text-slate-300">
+                      Dívida Total: <strong className="text-slate-900 dark:text-slate-100 font-bold">R$ {totalDebt.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
                     </span>
-                    <span className="text-amber-900 dark:text-amber-300 font-bold bg-amber-100/90 dark:bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-300 dark:border-amber-800">
+                    <span className="text-amber-800 dark:text-amber-300 font-bold bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 rounded-lg border border-amber-300/80 dark:border-amber-800">
                       Restante: R$ {remainingDebt.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -400,8 +400,8 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
               {/* Dia de Vencimento e Origem/Banco em Texto Livre */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-neutral-800 dark:text-neutral-200 mb-1 flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-neutral-600 dark:text-neutral-400" />
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
                     Dia Vencimento *
                   </label>
                   <input
@@ -427,17 +427,17 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
                         setDueDay(digitsOnly);
                       }
                     }}
-                    className="w-full px-3 py-2 text-sm font-black text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800/90 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 rounded-xl border-2 border-neutral-300 dark:border-neutral-700 focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 shadow-xs transition-all"
+                    className="w-full px-3.5 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 bg-white dark:bg-[#0e1726] placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all"
                   />
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1">
-                      <Landmark className="w-3.5 h-3.5 text-neutral-600 dark:text-neutral-400" />
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                      <Landmark className="w-3.5 h-3.5 text-slate-400" />
                       Origem / Banco *
                     </label>
-                    <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
+                    <span className="text-[10px] text-slate-400">
                       {origin.length}/{MAX_ORIGIN_LENGTH}
                     </span>
                   </div>
@@ -445,10 +445,10 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
                     type="text"
                     required
                     maxLength={MAX_ORIGIN_LENGTH}
-                    placeholder="Ex: Nubank, Itaú, Pan..."
+                    placeholder="Ex: Nubank, Itaú..."
                     value={origin}
                     onChange={(e) => setOrigin(sanitizeNameInput(e.target.value))}
-                    className="w-full px-3 py-2 text-sm font-semibold text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800/90 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 rounded-xl border border-neutral-300 dark:border-neutral-700 focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all"
+                    className="w-full px-3.5 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-[#0e1726] placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all"
                   />
                 </div>
               </div>
@@ -456,15 +456,15 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
               {/* Categoria */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1">
-                    <Tag className="w-3.5 h-3.5 text-neutral-600 dark:text-neutral-400" />
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                    <Tag className="w-3.5 h-3.5 text-slate-400" />
                     Categoria de Parcela *
                   </label>
                   {onOpenCategoryManager && (
                     <button
                       type="button"
                       onClick={() => onOpenCategoryManager('parcelas')}
-                      className="text-[10.5px] font-bold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 inline-flex items-center gap-1 cursor-pointer"
+                      className="text-[10.5px] font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 inline-flex items-center gap-1 cursor-pointer"
                     >
                       <Plus className="w-3 h-3" />
                       Nova Categoria
@@ -473,7 +473,7 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
                 </div>
 
                 {categoryOptions.length === 0 ? (
-                  <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-xl flex items-center justify-between gap-2">
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/25 rounded-2xl flex items-center justify-between gap-2">
                     <div className="text-[11px] text-amber-800 dark:text-amber-300 font-medium">
                       Nenhuma categoria de parcela cadastrada.
                     </div>
@@ -481,7 +481,7 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
                       <button
                         type="button"
                         onClick={() => onOpenCategoryManager('parcelas')}
-                        className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold rounded-lg shrink-0 flex items-center gap-1 cursor-pointer shadow-xs"
+                        className="px-3 py-1.5 bg-[#10b981] hover:bg-[#059669] text-white text-[11px] font-bold rounded-xl shrink-0 flex items-center gap-1 cursor-pointer shadow-xs"
                       >
                         <Plus className="w-3.5 h-3.5" /> Cadastrar Categoria
                       </button>
@@ -491,13 +491,13 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3 py-2 text-sm font-semibold text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800/90 rounded-xl border border-neutral-300 dark:border-neutral-700 focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all cursor-pointer"
+                    className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-[#0e1726] rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all cursor-pointer"
                   >
-                    <option value="" disabled className="text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-900">
+                    <option value="" disabled className="text-slate-400 bg-white dark:bg-[#152238]">
                       Selecione uma categoria...
                     </option>
                     {categoryOptions.map((cat) => (
-                      <option key={cat} value={cat} className="text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 font-medium py-1">
+                      <option key={cat} value={cat} className="text-slate-900 dark:text-slate-100 bg-white dark:bg-[#152238] font-medium py-1">
                         {cat}
                       </option>
                     ))}
@@ -507,7 +507,7 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
 
               {/* Status no Mês Atual */}
               <div>
-                <label className="block text-xs font-bold text-neutral-800 dark:text-neutral-200 mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                   Situação desta Parcela no Mês
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -516,8 +516,8 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
                     onClick={() => setStatus('pending')}
                     className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                       status === 'pending'
-                        ? 'bg-amber-50 dark:bg-amber-950/50 border-amber-500 text-amber-700 dark:text-amber-400 ring-1 ring-amber-500'
-                        : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'
+                        ? 'bg-amber-500/15 border-amber-500 text-amber-700 dark:text-amber-400 ring-1 ring-amber-500'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60'
                     }`}
                   >
                     <Clock className="w-3.5 h-3.5" />
@@ -528,8 +528,8 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
                     onClick={() => setStatus('completed')}
                     className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                       status === 'completed'
-                        ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-500 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500'
-                        : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'
+                        ? 'bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60'
                     }`}
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
@@ -541,11 +541,11 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
               {/* Observações */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                     Observações (Opcional)
                   </label>
                   <span className={`text-[10px] font-medium ${
-                    notes.length >= MAX_NOTES_LENGTH ? 'text-rose-500 font-bold' : 'text-neutral-400 dark:text-neutral-500'
+                    notes.length >= MAX_NOTES_LENGTH ? 'text-rose-500 font-bold' : 'text-slate-400'
                   }`}>
                     {notes.length}/{MAX_NOTES_LENGTH}
                   </span>
@@ -556,7 +556,7 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
                   placeholder="Número de contrato, link do boleto ou anotações..."
                   value={notes}
                   onChange={(e) => setNotes(sanitizeTextInput(e.target.value))}
-                  className="w-full px-3 py-2 text-sm font-semibold text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800/90 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 rounded-xl border border-neutral-300 dark:border-neutral-700 focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 resize-none transition-all"
+                  className="w-full px-3.5 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-[#0e1726] placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 resize-none transition-all"
                 />
               </div>
 
@@ -572,14 +572,14 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 py-2.5 text-xs font-bold text-neutral-600 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-xl transition-colors cursor-pointer"
+                  className="flex-1 py-2.5 text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer"
                 >
                   {successFeedback ? 'Concluir e Fechar' : 'Cancelar'}
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 py-2.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 rounded-xl shadow-md shadow-amber-600/20 transition-all cursor-pointer disabled:opacity-50"
+                  className="flex-1 py-2.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 rounded-xl shadow-md shadow-amber-600/25 transition-all cursor-pointer disabled:opacity-50"
                 >
                   {isSubmitting ? 'Salvando...' : initialData ? 'Salvar Alterações' : 'Salvar Parcela'}
                 </button>

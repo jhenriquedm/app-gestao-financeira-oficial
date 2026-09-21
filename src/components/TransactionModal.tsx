@@ -267,63 +267,68 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             exit={{ opacity: 0, scale: 0.94, y: 15 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
             id="modal-card-transaction"
-            className="bg-white dark:bg-neutral-900 rounded-3xl max-w-md w-full shadow-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden flex flex-col max-h-[90vh]"
+            className="bg-white dark:bg-[#152238] rounded-3xl max-w-md w-full shadow-2xl border border-slate-200/90 dark:border-slate-700/80 overflow-hidden flex flex-col max-h-[90vh] text-slate-900 dark:text-slate-100"
           >
             {/* Header */}
-            <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
+            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700/60 bg-slate-50/60 dark:bg-[#111c2e]/60 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
                 <div 
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                    type === 'income' ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400'
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                    type === 'income' ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
                   }`}
                 >
                   {type === 'income' ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
                 </div>
-                <h2 id="modal-title-transaction" className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
-                  {initialData ? 'Editar Lançamento' : 'Novo Lançamento'}
-                </h2>
+                <div>
+                  <h2 id="modal-title-transaction" className="text-sm font-bold text-slate-900 dark:text-white">
+                    {initialData ? 'Editar Lançamento' : 'Novo Lançamento'}
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {type === 'income' ? 'Registro de entrada financeira' : 'Registro de despesa financeira'}
+                  </p>
+                </div>
               </div>
               <button
                 id="btn-close-transaction-modal"
                 onClick={onClose}
                 aria-label="Fechar"
-                className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-300 transition-colors cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} id="form-transaction" className="p-4 overflow-y-auto space-y-3.5 flex-1">
+            <form onSubmit={handleSubmit} id="form-transaction" className="p-5 overflow-y-auto space-y-4 flex-1">
               {successFeedback && (
-                <div id="tx-success-message" className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                    <Check className="w-3 h-3" />
+                <div id="tx-success-message" className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/80 text-blue-800 dark:text-blue-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0">
+                    <Check className="w-3.5 h-3.5" />
                   </div>
                   <span>{successFeedback}</span>
                 </div>
               )}
 
               {error && (
-                <div id="tx-error-message" className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-medium">
+                <div id="tx-error-message" className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-medium">
                   {error}
                 </div>
               )}
 
               {/* Type Switcher */}
               <div>
-                <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                   Tipo de Lançamento
                 </label>
-                <div className="grid grid-cols-2 gap-2 p-1 bg-neutral-100 dark:bg-neutral-800/90 rounded-2xl border border-neutral-200 dark:border-neutral-700">
+                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-[#0e1726] rounded-2xl border border-slate-200 dark:border-slate-700">
                   <button
                     type="button"
                     id="btn-type-expense"
                     onClick={() => handleTypeChange('expense')}
-                    className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                    className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       type === 'expense'
-                        ? 'bg-rose-600 text-white shadow-xs'
-                        : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'
+                        ? 'bg-rose-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                   >
                     <ArrowDownRight className="w-4 h-4" />
@@ -333,10 +338,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     type="button"
                     id="btn-type-income"
                     onClick={() => handleTypeChange('income')}
-                    className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                    className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       type === 'income'
-                        ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'
+                        ? 'bg-[#2563eb] text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                   >
                     <ArrowUpRight className="w-4 h-4" />
@@ -346,13 +351,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               </div>
 
               {/* Amount & Date in Grid */}
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="tx-amount-input" className="block text-[11px] font-semibold text-neutral-600 dark:text-neutral-400 mb-1">
+                  <label htmlFor="tx-amount-input" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Valor (R$) *
                   </label>
                   <div className="relative">
-                    <span className="absolute left-2.5 top-2 text-xs font-bold text-neutral-400 dark:text-neutral-500">R$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">R$</span>
                     <input
                       id="tx-amount-input"
                       type="text"
@@ -362,13 +367,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                       maxLength={14}
                       value={amount}
                       onChange={(e) => setAmount(formatCurrencyInput(e.target.value))}
-                      className="w-full pl-8 pr-2 py-1.5 text-sm font-bold text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-800/90 focus:bg-white dark:focus:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 focus:border-emerald-500 rounded-xl focus:outline-hidden transition-all"
+                      className="w-full pl-9 pr-3 py-2 text-sm font-bold text-slate-900 dark:text-slate-100 bg-white dark:bg-[#0e1726] border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl focus:outline-hidden transition-all"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="tx-date-input" className="block text-[11px] font-semibold text-neutral-600 dark:text-neutral-400 mb-1">
+                  <label htmlFor="tx-date-input" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Data *
                   </label>
                   <input
@@ -377,7 +382,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     required
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className="w-full px-2 py-1.5 text-xs text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-800/90 focus:bg-white dark:focus:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 focus:border-emerald-500 rounded-xl focus:outline-hidden transition-all"
+                    className="w-full px-3 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-[#0e1726] border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl focus:outline-hidden transition-all"
                   />
                 </div>
               </div>
@@ -385,11 +390,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               {/* Description */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label htmlFor="tx-description-input" className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-400">
+                  <label htmlFor="tx-description-input" className="text-xs font-bold text-slate-700 dark:text-slate-300">
                     Descrição *
                   </label>
                   <span className={`text-[10px] font-medium ${
-                    description.length >= MAX_DESC_LENGTH ? 'text-rose-500 font-bold' : 'text-neutral-400 dark:text-neutral-500'
+                    description.length >= MAX_DESC_LENGTH ? 'text-rose-500 font-bold' : 'text-slate-400'
                   }`}>
                     {description.length}/{MAX_DESC_LENGTH}
                   </span>
@@ -402,21 +407,21 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   placeholder={type === 'expense' ? 'Ex: Supermercado, Aluguel...' : 'Ex: Salário do mês, Freelance...'}
                   value={description}
                   onChange={(e) => setDescription(sanitizeTextInput(e.target.value))}
-                  className="w-full px-3 py-1.5 text-xs text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-800/90 focus:bg-white dark:focus:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 focus:border-emerald-500 rounded-xl focus:outline-hidden transition-all placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
+                  className="w-full px-3.5 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-[#0e1726] border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl focus:outline-hidden transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
               </div>
 
               {/* Category */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label htmlFor="tx-category-select" className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-400">
+                  <label htmlFor="tx-category-select" className="text-xs font-bold text-slate-700 dark:text-slate-300">
                     Categoria *
                   </label>
                   {onOpenCategoryManager && (
                     <button
                       type="button"
                       onClick={() => onOpenCategoryManager(type === 'income' ? 'income' : 'fixed')}
-                      className="text-[10.5px] font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 inline-flex items-center gap-1 cursor-pointer"
+                      className="text-[10.5px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 inline-flex items-center gap-1 cursor-pointer"
                     >
                       <Plus className="w-3 h-3" />
                       Nova Categoria
@@ -425,7 +430,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 </div>
 
                 {filteredCategories.length === 0 ? (
-                  <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-xl flex items-center justify-between gap-2">
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/25 rounded-2xl flex items-center justify-between gap-2">
                     <div className="text-[11px] text-amber-800 dark:text-amber-300 font-medium">
                       Nenhuma categoria de {type === 'income' ? 'receita' : 'despesa'} cadastrada.
                     </div>
@@ -433,7 +438,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                       <button
                         type="button"
                         onClick={() => onOpenCategoryManager(type === 'income' ? 'income' : 'fixed')}
-                        className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold rounded-lg shrink-0 flex items-center gap-1 cursor-pointer shadow-xs"
+                        className="px-3 py-1.5 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[11px] font-bold rounded-xl shrink-0 flex items-center gap-1 cursor-pointer shadow-xs"
                       >
                         <Plus className="w-3.5 h-3.5" /> Cadastrar Categoria
                       </button>
@@ -446,37 +451,37 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                       required
                       value={categoryId}
                       onChange={(e) => setCategoryId(e.target.value)}
-                      className="w-full pl-3 pr-8 py-1.5 text-xs font-semibold text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-800/90 focus:bg-white dark:focus:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 focus:border-emerald-500 rounded-xl focus:outline-hidden transition-all appearance-none cursor-pointer"
+                      className="w-full pl-3.5 pr-8 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-[#0e1726] border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl focus:outline-hidden transition-all appearance-none cursor-pointer"
                     >
-                      <option value="" disabled className="text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-900">
+                      <option value="" disabled className="text-slate-400 bg-white dark:bg-[#152238]">
                         Selecione a categoria...
                       </option>
                       {filteredCategories.map((cat) => (
-                        <option key={cat.id} value={cat.id} className="text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 font-medium py-1">
+                        <option key={cat.id} value={cat.id} className="text-slate-900 dark:text-slate-100 bg-white dark:bg-[#152238] font-medium py-1">
                           {cat.name}
                         </option>
                       ))}
                     </select>
-                    <Tag className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500 absolute right-3 top-2 pointer-events-none" />
+                    <Tag className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
                 )}
               </div>
 
               {/* Payment Method & Status */}
               {type === 'expense' ? (
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="tx-payment-select" className="block text-[11px] font-semibold text-neutral-600 dark:text-neutral-400 mb-1">
+                    <label htmlFor="tx-payment-select" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                       Forma de Pagamento
                     </label>
                     <select
                       id="tx-payment-select"
                       value={paymentMethod}
                       onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                      className="w-full px-2 py-1.5 text-xs font-semibold text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-800/90 focus:bg-white dark:focus:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 focus:border-emerald-500 rounded-xl focus:outline-hidden transition-all cursor-pointer"
+                      className="w-full px-3 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-[#0e1726] border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl focus:outline-hidden transition-all cursor-pointer"
                     >
                       {Object.entries(PAYMENT_METHOD_LABELS).map(([key, label]) => (
-                        <option key={key} value={key} className="text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 font-medium py-1">
+                        <option key={key} value={key} className="text-slate-900 dark:text-slate-100 bg-white dark:bg-[#152238] font-medium py-1">
                           {label}
                         </option>
                       ))}
@@ -484,19 +489,19 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   </div>
 
                   <div>
-                    <label htmlFor="tx-status-select" className="block text-[11px] font-semibold text-neutral-600 dark:text-neutral-400 mb-1">
+                    <label htmlFor="tx-status-select" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                       Situação
                     </label>
                     <select
                       id="tx-status-select"
                       value={status}
                       onChange={(e) => setStatus(e.target.value as TransactionStatus)}
-                      className="w-full px-2 py-1.5 text-xs font-semibold text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-800/90 focus:bg-white dark:focus:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 focus:border-emerald-500 rounded-xl focus:outline-hidden transition-all cursor-pointer"
+                      className="w-full px-3 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-[#0e1726] border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl focus:outline-hidden transition-all cursor-pointer"
                     >
-                      <option value="completed" className="text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 font-medium py-1">
+                      <option value="completed" className="text-slate-900 dark:text-slate-100 bg-white dark:bg-[#152238] font-medium py-1">
                         Pago
                       </option>
-                      <option value="pending" className="text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 font-medium py-1">
+                      <option value="pending" className="text-slate-900 dark:text-slate-100 bg-white dark:bg-[#152238] font-medium py-1">
                         Pendente
                       </option>
                     </select>
@@ -505,19 +510,19 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               ) : (
                 /* Receita: apenas situação, sem campo de forma de pagamento */
                 <div>
-                  <label htmlFor="tx-status-select" className="block text-[11px] font-semibold text-neutral-600 dark:text-neutral-400 mb-1">
+                  <label htmlFor="tx-status-select" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Situação da Receita
                   </label>
                   <select
                     id="tx-status-select"
                     value={status}
                     onChange={(e) => setStatus(e.target.value as TransactionStatus)}
-                    className="w-full px-3 py-1.5 text-xs font-semibold text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-800/90 focus:bg-white dark:focus:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 focus:border-emerald-500 rounded-xl focus:outline-hidden transition-all cursor-pointer"
+                    className="w-full px-3.5 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-[#0e1726] border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl focus:outline-hidden transition-all cursor-pointer"
                   >
-                    <option value="completed" className="text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 font-medium py-1">
+                    <option value="completed" className="text-slate-900 dark:text-slate-100 bg-white dark:bg-[#152238] font-medium py-1">
                       Recebido
                     </option>
-                    <option value="pending" className="text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 font-medium py-1">
+                    <option value="pending" className="text-slate-900 dark:text-slate-100 bg-white dark:bg-[#152238] font-medium py-1">
                       A Receber
                     </option>
                   </select>
@@ -526,11 +531,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
               {/* Opção de Despesa Fixa (Aluguel, Moradia, etc) */}
               {type === 'expense' && (
-                <div className="p-2.5 bg-indigo-50/60 dark:bg-indigo-950/40 rounded-xl border border-indigo-100 dark:border-indigo-900/60 space-y-2">
+                <div className="p-3 bg-indigo-50/50 dark:bg-indigo-950/25 rounded-2xl border border-indigo-100/90 dark:border-indigo-900/50 space-y-2">
                   <label className="flex items-center justify-between cursor-pointer">
                     <div>
-                      <span className="text-xs font-bold text-indigo-950 dark:text-indigo-200 block">Despesa Fixa Recorrente</span>
-                      <span className="text-[10.5px] text-indigo-700/80 dark:text-indigo-400/80">
+                      <span className="text-xs font-bold text-slate-900 dark:text-indigo-200 block">Despesa Fixa Recorrente</span>
+                      <span className="text-[10.5px] text-slate-500 dark:text-indigo-300/80">
                         Aluguel, moradia, condomínio, internet, feira essencial
                       </span>
                     </div>
@@ -538,13 +543,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                       type="checkbox"
                       checked={isFixed}
                       onChange={(e) => setIsFixed(e.target.checked)}
-                      className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-neutral-300 dark:border-neutral-600 cursor-pointer"
+                      className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 dark:border-slate-600 cursor-pointer"
                     />
                   </label>
 
                   {isFixed && (
-                    <div className="pt-1.5 border-t border-indigo-100 dark:border-indigo-900/60 flex items-center justify-between gap-2">
-                      <label className="text-[11px] font-bold text-indigo-950 dark:text-indigo-200">
+                    <div className="pt-2 border-t border-indigo-100 dark:border-indigo-900/60 flex items-center justify-between gap-2">
+                      <label className="text-[11px] font-bold text-slate-800 dark:text-indigo-200">
                         Dia de Vencimento no Mês:
                       </label>
                       <input
@@ -569,7 +574,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                             setDueDay(digitsOnly);
                           }
                         }}
-                        className="w-20 px-2 py-1.5 text-xs font-black text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 border-2 border-indigo-300 dark:border-indigo-700 focus:border-indigo-600 rounded-lg focus:outline-hidden shadow-xs text-center"
+                        className="w-20 px-2 py-1.5 text-xs font-black text-slate-900 dark:text-slate-100 bg-white dark:bg-[#0e1726] border border-indigo-300 dark:border-indigo-700 focus:border-indigo-500 rounded-xl focus:outline-hidden text-center"
                       />
                     </div>
                   )}
@@ -579,11 +584,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               {/* Notes */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label htmlFor="tx-notes-input" className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-400">
+                  <label htmlFor="tx-notes-input" className="text-xs font-bold text-slate-700 dark:text-slate-300">
                     Observações (Opcional)
                   </label>
                   <span className={`text-[10px] font-medium ${
-                    notes.length >= MAX_NOTES_LENGTH ? 'text-rose-500 font-bold' : 'text-neutral-400 dark:text-neutral-500'
+                    notes.length >= MAX_NOTES_LENGTH ? 'text-rose-500 font-bold' : 'text-slate-400'
                   }`}>
                     {notes.length}/{MAX_NOTES_LENGTH}
                   </span>
@@ -595,7 +600,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   placeholder="Informações adicionais..."
                   value={notes}
                   onChange={(e) => setNotes(sanitizeTextInput(e.target.value))}
-                  className="w-full px-3 py-1.5 text-xs text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-800/90 focus:bg-white dark:focus:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 focus:border-emerald-500 rounded-xl focus:outline-hidden transition-all placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
+                  className="w-full px-3.5 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-[#0e1726] border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl focus:outline-hidden transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
               </div>
 
@@ -608,12 +613,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </form>
 
             {/* Sticky Action Footer */}
-            <div className="px-4 py-3 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/90 dark:bg-neutral-950/90 flex items-center justify-between gap-2 shrink-0">
+            <div className="px-5 py-4 border-t border-slate-100 dark:border-slate-700/60 bg-slate-50/60 dark:bg-[#111c2e]/60 flex items-center justify-between gap-3 shrink-0">
               <button
                 type="button"
                 id="btn-cancel-transaction"
                 onClick={onClose}
-                className="px-3 py-1.5 text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-neutral-200/60 dark:hover:bg-neutral-800 rounded-xl transition-colors cursor-pointer"
+                className="flex-1 py-2.5 text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer"
               >
                 {successFeedback ? 'Concluir e Fechar' : 'Cancelar'}
               </button>
@@ -622,8 +627,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 form="form-transaction"
                 id="btn-save-transaction"
                 disabled={isSubmitting}
-                className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer disabled:opacity-50 ${
-                  type === 'income' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'
+                className={`flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold text-white rounded-xl shadow-md transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 ${
+                  type === 'income' ? 'bg-[#2563eb] hover:bg-[#1d4ed8] shadow-blue-600/25' : 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/25'
                 }`}
               >
                 <Check className="w-3.5 h-3.5" />

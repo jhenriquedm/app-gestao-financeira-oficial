@@ -6,9 +6,6 @@ import {
   ChevronRight, 
   Plus, 
   Download, 
-  TrendingUp, 
-  TrendingDown,
-  Wallet,
   Building2,
   CreditCard,
   Sun,
@@ -139,20 +136,36 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   const isCurrentMonth = currentYearMonth === systemCurrentMonth;
   const isOverview = activeTab === 'overview';
 
-  const firstName = user?.name ? user.name.split(' ')[0] : 'Usuário';
-  const initials = user?.name
-    ? user.name
-        .split(' ')
-        .slice(0, 2)
-        .map((n) => n.charAt(0).toUpperCase())
-        .join('')
-    : 'U';
+  const rawFullName = user?.name?.trim() || 'José Henrique';
+  const nameParts = rawFullName.split(/\s+/).filter(Boolean);
+  const shortDisplayName = nameParts.slice(0, 2).join(' ') || 'José Henrique';
+  const initials = nameParts
+    .slice(0, 2)
+    .map((n) => n.charAt(0).toUpperCase())
+    .join('') || 'JH';
+
+  // Get date breakdown for the Sesame-styled date card
+  const [, currentM] = currentYearMonth.split('-').map(Number);
+  const monthObj = MONTHS_LIST.find((m) => m.value === currentM) || MONTHS_LIST[0];
+  const today = new Date();
+  const displayDay = today.getDate();
+  const dayOfWeekNames = ['Domingo', 'Segunda-Feira', 'Terça-Feira', 'Quarta-Feira', 'Quinta-Feira', 'Sexta-Feira', 'Sábado'];
+  const displayDayOfWeek = dayOfWeekNames[today.getDay()];
 
   return (
-    <div id="mobile-header-root" className="bg-neutral-900 text-white pt-4 pb-4 px-3.5 sm:px-4 rounded-b-2xl shadow-md transition-all duration-200">
+    <div id="mobile-header-root" className="relative text-white pt-3.5 pb-4 px-3.5 sm:px-4 rounded-b-[28px] shadow-lg transition-all duration-300 bg-[#1c2838] dark:bg-[#0f172a]">
       
-      {/* Top Bar: User Greeting & Quick Settings */}
-      <div className={`flex items-center justify-between gap-2 min-w-0 ${isOverview ? 'mb-3.5' : 'mb-0'}`}>
+      {/* Sesame Organic Wavy SVG Background Decor */}
+      <div className="absolute inset-0 pointer-events-none opacity-45 overflow-hidden rounded-b-[28px]">
+        <svg className="w-full h-full object-cover" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+          <path d="M-50 80 C100 20, 250 140, 450 60 L450 -50 L-50 -50 Z" fill="#293b52" />
+          <path d="M-20 180 C120 110, 280 230, 430 140 L430 -50 L-20 -50 Z" fill="#223348" />
+          <path d="M0 260 C150 200, 300 280, 450 220 L450 300 L0 300 Z" fill="#172232" opacity="0.6" />
+        </svg>
+      </div>
+
+      {/* Top Bar: User Greeting & Sesame White Circular Controls */}
+      <div className={`relative z-50 flex items-center justify-between gap-2 min-w-0 ${isOverview ? 'mb-3.5' : 'mb-1'}`}>
         <div 
           id="btn-header-user-profile"
           onClick={onOpenProfile}
@@ -168,39 +181,49 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
           }}
           className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer group select-none focus:outline-hidden"
         >
-          <div 
-            id="btn-header-profile-avatar"
-            className="w-9.5 h-9.5 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center ring-2 ring-emerald-400/30 shadow-xs shrink-0 group-hover:scale-105 group-hover:ring-emerald-400/60 transition-all overflow-hidden"
-          >
-            {(user?.photoUrl && !user.photoUrl.includes('googleusercontent.com')) ? (
-              <img
-                src={user.photoUrl}
-                alt={user.name || 'Foto de perfil'}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              initials
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-base sm:text-lg font-bold text-neutral-100 group-hover:text-emerald-300 transition-colors truncate">Olá, {firstName}</span>
-              <span className="text-base sm:text-lg shrink-0">👋</span>
+          {/* Sesame Organic Avatar with ring and status dot */}
+          <div className="relative shrink-0">
+            <div 
+              id="btn-header-profile-avatar"
+              className="w-10 h-10 rounded-full bg-slate-700 text-white font-bold text-xs flex items-center justify-center ring-2 ring-white/60 shadow-md group-hover:scale-105 group-hover:ring-blue-400 transition-all overflow-hidden"
+            >
+              {(user?.photoUrl && !user.photoUrl.includes('googleusercontent.com')) ? (
+                <img
+                  src={user.photoUrl}
+                  alt={user.name || 'Foto de perfil'}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="font-extrabold text-sm text-slate-100">{initials}</span>
+              )}
             </div>
+            {/* Status indicator ring dot */}
+            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-white rounded-full flex items-center justify-center shadow-xs">
+              <div className="w-2 h-2 rounded-full bg-blue-400" />
+            </div>
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm sm:text-base font-bold text-white tracking-tight leading-tight truncate group-hover:text-sky-300 transition-colors">
+              {shortDisplayName}
+            </h2>
+            <p className="text-[11px] font-medium text-slate-300/90 tracking-wide uppercase truncate">
+              {user?.department || 'Finanças Pessoais'}
+            </p>
           </div>
         </div>
 
-        {/* Action icons: only dark mode, balance privacy, and Kebab menu remain outside */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        {/* Action icons: Clean White Circular Buttons (Sesame App style) */}
+        <div className="relative z-50 flex items-center gap-1.5 shrink-0">
           {onToggleDarkMode && (
             <button
               id="btn-mobile-toggle-theme"
               onClick={onToggleDarkMode}
               title={isDarkMode ? "Mudar para modo claro" : "Mudar para modo escuro"}
               aria-label="Alternar tema claro/escuro"
-              className="w-8 h-8 flex items-center justify-center text-neutral-300 hover:text-white bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/50 rounded-xl transition-all cursor-pointer shadow-xs"
+              className="w-8.5 h-8.5 flex items-center justify-center text-slate-700 dark:text-slate-200 bg-white/95 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 rounded-full transition-all cursor-pointer shadow-sm hover:scale-105"
             >
-              {isDarkMode ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-neutral-300" />}
+              {isDarkMode ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-slate-700" />}
             </button>
           )}
 
@@ -209,23 +232,29 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
             onClick={onToggleBalancePrivacy}
             title={isBalanceHidden ? "Mostrar valores" : "Ocultar valores"}
             aria-label="Alternar privacidade de saldo"
-            className="w-8 h-8 flex items-center justify-center text-neutral-300 hover:text-white bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/50 rounded-xl transition-all cursor-pointer shadow-xs"
+            className="w-8.5 h-8.5 flex items-center justify-center text-slate-700 dark:text-slate-200 bg-white/95 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 rounded-full transition-all cursor-pointer shadow-sm hover:scale-105"
           >
-            {isBalanceHidden ? <EyeOff className="w-4 h-4 text-emerald-400" /> : <Eye className="w-4 h-4" />}
+            {isBalanceHidden ? <EyeOff className="w-4 h-4 text-blue-500 dark:text-blue-400" /> : <Eye className="w-4 h-4" />}
           </button>
 
-          {/* Kebab Menu */}
-          <div className="relative" ref={kebabMenuRef}>
+          {/* Kebab Menu - White circular button with high z-index overlay and non-blocking backdrop */}
+          <div className="relative z-50" ref={kebabMenuRef}>
+            {isKebabOpen && (
+              <div 
+                className="fixed inset-0 z-40 bg-black/25 backdrop-blur-[1px]"
+                onClick={() => setIsKebabOpen(false)}
+              />
+            )}
             <button
               id="btn-kebab-menu"
               onClick={() => setIsKebabOpen((prev) => !prev)}
               title="Mais opções"
               aria-label="Mais opções"
               aria-expanded={isKebabOpen}
-              className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all cursor-pointer shadow-xs border ${
+              className={`relative z-50 w-8.5 h-8.5 flex items-center justify-center rounded-full transition-all cursor-pointer shadow-sm hover:scale-105 ${
                 isKebabOpen
-                  ? 'bg-neutral-700 text-white border-neutral-600'
-                  : 'text-neutral-300 hover:text-white bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/50'
+                  ? 'bg-slate-800 text-white dark:bg-slate-700 ring-2 ring-blue-400/50'
+                  : 'text-slate-700 dark:text-slate-200 bg-white/95 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700'
               }`}
             >
               <MoreVertical className="w-4 h-4" />
@@ -234,7 +263,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
             {isKebabOpen && (
               <div
                 id="kebab-dropdown-menu"
-                className="absolute right-0 mt-2 w-56 bg-neutral-900/95 border border-neutral-700/80 rounded-2xl shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md"
+                className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#152238] border border-slate-200/90 dark:border-slate-700/80 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.35)] py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md text-slate-800 dark:text-slate-100"
               >
                 {onOpenCategoryManager && (
                   <button
@@ -244,14 +273,14 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                       setIsKebabOpen(false);
                       onOpenCategoryManager();
                     }}
-                    className="w-full px-3.5 py-2.5 flex items-center gap-2.5 text-xs font-semibold text-neutral-200 hover:text-white hover:bg-neutral-800/90 transition-colors text-left cursor-pointer"
+                    className="w-full px-3.5 py-2.5 flex items-center gap-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors text-left cursor-pointer"
                   >
-                    <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
+                    <div className="w-7 h-7 rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
                       <Tag className="w-3.5 h-3.5" />
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate font-semibold">Categorias / Etiquetas</p>
-                      <p className="text-[10px] text-neutral-400 font-normal">Gerenciar e cadastrar tags</p>
+                      <p className="truncate font-bold">Categorias / Tags</p>
+                      <p className="text-[10px] text-slate-400 font-normal">Gerenciar e cadastrar tags</p>
                     </div>
                   </button>
                 )}
@@ -263,20 +292,20 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                     setIsKebabOpen(false);
                     onOpenExportImport();
                   }}
-                  className="w-full px-3.5 py-2.5 flex items-center gap-2.5 text-xs font-semibold text-neutral-200 hover:text-white hover:bg-neutral-800/90 transition-colors text-left cursor-pointer"
+                  className="w-full px-3.5 py-2.5 flex items-center gap-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors text-left cursor-pointer"
                 >
-                  <div className="w-7 h-7 rounded-lg bg-indigo-500/15 text-indigo-400 flex items-center justify-center shrink-0">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
                     <Download className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate font-semibold">Download CSV e Backup</p>
-                    <p className="text-[10px] text-neutral-400 font-normal">Exportar ou restaurar dados</p>
+                    <p className="truncate font-bold">Download CSV e Backup</p>
+                    <p className="text-[10px] text-slate-400 font-normal">Exportar ou restaurar dados</p>
                   </div>
                 </button>
 
                 {onLogout && (
                   <>
-                    <div className="my-1 border-t border-neutral-800" />
+                    <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
                     <button
                       id="kebab-item-logout"
                       type="button"
@@ -284,14 +313,14 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                         setIsKebabOpen(false);
                         onLogout();
                       }}
-                      className="w-full px-3.5 py-2.5 flex items-center gap-2.5 text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/15 transition-colors text-left cursor-pointer"
+                      className="w-full px-3.5 py-2.5 flex items-center gap-2.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors text-left cursor-pointer"
                     >
-                      <div className="w-7 h-7 rounded-lg bg-rose-500/15 text-rose-400 flex items-center justify-center shrink-0">
+                      <div className="w-7 h-7 rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
                         <LogOut className="w-3.5 h-3.5" />
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate font-semibold">Sair da Conta</p>
-                        <p className="text-[10px] text-rose-400/70 font-normal">Encerrar sessão no app</p>
+                        <p className="truncate font-bold">Sair da Conta</p>
+                        <p className="text-[10px] text-rose-500/70 font-normal">Encerrar sessão no app</p>
                       </div>
                     </button>
                   </>
@@ -304,10 +333,10 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
 
       {/* Month Navigator Sub-Bar when NOT in Overview */}
       {!isOverview && (
-        <div id="mobile-sub-month-bar" className="flex items-center justify-between mt-3 pt-2.5 border-t border-neutral-800/80">
+        <div id="mobile-sub-month-bar" className="relative z-10 flex items-center justify-between mt-2 pt-2 border-t border-white/10">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
-              Referência
+            <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+              Competência
             </span>
           </div>
 
@@ -315,17 +344,17 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
             {!isCurrentMonth && (
               <button
                 onClick={handleCurrentMonth}
-                className="text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full transition-colors cursor-pointer shrink-0"
+                className="text-[10px] font-bold text-sky-300 hover:text-white bg-blue-800/60 border border-blue-400/30 px-2.5 py-0.5 rounded-full transition-colors cursor-pointer shrink-0"
               >
                 Mês Atual
               </button>
             )}
 
-            <div className="flex items-center bg-neutral-800/90 rounded-full px-1.5 py-0.5 border border-neutral-700/80 shadow-xs">
+            <div className="flex items-center bg-white/10 backdrop-blur-md rounded-full px-1.5 py-0.5 border border-white/20 shadow-xs">
               <button
                 id="header-sub-prev-month"
                 onClick={handlePrevMonth}
-                className="w-5 h-5 flex items-center justify-center text-neutral-400 hover:text-white transition-colors cursor-pointer rounded-full hover:bg-neutral-700/60"
+                className="w-5 h-5 flex items-center justify-center text-slate-300 hover:text-white transition-colors cursor-pointer rounded-full hover:bg-white/10"
                 title="Mês anterior"
                 aria-label="Mês anterior"
               >
@@ -335,17 +364,17 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
               <button
                 id="header-sub-open-month-list"
                 onClick={handleOpenMonthPicker}
-                className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 px-2 py-0.5 rounded-full hover:bg-neutral-700/60 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 text-xs font-bold text-white hover:text-sky-300 px-2 py-0.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
                 title="Clique para selecionar o mês"
               >
-                <Calendar className="w-3 h-3 text-emerald-400 shrink-0" />
+                <Calendar className="w-3 h-3 text-sky-400 shrink-0" />
                 <span>{formatMonthYear(currentYearMonth)}</span>
               </button>
 
               <button
                 id="header-sub-next-month"
                 onClick={handleNextMonth}
-                className="w-5 h-5 flex items-center justify-center text-neutral-400 hover:text-white transition-colors cursor-pointer rounded-full hover:bg-neutral-700/60"
+                className="w-5 h-5 flex items-center justify-center text-slate-300 hover:text-white transition-colors cursor-pointer rounded-full hover:bg-white/10"
                 title="Próximo mês"
                 aria-label="Próximo mês"
               >
@@ -356,179 +385,164 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
         </div>
       )}
 
-      {/* Hero Balance Card - Rendered ONLY in 'Início' (overview tab) */}
+      {/* Main Sesame Overview Cards */}
       {isOverview && (
-        <div 
-          id="mobile-balance-card" 
-          className="bg-neutral-800/90 border border-neutral-700/60 rounded-xl p-3 backdrop-blur-xs shadow-xs"
-        >
-          <div className="flex items-center justify-between mb-0.5">
-            <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Wallet className="w-3 h-3 text-emerald-400" /> Saldo no Mês
-            </span>
+        <div className="relative z-10 space-y-2.5 mt-2">
+          
+          {/* Card 1: The Signature Sesame White "Registros" Card (Balance & Activity) */}
+          <div 
+            id="mobile-balance-card" 
+            className="bg-white dark:bg-[#152238] text-slate-900 dark:text-slate-100 rounded-2xl p-4 shadow-md border border-slate-100 dark:border-slate-800/80 transition-colors"
+          >
+            {/* Card Header: Title & Total / Current Month */}
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100">
+                Registros
+              </span>
 
-            {/* Month Navigator pill with dropdown selection */}
-            <div className="flex items-center bg-neutral-900/90 rounded-full px-1.5 py-0.5 border border-neutral-700/80">
-              <button
-                id="mobile-btn-prev-month"
-                onClick={handlePrevMonth}
-                className="p-0.5 text-neutral-400 hover:text-white transition-colors cursor-pointer rounded-full"
-                title="Mês anterior"
-                aria-label="Mês anterior"
-              >
-                <ChevronLeft className="w-3 h-3" />
-              </button>
+              {/* Month Navigator pill */}
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-full px-1.5 py-0.5 border border-slate-200/80 dark:border-slate-700">
+                <button
+                  id="mobile-btn-prev-month"
+                  onClick={handlePrevMonth}
+                  className="p-0.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer rounded-full"
+                  title="Mês anterior"
+                  aria-label="Mês anterior"
+                >
+                  <ChevronLeft className="w-3 h-3" />
+                </button>
 
-              {/* Clickable Month Label to open full list */}
-              <button
-                id="btn-open-month-list"
-                onClick={handleOpenMonthPicker}
-                className="flex items-center gap-1 text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 px-1 py-0.5 rounded-full hover:bg-neutral-800 transition-colors cursor-pointer"
-                title="Clique para selecionar o mês na lista"
-              >
-                <Calendar className="w-2.5 h-2.5 text-emerald-400" />
-                <span>{formatMonthYear(currentYearMonth)}</span>
-              </button>
+                <button
+                  id="btn-open-month-list"
+                  onClick={handleOpenMonthPicker}
+                  className="flex items-center gap-1 text-[10px] font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-sky-400 px-1.5 py-0.5 rounded-full transition-colors cursor-pointer"
+                  title="Clique para selecionar o mês na lista"
+                >
+                  <Calendar className="w-2.5 h-2.5 text-blue-600 dark:text-sky-400" />
+                  <span>{formatMonthYear(currentYearMonth)}</span>
+                </button>
 
-              <button
-                id="mobile-btn-next-month"
-                onClick={handleNextMonth}
-                className="p-0.5 text-neutral-400 hover:text-white transition-colors cursor-pointer"
-                title="Próximo mês"
-                aria-label="Próximo mês"
-              >
-                <ChevronRight className="w-3 h-3" />
-              </button>
+                <button
+                  id="mobile-btn-next-month"
+                  onClick={handleNextMonth}
+                  className="p-0.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer"
+                  title="Próximo mês"
+                  aria-label="Próximo mês"
+                >
+                  <ChevronRight className="w-3 h-3" />
+                </button>
+              </div>
             </div>
+
+            {/* Middle Section: Big Sesame Date Block on Left + Income / Expense Arrows on Right */}
+            <div className="flex items-center justify-between gap-3 py-1">
+              
+              {/* Sesame Date Block (e.g. 21 Segunda-Feira Setembro) */}
+              <div className="flex items-center gap-2.5">
+                <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200/60 dark:border-slate-700/60">
+                  <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+                    {displayDay}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-tight">
+                    {displayDayOfWeek}
+                  </h4>
+                  <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                    {monthObj.name}
+                  </p>
+                </div>
+              </div>
+
+              {/* Sesame In/Out Arrows with values */}
+              <div className="text-right space-y-1">
+                <div className="flex items-center justify-end gap-1.5 text-xs font-bold text-blue-600 dark:text-sky-400">
+                  <span className="text-sm leading-none">➔</span>
+                  <span>{isBalanceHidden ? '••••••' : formatCurrency(summary.totalIncome)}</span>
+                </div>
+                <div className="flex items-center justify-end gap-1.5 text-xs font-bold text-rose-500 dark:text-rose-400">
+                  <span className="text-sm leading-none">➔</span>
+                  <span>{isBalanceHidden ? '••••••' : formatCurrency(summary.totalExpense)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Status / Balance Sub-row */}
+            <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-slate-100 dark:border-slate-800/80 text-[11px]">
+              <div className="flex items-center gap-1.5 font-medium text-slate-600 dark:text-slate-300">
+                <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                <span>Saldo Líquido:</span>
+                <span className={`font-black ${summary.balance < 0 ? 'text-rose-500' : 'text-blue-600 dark:text-sky-400'}`}>
+                  {isBalanceHidden ? 'R$ ••••••' : formatCurrency(summary.balance)}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                <span>Fixas: <b className="text-slate-700 dark:text-slate-200">{isBalanceHidden ? '••' : formatCurrency(summary.fixedExpenses)}</b></span>
+              </div>
+            </div>
+
           </div>
 
-          {/* Big Balance Number */}
-          <div className="flex items-baseline justify-between mt-0.5">
-            <div 
-              id="mobile-val-overall-balance" 
-              className={`text-xl font-black tracking-tight ${
-                summary.balance < 0 ? 'text-rose-400' : 'text-white'
-              }`}
+          {/* Quick Action Navigation Chips - Sesame Clean Pill Grid */}
+          <div className="grid grid-cols-4 gap-1.5 pt-0.5">
+            <button
+              id="btn-quick-new-income"
+              onClick={() => onOpenNewTransaction('income')}
+              className="flex flex-col items-center justify-center p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 transition-all cursor-pointer group hover:scale-[1.02]"
             >
-              {isBalanceHidden ? 'R$ ••••••' : formatCurrency(summary.balance)}
-            </div>
-            {!isCurrentMonth && (
-              <button
-                onClick={handleCurrentMonth}
-                className="text-[9.5px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full hover:bg-emerald-900/60 transition-colors cursor-pointer"
-              >
-                Ir para Mês Atual
-              </button>
-            )}
+              <div className="w-6 h-6 rounded-lg bg-blue-500/25 text-sky-300 flex items-center justify-center mb-0.5">
+                <Plus className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold text-white">Receita</span>
+            </button>
+
+            <button
+              id="btn-quick-new-expense"
+              onClick={() => onOpenNewTransaction('expense')}
+              className="flex flex-col items-center justify-center p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 transition-all cursor-pointer group hover:scale-[1.02]"
+            >
+              <div className="w-6 h-6 rounded-lg bg-rose-500/25 text-rose-300 flex items-center justify-center mb-0.5">
+                <Plus className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold text-white">Despesa</span>
+            </button>
+
+            <button
+              id="btn-quick-go-fixed"
+              onClick={() => onNavigateTab('fixed')}
+              className="flex flex-col items-center justify-center p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 transition-all cursor-pointer group hover:scale-[1.02]"
+            >
+              <div className="w-6 h-6 rounded-lg bg-indigo-500/25 text-indigo-300 flex items-center justify-center mb-0.5">
+                <Building2 className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold text-white">Fixas</span>
+            </button>
+
+            <button
+              id="btn-quick-go-parcelas"
+              onClick={() => onNavigateTab('installments')}
+              className="flex flex-col items-center justify-center p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 transition-all cursor-pointer group hover:scale-[1.02]"
+            >
+              <div className="w-6 h-6 rounded-lg bg-amber-500/25 text-amber-300 flex items-center justify-center mb-0.5">
+                <CreditCard className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold text-white">Parcelas</span>
+            </button>
           </div>
 
-          {/* Monthly Income and Expense Badges */}
-          <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-neutral-700/50">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <div className="w-5.5 h-5.5 rounded-md bg-emerald-900/50 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
-                <TrendingUp className="w-3 h-3" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <span className="text-[9.5px] text-neutral-400 block leading-tight truncate">Renda no mês</span>
-                <span className="text-[11.5px] font-bold text-emerald-400 block truncate leading-tight">
-                  {isBalanceHidden ? '••••••' : formatCurrency(summary.totalIncome)}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 min-w-0">
-              <div className="w-5.5 h-5.5 rounded-md bg-rose-900/50 border border-rose-500/30 text-rose-400 flex items-center justify-center shrink-0">
-                <TrendingDown className="w-3 h-3" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <span className="text-[9.5px] text-neutral-400 block leading-tight truncate">Gastos totais</span>
-                <span className="text-[11.5px] font-bold text-rose-400 block truncate leading-tight">
-                  {isBalanceHidden ? '••••••' : formatCurrency(summary.totalExpense)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Planilha Breakdown Pill Indicators */}
-          <div className="grid grid-cols-3 gap-1.5 mt-2 pt-1.5 border-t border-neutral-700/40 text-[9.5px]">
-            <div className="bg-neutral-900/60 rounded-md py-1 px-1.5 text-center">
-              <span className="text-neutral-400 block text-[8.5px]">Fixas</span>
-              <span className="font-bold text-neutral-200">
-                {isBalanceHidden ? '••••' : formatCurrency(summary.fixedExpenses)}
-              </span>
-            </div>
-            <div className="bg-neutral-900/60 rounded-md py-1 px-1.5 text-center">
-              <span className="text-neutral-400 block text-[8.5px]">Parcelas</span>
-              <span className="font-bold text-amber-400">
-                {isBalanceHidden ? '••••' : formatCurrency(summary.installmentsAmount)}
-              </span>
-            </div>
-            <div className="bg-neutral-900/60 rounded-md py-1 px-1.5 text-center">
-              <span className="text-neutral-400 block text-[8.5px]">Pendentes</span>
-              <span className="font-bold text-rose-400">
-                {isBalanceHidden ? '••••' : formatCurrency(summary.totalPending)}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Quick Action Navigation Chips - Rendered ONLY in 'Início' (overview tab) */}
-      {isOverview && (
-        <div className="grid grid-cols-4 gap-1.5 mt-2.5">
-          <button
-            id="btn-quick-new-income"
-            onClick={() => onOpenNewTransaction('income')}
-            className="flex flex-col items-center justify-center p-1.5 rounded-xl bg-neutral-800/80 hover:bg-neutral-700/80 border border-neutral-700/50 transition-colors cursor-pointer group"
-          >
-            <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-0.5 group-hover:scale-105 transition-transform">
-              <Plus className="w-3.5 h-3.5" />
-            </div>
-            <span className="text-[9.5px] font-semibold text-neutral-300">Receita</span>
-          </button>
-
-          <button
-            id="btn-quick-new-expense"
-            onClick={() => onOpenNewTransaction('expense')}
-            className="flex flex-col items-center justify-center p-1.5 rounded-xl bg-neutral-800/80 hover:bg-neutral-700/80 border border-neutral-700/50 transition-colors cursor-pointer group"
-          >
-            <div className="w-6 h-6 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center mb-0.5 group-hover:scale-105 transition-transform">
-              <Plus className="w-3.5 h-3.5" />
-            </div>
-            <span className="text-[9.5px] font-semibold text-neutral-300">Despesa</span>
-          </button>
-
-          <button
-            id="btn-quick-go-fixed"
-            onClick={() => onNavigateTab('fixed')}
-            className="flex flex-col items-center justify-center p-1.5 rounded-xl bg-neutral-800/80 hover:bg-neutral-700/80 border border-neutral-700/50 transition-colors cursor-pointer group"
-          >
-            <div className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center mb-0.5 group-hover:scale-105 transition-transform">
-              <Building2 className="w-3.5 h-3.5" />
-            </div>
-            <span className="text-[9.5px] font-semibold text-neutral-300">Fixas</span>
-          </button>
-
-          <button
-            id="btn-quick-go-parcelas"
-            onClick={() => onNavigateTab('installments')}
-            className="flex flex-col items-center justify-center p-1.5 rounded-xl bg-neutral-800/80 hover:bg-neutral-700/80 border border-neutral-700/50 transition-colors cursor-pointer group"
-          >
-            <div className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center mb-0.5 group-hover:scale-105 transition-transform">
-              <CreditCard className="w-3.5 h-3.5" />
-            </div>
-            <span className="text-[9.5px] font-semibold text-neutral-300">Parcelas</span>
-          </button>
         </div>
       )}
 
       {/* Month Selection Modal / Sheet */}
       {isMonthPickerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-sm flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800 bg-neutral-950/60">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#152238] border border-slate-700/80 text-white rounded-3xl w-full max-w-sm flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700/60 bg-[#111c2e]/60">
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-emerald-400" />
+                <div className="w-7 h-7 rounded-xl bg-slate-800 text-sky-400 flex items-center justify-center">
+                  <Calendar className="w-4 h-4" />
+                </div>
                 <h4 className="text-xs font-bold text-white uppercase tracking-wider">
                   Selecionar Mês e Ano
                 </h4>
@@ -536,23 +550,23 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
               <button
                 type="button"
                 onClick={() => setIsMonthPickerOpen(false)}
-                className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
+                className="text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="p-4 space-y-3.5">
-              {/* Filtro / Controle de Ano com botões e digitação livre */}
+              {/* Filtro / Controle de Ano */}
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
                   Ano
                 </label>
-                <div className="flex items-center justify-between bg-neutral-950/90 p-1.5 rounded-xl border border-neutral-800">
+                <div className="flex items-center justify-between bg-white dark:bg-white p-1.5 rounded-2xl border border-slate-200/90 shadow-sm">
                   <button
                     type="button"
                     onClick={() => setPickerYear((prev) => prev - 1)}
-                    className="w-9 h-9 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                    className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
                     title="Ano anterior"
                   >
                     <ChevronLeft className="w-4 h-4" />
@@ -568,7 +582,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                           setPickerYear(val);
                         }
                       }}
-                      className="w-24 text-center font-black text-lg bg-transparent text-emerald-400 focus:outline-none"
+                      className="w-24 text-center font-black text-xl bg-transparent text-slate-900 focus:outline-none"
                       placeholder="2026"
                       min={2000}
                       max={2100}
@@ -577,7 +591,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                   <button
                     type="button"
                     onClick={() => setPickerYear((prev) => prev + 1)}
-                    className="w-9 h-9 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                    className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
                     title="Próximo ano"
                   >
                     <ChevronRight className="w-4 h-4" />
@@ -587,8 +601,8 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
 
               {/* Filtro / Seleção de Mês - Grade dos 12 meses */}
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                     Mês ({pickerYear})
                   </label>
                   <button
@@ -600,13 +614,13 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                       onMonthChange(systemCurrentMonth);
                       setIsMonthPickerOpen(false);
                     }}
-                    className="text-[10.5px] font-semibold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer underline"
+                    className="text-[11px] font-semibold text-sky-400 hover:text-sky-300 transition-colors cursor-pointer"
                   >
                     Ir para Mês Atual
                   </button>
                 </div>
 
-                <div className="grid grid-cols-3 gap-1.5 max-h-[42vh] overflow-y-auto pr-0.5">
+                <div className="grid grid-cols-3 gap-2 max-h-[42vh] overflow-y-auto pr-0.5">
                   {MONTHS_LIST.map((m) => {
                     const ym = `${pickerYear}-${String(m.value).padStart(2, '0')}`;
                     const isSelected = ym === currentYearMonth;
@@ -623,17 +637,19 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                           onMonthChange(targetYm);
                           setIsMonthPickerOpen(false);
                         }}
-                        className={`p-2.5 rounded-xl text-xs font-semibold flex flex-col items-center justify-center transition-all cursor-pointer relative ${
+                        className={`py-2.5 px-2 rounded-xl text-xs font-semibold flex flex-col items-center justify-center transition-all cursor-pointer relative ${
                           isSelected
-                            ? 'bg-emerald-600 text-white shadow-xs font-bold ring-2 ring-emerald-400/40'
+                            ? 'bg-[#2563eb] text-white shadow-md shadow-blue-900/40 font-bold ring-2 ring-blue-400'
                             : isPickerActive
-                            ? 'bg-neutral-800 text-emerald-400 border border-emerald-500/50'
-                            : 'bg-neutral-950/80 text-neutral-300 hover:bg-neutral-800 hover:text-white border border-neutral-800/80'
+                            ? 'bg-blue-50 text-blue-700 border-2 border-blue-500 font-bold shadow-xs'
+                            : 'bg-white dark:bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-50 border border-slate-200/90 shadow-2xs hover:border-blue-300'
                         }`}
                       >
                         <span className="text-xs">{m.name}</span>
                         {isCurrentSystemMonth && (
-                          <span className="text-[8.5px] mt-0.5 px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-medium">
+                          <span className={`text-[8px] mt-0.5 px-1.5 py-0.2 rounded-full font-bold uppercase tracking-wider ${
+                            isSelected ? 'bg-white/25 text-white' : 'bg-blue-100 text-blue-700'
+                          }`}>
                             Atual
                           </span>
                         )}
@@ -644,7 +660,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
               </div>
             </div>
 
-            <div className="p-3 border-t border-neutral-800 bg-neutral-950/60 flex items-center justify-between gap-2">
+            <div className="p-4 border-t border-slate-700/60 bg-[#111c2e]/60 flex items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => {
@@ -652,7 +668,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                   setPickerYear(sysY);
                   setPickerMonth(sysM);
                 }}
-                className="px-3 py-1.5 text-xs text-neutral-400 hover:text-white rounded-lg bg-neutral-800/50 hover:bg-neutral-800 transition-colors cursor-pointer"
+                className="px-3.5 py-2 text-xs font-semibold text-slate-300 hover:text-white rounded-xl bg-slate-800/80 hover:bg-slate-700 transition-colors cursor-pointer"
               >
                 Resetar Ano
               </button>
@@ -663,7 +679,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                   onMonthChange(targetYm);
                   setIsMonthPickerOpen(false);
                 }}
-                className="px-4 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg transition-colors cursor-pointer shadow-xs"
+                className="px-5 py-2 text-xs font-bold text-white bg-[#2563eb] hover:bg-[#1d4ed8] rounded-xl transition-all cursor-pointer shadow-md shadow-blue-900/30 active:scale-95"
               >
                 Confirmar
               </button>

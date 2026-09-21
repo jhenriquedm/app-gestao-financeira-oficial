@@ -284,33 +284,115 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             exit={{ opacity: 0, scale: 0.94, y: 14 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
             id="profile-modal-card"
-            className="bg-white dark:bg-neutral-900 rounded-3xl max-w-md w-full shadow-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden flex flex-col max-h-[92vh]"
+            className="bg-white dark:bg-[#152238] rounded-[28px] max-w-md w-full shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh]"
           >
-          {/* Header */}
-          <div className="p-4 sm:p-5 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white font-bold text-sm flex items-center justify-center shadow-md shadow-emerald-600/20 overflow-hidden shrink-0">
-                {displayPhotoUrl ? (
-                  <img src={displayPhotoUrl} alt="Foto de perfil" className="w-full h-full object-cover" />
-                ) : (
-                  initials
-                )}
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">Gerenciar Perfil</h3>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">Atualize seus dados cadastrais e senha</p>
-              </div>
+          {/* Sesame Wavy Slate-Navy Header */}
+          <div className="relative bg-[#1c2838] dark:bg-[#0f172a] text-white pt-5 pb-8 px-5 overflow-hidden">
+            {/* Background Wavy SVG */}
+            <div className="absolute inset-0 pointer-events-none opacity-40">
+              <svg className="w-full h-full object-cover" viewBox="0 0 400 200" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+                <path d="M-50 60 C100 10, 250 110, 450 40 L450 -50 L-50 -50 Z" fill="#293b52" />
+                <path d="M-20 140 C120 80, 280 180, 430 100 L430 -50 L-20 -50 Z" fill="#223348" />
+              </svg>
             </div>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
+
+            <div className="relative z-10 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-white tracking-tight">Meu Perfil</h3>
+                <p className="text-xs text-slate-300 font-medium">Gestão Financeira Pessoal</p>
+              </div>
+              <button
+                onClick={onClose}
+                className="w-8.5 h-8.5 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all cursor-pointer shadow-sm"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
-          {/* Form Content */}
-          <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 overflow-y-auto">
+          {/* Form Content with Floating Avatar */}
+          <form onSubmit={handleSubmit} className="px-5 pb-5 -mt-6 space-y-4 overflow-y-auto relative z-10">
+            
+            {/* Floating Avatar & Fast Action Pill (Sesame Profile Header look) */}
+            <div className="flex items-end justify-between gap-3">
+              <div className="relative group shrink-0">
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Clique para escolher uma foto"
+                  className="w-18 h-18 rounded-full overflow-hidden bg-slate-700 text-white font-bold text-xl flex items-center justify-center ring-4 ring-white dark:ring-[#152238] shadow-lg cursor-pointer group-hover:ring-emerald-400 transition-all relative"
+                >
+                  {displayPhotoUrl ? (
+                    <img
+                      src={displayPhotoUrl}
+                      alt={name || 'Foto de perfil'}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    initials
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                    <Camera className="w-5 h-5" />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Alterar foto"
+                  aria-label="Alterar foto de perfil"
+                  className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-md border-2 border-white dark:border-[#152238] cursor-pointer transition-all"
+                >
+                  <Camera className="w-3 h-3" />
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2 pb-1">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-3 py-1.5 rounded-full text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Upload className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Foto</span>
+                </button>
+
+                {photoUrl && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (rawImageForCropping || photoUrl) {
+                        setRawImageForCropping(rawImageForCropping || photoUrl);
+                        setIsCropperOpen(true);
+                      }
+                    }}
+                    className="p-1.5 rounded-full text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-all cursor-pointer"
+                    title="Enquadrar Foto"
+                  >
+                    <Crop className="w-3.5 h-3.5 text-emerald-500" />
+                  </button>
+                )}
+
+                {photoUrl && (
+                  <button
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    className="p-1.5 rounded-full text-rose-500 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 transition-all cursor-pointer"
+                    title="Remover Foto"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/svg+xml,image/avif,image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+            </div>
+
             {/* Sync Alert (Only shown if real failure occurred) */}
             {syncStatus.hasPending && (
               <div
@@ -327,99 +409,24 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               </div>
             )}
 
-            {/* Foto de Perfil */}
-            <div
-              id="profile-photo-card"
-              className="p-3.5 bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200/80 dark:border-neutral-700/60 rounded-2xl flex items-center gap-3.5"
-            >
-              <div className="relative group shrink-0">
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Clique para escolher uma foto"
-                  className="w-14 h-14 rounded-full overflow-hidden bg-emerald-600 text-white font-bold text-base flex items-center justify-center ring-2 ring-emerald-500/30 shadow-xs cursor-pointer group-hover:ring-emerald-500/70 transition-all relative"
-                >
-                  {displayPhotoUrl ? (
-                    <img
-                      src={displayPhotoUrl}
-                      alt={name || 'Foto de perfil'}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    initials
-                  )}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
-                    <Camera className="w-4 h-4" />
-                  </div>
+            {/* Sesame Employee Info Card */}
+            <div className="bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Empresa</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-100">{user?.company || 'Finanças Pessoais'}</span>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Alterar foto"
-                  aria-label="Alterar foto de perfil"
-                  className="absolute -bottom-1 -right-1 w-5.5 h-5.5 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-md border-2 border-white dark:border-neutral-900 cursor-pointer hover:bg-emerald-700 transition-all"
-                >
-                  <Camera className="w-3 h-3" />
-                </button>
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100">Foto de Perfil</span>
-                <div className="flex flex-wrap items-center gap-3 pt-1.5">
-                  <button
-                    type="button"
-                    id="btn-upload-profile-photo"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 cursor-pointer flex items-center gap-1"
-                  >
-                    <Upload className="w-3 h-3" />
-                    <span>{photoUrl ? 'Alterar foto' : 'Adicionar foto'}</span>
-                  </button>
-
-                  {photoUrl && (
-                    <button
-                      type="button"
-                      id="btn-reframe-profile-photo"
-                      onClick={() => {
-                        if (rawImageForCropping || photoUrl) {
-                          setRawImageForCropping(rawImageForCropping || photoUrl);
-                          setIsCropperOpen(true);
-                        }
-                      }}
-                      className="text-xs font-semibold text-neutral-600 dark:text-neutral-300 hover:text-emerald-600 dark:hover:text-emerald-400 cursor-pointer flex items-center gap-1"
-                    >
-                      <Crop className="w-3 h-3 text-emerald-500" />
-                      <span>Enquadrar</span>
-                    </button>
-                  )}
-
-                  {photoUrl && (
-                    <button
-                      type="button"
-                      id="btn-remove-profile-photo"
-                      onClick={handleRemovePhoto}
-                      className="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 cursor-pointer flex items-center gap-1"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      <span>Remover</span>
-                    </button>
-                  )}
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Departamento</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-100">{user?.department || 'Finanças'}</span>
                 </div>
               </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/svg+xml,image/avif,image/*"
-                onChange={handlePhotoUpload}
-                className="hidden"
-              />
             </div>
 
             {/* Nome Completo */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
-                <UserIcon className="w-3.5 h-3.5 text-neutral-400" />
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <UserIcon className="w-3.5 h-3.5 text-slate-400" />
                 Nome Completo
               </label>
               <input
@@ -428,15 +435,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 onChange={handleNameChange}
                 required
                 maxLength={60}
-                className="w-full px-3.5 py-2.5 bg-neutral-50 dark:bg-neutral-800/70 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm text-neutral-900 dark:text-neutral-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all font-medium"
                 placeholder="Seu nome completo"
               />
             </div>
 
             {/* E-mail */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-neutral-400" />
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-slate-400" />
                 E-mail
               </label>
               <input
@@ -444,15 +451,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 value={email}
                 onChange={handleEmailChange}
                 required
-                className="w-full px-3.5 py-2.5 bg-neutral-50 dark:bg-neutral-800/70 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm text-neutral-900 dark:text-neutral-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all font-medium"
                 placeholder="seu.email@exemplo.com"
               />
             </div>
 
             {/* CPF */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
-                <CreditCard className="w-3.5 h-3.5 text-neutral-400" />
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <CreditCard className="w-3.5 h-3.5 text-slate-400" />
                 CPF
               </label>
               <input
@@ -461,26 +468,26 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 onChange={handleCpfChange}
                 required
                 maxLength={14}
-                className="w-full px-3.5 py-2.5 bg-neutral-50 dark:bg-neutral-800/70 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm text-neutral-900 dark:text-neutral-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all font-mono"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all font-mono"
                 placeholder="000.000.000-00"
               />
             </div>
 
             {/* Alterar Senha (Opcional) */}
-            <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800 space-y-3">
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
               <div>
-                <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
-                  <Lock className="w-3.5 h-3.5 text-neutral-400" />
+                <span className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-slate-400" />
                   Trocar Senha (Opcional)
                 </span>
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   Deixe os campos abaixo em branco caso deseje manter a senha atual.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400">Nova Senha</label>
+                  <label className="text-[11px] font-medium text-slate-600 dark:text-slate-400">Nova Senha</label>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
@@ -489,12 +496,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       minLength={6}
                       maxLength={32}
                       placeholder="Mínimo 6 dígitos"
-                      className="w-full px-3 py-2 pr-9 bg-neutral-50 dark:bg-neutral-800/70 border border-neutral-200 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-neutral-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+                      className="w-full px-3 py-2 pr-9 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 font-medium"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                     >
                       {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                     </button>
@@ -502,7 +509,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400">Confirmar Nova Senha</label>
+                  <label className="text-[11px] font-medium text-slate-600 dark:text-slate-400">Confirmar Nova Senha</label>
                   <div className="relative">
                     <input
                       type={showConfirmPassword ? 'text' : 'password'}
@@ -511,12 +518,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       minLength={6}
                       maxLength={32}
                       placeholder="Repita a senha"
-                      className="w-full px-3 py-2 pr-9 bg-neutral-50 dark:bg-neutral-800/70 border border-neutral-200 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-neutral-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+                      className="w-full px-3 py-2 pr-9 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 font-medium"
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                     >
                       {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                     </button>
@@ -560,7 +567,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   onClose();
                   onLogout();
                 }}
-                className="px-3.5 py-2.5 rounded-xl border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 bg-rose-50/50 dark:bg-rose-950/30 hover:bg-rose-100 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="px-4 py-2.5 rounded-xl border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 bg-rose-50/60 dark:bg-rose-950/30 hover:bg-rose-100 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>Sair da Conta</span>
@@ -570,7 +577,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 type="submit"
                 id="btn-save-profile"
                 disabled={isLoading}
-                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all cursor-pointer disabled:opacity-50"
+                className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all cursor-pointer disabled:opacity-50"
               >
                 <Save className="w-3.5 h-3.5" />
                 <span>{isLoading ? 'Salvando...' : 'Salvar Alterações'}</span>
@@ -579,7 +586,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
             {/* Version Information */}
             <div className="pt-2 text-center">
-              <span className="text-[11px] font-medium text-neutral-400 dark:text-neutral-500">
+              <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
                 Gestão Financeira • Versão {APP_VERSION}
               </span>
             </div>

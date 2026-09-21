@@ -115,18 +115,18 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
   return (
     <div id="section-installments-manager" className="space-y-4">
       {/* Top Banner Card: Visão Geral das Dívidas e Parcelamentos - Fixed/Sticky */}
-      <div className="sticky top-0 z-20 pt-0.5 pb-1 -mt-1 bg-neutral-100/95 dark:bg-neutral-950/95 backdrop-blur-md">
-        <div className="bg-gradient-to-br from-amber-600 to-amber-700 dark:from-amber-700 dark:to-amber-900 rounded-2xl p-3.5 text-white shadow-lg shadow-amber-700/20 relative overflow-hidden">
-        <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
+      <div className="sticky top-0 z-20 pt-0.5 pb-1 -mt-1 bg-slate-50/95 dark:bg-[#0b111e]/95 backdrop-blur-md">
+        <div className="bg-gradient-to-br from-[#1c2838] to-[#152238] dark:from-[#152238] dark:to-[#0f172a] rounded-3xl p-4 text-white shadow-xl border border-slate-700/60 relative overflow-hidden">
+        <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-amber-500/10 rounded-full blur-xl pointer-events-none" />
         
         <div className="flex items-center justify-between mb-3 relative z-10">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-white/15 backdrop-blur-xs flex items-center justify-center">
-              <CreditCard className="w-4 h-4 text-amber-100" />
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+              <CreditCard className="w-4 h-4" />
             </div>
             <div>
               <h2 className="text-sm font-bold leading-tight">Parcelas & Empréstimos</h2>
-              <p className="text-[11px] text-amber-100/80">
+              <p className="text-[11px] text-slate-300/80">
                 Compromissos ativos no mês ({formatMonthYearUppercase(currentYearMonth)})
               </p>
             </div>
@@ -134,36 +134,36 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
           <button
             id="btn-add-installment-top"
             onClick={onOpenAddModal}
-            className="flex items-center gap-1 px-2.5 py-1.5 bg-white text-amber-900 text-xs font-bold rounded-xl shadow-xs hover:bg-amber-50 active:scale-95 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded-xl shadow-md shadow-blue-900/30 active:scale-95 transition-all cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
             <span>Adicionar</span>
           </button>
         </div>
 
         {/* Hero Value: Total do Mês */}
         <div className="mb-3 relative z-10">
-          <span className="text-[11px] uppercase tracking-wider text-amber-200/90 font-semibold block">
+          <span className="text-[11px] uppercase tracking-wider text-slate-300/90 font-semibold block">
             Total em Parcelas Neste Mês
           </span>
-          <div className="text-2xl font-black tracking-tight">
+          <div className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-0.5">
             {isBalanceHidden ? '••••••' : formatCurrency(totalMonthlyAmount)}
           </div>
         </div>
 
         {/* Global Progress Bar */}
-        <div className="bg-black/20 rounded-xl p-2.5 space-y-1.5 relative z-10 border border-white/10">
+        <div className="bg-[#0e1726]/80 rounded-2xl p-3 space-y-2 relative z-10 border border-slate-700/60">
           <div className="flex justify-between text-[11px]">
-            <span className="text-amber-100 font-medium">Quitação Global dos Contratos Ativos:</span>
-            <span className="font-bold text-white">{overallProgress.toFixed(1)}%</span>
+            <span className="text-slate-300 font-medium">Quitação Global dos Contratos:</span>
+            <span className="font-bold text-sky-400">{overallProgress.toFixed(1)}%</span>
           </div>
-          <div className="w-full bg-black/30 h-2 rounded-full overflow-hidden">
+          <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
             <div
-              className="bg-amber-300 h-full rounded-full transition-all duration-500"
+              className="bg-[#2563eb] h-full rounded-full transition-all duration-500 shadow-sm shadow-blue-500/50"
               style={{ width: `${Math.min(100, Math.max(0, overallProgress))}%` }}
             />
           </div>
-          <div className="flex justify-between items-center text-[10.5px] text-amber-100/90 pt-0.5">
+          <div className="flex justify-between items-center text-[10.5px] text-slate-300/90 pt-0.5">
             <span>
               Saldo Devedor:{' '}
               <strong className="text-white">
@@ -172,7 +172,7 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
             </span>
             <span>
               Quitado:{' '}
-              <strong className="text-amber-200">
+              <strong className="text-sky-300">
                 {isBalanceHidden ? '••••' : formatCurrency(totalPaidDebt)}
               </strong>
             </span>
@@ -181,15 +181,15 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
 
         {/* Month Paid / Pending mini chips */}
         <div className="grid grid-cols-2 gap-2 mt-3 text-xs relative z-10">
-          <div className="bg-white/10 rounded-lg px-2.5 py-1.5 border border-white/10 flex items-center justify-between">
-            <span className="text-amber-100 text-[11px]">Pagas no mês:</span>
-            <strong className="text-emerald-300 font-bold">
+          <div className="bg-[#0e1726]/60 rounded-xl px-3 py-2 border border-slate-700/50 flex items-center justify-between">
+            <span className="text-slate-300 text-[11px]">Pagas no mês:</span>
+            <strong className="text-sky-400 font-bold">
               {isBalanceHidden ? '•••' : formatCurrency(paidMonthlyAmount)}
             </strong>
           </div>
-          <div className="bg-white/10 rounded-lg px-2.5 py-1.5 border border-white/10 flex items-center justify-between">
-            <span className="text-amber-100 text-[11px]">Pendentes:</span>
-            <strong className="text-amber-200 font-bold">
+          <div className="bg-[#0e1726]/60 rounded-xl px-3 py-2 border border-slate-700/50 flex items-center justify-between">
+            <span className="text-slate-300 text-[11px]">Pendentes:</span>
+            <strong className="text-amber-400 font-bold">
               {isBalanceHidden ? '•••' : formatCurrency(pendingMonthlyAmount)}
             </strong>
           </div>
@@ -203,7 +203,7 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
         {activeComputedList.length > 0 && (
           <div ref={searchContainerRef} className="relative z-10 px-1">
             <div className="relative">
-              <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-2.5 pointer-events-none" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
               <input
                 type="text"
                 id="input-search-installments"
@@ -214,12 +214,12 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
                   setSearchQuery(e.target.value);
                   setShowSuggestions(true);
                 }}
-                className="w-full pl-9 pr-8 py-2 text-xs font-medium text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:border-amber-500 focus:outline-hidden transition-all placeholder:text-neutral-400 shadow-2xs"
+                className="w-full pl-9 pr-8 py-2.5 text-xs font-medium text-slate-900 dark:text-slate-100 bg-white dark:bg-[#152238] border border-slate-200/90 dark:border-slate-700/80 rounded-2xl focus:border-blue-500 focus:outline-hidden transition-all placeholder:text-slate-400 shadow-2xs"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-2.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-0.5 cursor-pointer"
+                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -228,7 +228,7 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
 
             {/* Autocomplete suggestions dropdown */}
             {showSuggestions && searchQuery.trim() && autocompleteSuggestions.length > 0 && (
-              <div className="absolute top-full left-1 right-1 mt-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl overflow-hidden z-30 py-1">
+              <div className="absolute top-full left-1 right-1 mt-1 bg-white dark:bg-[#152238] border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl overflow-hidden z-30 py-1">
                 {autocompleteSuggestions.map((suggestion, idx) => (
                   <button
                     key={idx}
@@ -237,10 +237,10 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
                       setSearchQuery(suggestion);
                       setShowSuggestions(false);
                     }}
-                    className="w-full text-left px-3 py-2 text-xs text-neutral-800 dark:text-neutral-200 hover:bg-amber-50 dark:hover:bg-amber-950/40 flex items-center justify-between cursor-pointer"
+                    className="w-full text-left px-3.5 py-2 text-xs text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80 flex items-center justify-between cursor-pointer"
                   >
                     <span>{suggestion}</span>
-                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">Selecionar</span>
+                    <span className="text-[10px] text-blue-600 dark:text-sky-400 font-semibold">Selecionar</span>
                   </button>
                 ))}
               </div>
@@ -249,9 +249,9 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
         )}
 
         <div className="flex items-center justify-between px-1">
-          <h3 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center gap-1.5">
+          <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
             <span>Contratos Ativos</span>
-            <span className="px-1.5 py-0.5 text-[10px] bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 rounded-md font-bold">
+            <span className="px-1.5 py-0.5 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-md font-bold">
               {sortedList.length}
             </span>
           </h3>
@@ -259,7 +259,7 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
           <div className="flex items-center gap-1">
             <button
               onClick={() => setSortOrder(sortOrder === 'amount-desc' ? 'dueDay-asc' : 'amount-desc')}
-              className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 flex items-center gap-1 px-2 py-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 cursor-pointer"
+              className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 cursor-pointer transition-colors"
               title="Alternar ordenação"
             >
               <ArrowDownUp className="w-3 h-3" />
@@ -269,34 +269,34 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
         </div>
 
         {activeComputedList.length === 0 ? (
-          <div className="p-8 text-center bg-white dark:bg-neutral-900 rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-800 space-y-3">
-            <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
+          <div className="p-8 text-center bg-white dark:bg-[#152238] rounded-3xl border border-dashed border-slate-200 dark:border-slate-700/80 space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/15 text-amber-400 flex items-center justify-center mx-auto">
               <CreditCard className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-sm font-bold text-neutral-800 dark:text-neutral-200">
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
                 Nenhuma parcela ativa em {currentYearMonth}
               </p>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-xs mx-auto mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto mt-1">
                 Todas as parcelas foram finalizadas ou não há contratos ativos nesta competência.
               </p>
             </div>
             <button
               onClick={onOpenAddModal}
-              className="inline-flex items-center gap-1 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer"
+              className="inline-flex items-center gap-1 px-4 py-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded-xl shadow-md shadow-blue-900/20 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Cadastrar Nova Parcela</span>
             </button>
           </div>
         ) : sortedList.length === 0 ? (
-          <div className="p-8 text-center bg-white dark:bg-neutral-900 rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-800 space-y-3">
-            <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
+          <div className="p-8 text-center bg-white dark:bg-[#152238] rounded-3xl border border-dashed border-slate-200 dark:border-slate-700/80 space-y-3">
+            <p className="text-xs font-medium text-slate-600 dark:text-slate-400">
               Nenhuma parcela encontrada para &quot;{searchQuery}&quot;.
             </p>
             <button
               onClick={() => setSearchQuery('')}
-              className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 text-xs font-bold rounded-xl cursor-pointer"
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl cursor-pointer"
             >
               Limpar busca
             </button>
@@ -312,32 +312,32 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
                 key={inst.id}
                 id={`installment-card-${inst.id}`}
                 onClick={() => onEdit(inst)}
-                className={`bg-white dark:bg-neutral-900 rounded-2xl p-3.5 border transition-all shadow-xs cursor-pointer group ${
+                className={`bg-white dark:bg-[#152238] rounded-3xl p-4 border transition-all shadow-xs cursor-pointer group ${
                   isPaid 
-                    ? 'border-emerald-200/90 dark:border-emerald-800/60 bg-emerald-50/20 dark:bg-emerald-950/10 hover:border-emerald-300' 
-                    : 'border-neutral-200 dark:border-neutral-800 hover:border-amber-400 dark:hover:border-amber-600'
+                    ? 'border-blue-500/30 bg-blue-50/15 dark:bg-blue-950/20 hover:border-blue-400' 
+                    : 'border-slate-200/90 dark:border-slate-700/80 hover:border-blue-500/50 dark:hover:border-blue-500/50'
                 }`}
               >
                 {/* Linha 1: Ícone + Título + Tags + Valor + Status Toggle */}
                 <div className="flex items-start justify-between gap-2.5">
-                  <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
                     <div
-                      className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 border mt-0.5 ${
+                      className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border mt-0.5 ${
                         isPaid
-                          ? 'bg-emerald-100/70 dark:bg-emerald-950/80 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
-                          : 'bg-amber-100/70 dark:bg-amber-950/80 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300'
+                          ? 'bg-blue-500/15 border-blue-500/30 text-blue-600 dark:text-sky-400'
+                          : 'bg-amber-500/10 border-slate-200 dark:border-slate-700 text-amber-700 dark:text-amber-300'
                       }`}
                     >
-                      <CreditCard className="w-4 h-4" />
+                      <CreditCard className="w-4.5 h-4.5" />
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span
-                          className={`text-xs font-bold leading-snug break-words group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors ${
+                          className={`text-xs font-bold leading-snug break-words group-hover:text-blue-600 dark:group-hover:text-sky-400 transition-colors ${
                             isPaid 
-                              ? 'line-through text-neutral-400 dark:text-neutral-500' 
-                              : 'text-neutral-900 dark:text-neutral-100'
+                              ? 'line-through text-slate-400 dark:text-slate-500' 
+                              : 'text-slate-900 dark:text-slate-100'
                           }`}
                         >
                           {inst.description}
@@ -346,14 +346,14 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
 
                       {/* Tags: Categoria, Origem e Dia de Vencimento */}
                       <div className="flex items-center gap-1.5 flex-wrap mt-1">
-                        <span className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 text-[10px] font-medium rounded">
+                        <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-semibold rounded-lg">
                           {inst.category}
                         </span>
-                        <span className="px-1.5 py-0.5 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-[10px] font-medium rounded flex items-center gap-1">
+                        <span className="px-2 py-0.5 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[10px] font-semibold rounded-lg flex items-center gap-1">
                           <Landmark className="w-2.5 h-2.5" />
                           {inst.origin}
                         </span>
-                        <span className="px-1.5 py-0.5 bg-neutral-50 dark:bg-neutral-800/80 text-neutral-500 dark:text-neutral-400 text-[10px] font-medium rounded flex items-center gap-1">
+                        <span className="px-2 py-0.5 bg-slate-100/80 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 text-[10px] font-medium rounded-lg flex items-center gap-1">
                           <Calendar className="w-2.5 h-2.5" />
                           Dia {inst.dueDay}
                         </span>
@@ -364,10 +364,10 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
                   {/* Valor Mensal e Status Toggle */}
                   <div className="flex flex-col items-end shrink-0">
                     <span
-                      className={`text-xs font-black ${
+                      className={`text-xs sm:text-sm font-black ${
                         isPaid 
-                          ? 'text-emerald-700 dark:text-emerald-400' 
-                          : 'text-amber-700 dark:text-amber-400'
+                          ? 'text-blue-600 dark:text-sky-400' 
+                          : 'text-slate-900 dark:text-white'
                       }`}
                     >
                       {isBalanceHidden ? '••••••' : formatCurrency(inst.monthlyAmount)}
@@ -377,16 +377,16 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
                         e.stopPropagation();
                         onToggleStatus(inst.id);
                       }}
-                      className={`mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                      className={`mt-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
                         isPaid
-                          ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-200'
-                          : 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-200 hover:bg-amber-200'
+                          ? 'bg-blue-500/15 text-blue-600 dark:text-sky-400 hover:bg-blue-500/25'
+                          : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25'
                       }`}
                       title="Clique para alternar situação"
                     >
                       {isPaid ? (
                         <>
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                          <CheckCircle2 className="w-3 h-3 text-blue-600 dark:text-sky-400" />
                           Paga
                         </>
                       ) : (
@@ -400,33 +400,33 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
                 </div>
 
                 {/* Linha 2: Barra de Progresso e Contador da Parcela */}
-                <div className="mt-3 pt-2.5 border-t border-neutral-100 dark:border-neutral-800">
-                  <div className="flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400 mb-1">
-                    <span className="font-bold text-neutral-800 dark:text-neutral-200">
+                <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-700/60">
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
                       {current} / {total}{' '}
-                      <span className="text-neutral-400 font-normal">
+                      <span className="text-slate-400 font-normal">
                         ({remaining} {remaining === 1 ? 'restante' : 'restantes'})
                       </span>
                     </span>
-                    <span className="font-bold text-amber-700 dark:text-amber-400">
+                    <span className="font-bold text-blue-600 dark:text-sky-400">
                       {progressPercent.toFixed(0)}% pago
                     </span>
                   </div>
 
-                  <div className="w-full bg-neutral-100 dark:bg-neutral-800 h-1.5 rounded-full overflow-hidden">
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-300 ${
-                        progressPercent >= 100 ? 'bg-emerald-500' : 'bg-amber-500'
+                        progressPercent >= 100 ? 'bg-blue-600' : 'bg-[#2563eb]'
                       }`}
                       style={{ width: `${Math.min(100, Math.max(0, progressPercent))}%` }}
                     />
                   </div>
 
                   {/* Linha 3: Subtotais & Ações */}
-                  <div className="flex items-center justify-between mt-2 pt-1">
-                    <div className="text-[10.5px] text-neutral-400 dark:text-neutral-500">
+                  <div className="flex items-center justify-between mt-2.5 pt-1">
+                    <div className="text-[10.5px] text-slate-400 dark:text-slate-500">
                       Saldo restante:{' '}
-                      <strong className="text-neutral-600 dark:text-neutral-300">
+                      <strong className="text-slate-700 dark:text-slate-300 font-bold">
                         {isBalanceHidden ? '•••' : formatCurrency(remainingAmount)}
                       </strong>
                     </div>
@@ -439,7 +439,7 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
                           onEdit(inst);
                         }}
                         title="Editar contrato"
-                        className="p-1 rounded-lg text-neutral-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-xl text-slate-400 hover:text-blue-600 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
@@ -451,7 +451,7 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
                           onDelete(inst.id);
                         }}
                         title="Excluir contrato"
-                        className="p-1 rounded-lg text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

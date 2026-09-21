@@ -130,6 +130,9 @@ export interface User {
   email: string;
   cpf?: string;
   photoUrl?: string;
+  company?: string;
+  department?: string;
+  role?: string;
   authProvider?: 'password' | 'google';
   createdAt: number;
 }
@@ -141,6 +144,9 @@ export interface UserRecord {
   cpf?: string;
   passwordHash: string;
   photoUrl?: string;
+  company?: string;
+  department?: string;
+  role?: string;
   authProvider?: 'password' | 'google';
   createdAt: number;
 }

@@ -549,27 +549,37 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
             exit={{ opacity: 0, y: 100 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
             id="modal-card-export"
-            className="bg-white dark:bg-neutral-900 rounded-t-[28px] w-full shadow-2xl border-t border-neutral-200 dark:border-neutral-800 overflow-hidden flex flex-col max-h-[85%]"
+            className="bg-white dark:bg-[#152238] rounded-t-[32px] sm:rounded-[32px] sm:max-w-lg w-full shadow-2xl border border-slate-200/90 dark:border-slate-700/80 overflow-hidden flex flex-col max-h-[88%] text-slate-900 dark:text-slate-100"
           >
             {/* Mobile Drag Indicator */}
-            <div className="w-10 h-1 bg-neutral-300 dark:bg-neutral-700 rounded-full mx-auto mt-2 shrink-0" />
+            <div className="w-10 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mt-2.5 shrink-0 sm:hidden" />
 
             {/* Header */}
-            <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between shrink-0">
-              <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
-                Backup, Exportação e Dados
-              </h3>
+            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700/60 bg-slate-50/60 dark:bg-[#111c2e]/60 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <FolderDown className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Backup, Exportação e Dados
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Gerencie seus dados e sincronização
+                  </p>
+                </div>
+              </div>
               <button
                 id="btn-close-export-modal"
                 onClick={handleClose}
-                className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-300 transition-colors cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Content */}
-            <div className="p-4 overflow-y-auto space-y-3.5 text-xs flex-1">
+            <div className="p-5 overflow-y-auto space-y-4 text-xs flex-1">
               <AnimatePresence>
                 {feedback && (
                   <motion.div

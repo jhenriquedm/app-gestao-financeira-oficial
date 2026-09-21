@@ -1,113 +1,74 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
   <defs>
-    <!-- Background Gradient: Emerald Luxury Dark -->
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#064e3b"/>
-      <stop offset="50%" stop-color="#047857"/>
-      <stop offset="100%" stop-color="#022c22"/>
-    </linearGradient>
-
-    <!-- Wallet Body Gradient -->
-    <linearGradient id="walletGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+    <!-- Premium Navy Background Gradient -->
+    <linearGradient id="walletBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#1e293b"/>
       <stop offset="50%" stop-color="#0f172a"/>
-      <stop offset="100%" stop-color="#020617"/>
+      <stop offset="100%" stop-color="#0a0f1d"/>
     </linearGradient>
 
-    <!-- Wallet Flap / Front Pocket -->
-    <linearGradient id="flapGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#334155"/>
-      <stop offset="100%" stop-color="#1e293b"/>
+    <!-- Wallet Body Sapphire Gradient -->
+    <linearGradient id="walletBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="50%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
     </linearGradient>
 
-    <!-- Gold Accent Gradient -->
-    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fef08a"/>
-      <stop offset="35%" stop-color="#eab308"/>
-      <stop offset="100%" stop-color="#ca8a04"/>
+    <!-- Wallet Flap Gradient -->
+    <linearGradient id="walletFlapGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#2563eb"/>
     </linearGradient>
 
-    <!-- Credit Card Gradient -->
-    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#10b981"/>
-      <stop offset="100%" stop-color="#047857"/>
+    <!-- Card Top Gradient -->
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#818cf8"/>
     </linearGradient>
 
-    <!-- Secondary Card (Indigo) -->
-    <linearGradient id="cardGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#6366f1"/>
-      <stop offset="100%" stop-color="#4338ca"/>
+    <!-- Metallic Clasp Gold/Silver Accent -->
+    <linearGradient id="claspGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="50%" stop-color="#93c5fd"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
     </linearGradient>
 
-    <!-- Drop Shadows -->
-    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#000000" flood-opacity="0.45"/>
-    </filter>
-    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="20" result="blur"/>
-      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    <!-- Soft Glow Filter -->
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#2563eb" flood-opacity="0.35"/>
     </filter>
   </defs>
 
-  <!-- Squircle Base for App Icon -->
-  <rect width="512" height="512" rx="115" fill="url(#bgGrad)"/>
+  <!-- Squircle Base -->
+  <rect width="512" height="512" rx="120" fill="url(#walletBgGrad)"/>
   
-  <!-- Subtle Inner Border / Glass Highlight -->
-  <rect x="10" y="10" width="492" height="492" rx="106" fill="none" stroke="#34d399" stroke-opacity="0.25" stroke-width="3"/>
-  <circle cx="256" cy="180" r="140" fill="#10b981" opacity="0.15" filter="url(#glow)"/>
+  <!-- Subtle Border Highlight -->
+  <rect x="8" y="8" width="496" height="496" rx="112" fill="none" stroke="#334155" stroke-opacity="0.6" stroke-width="2"/>
+  <rect x="12" y="12" width="488" height="488" rx="108" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="2"/>
 
-  <!-- Back Credit Card (Indigo) -->
-  <g filter="url(#softShadow)" transform="rotate(-6 230 160)">
-    <rect x="130" y="115" width="230" height="135" rx="18" fill="url(#cardGrad2)"/>
-    <rect x="150" y="140" width="45" height="14" rx="5" fill="#ffffff" opacity="0.4"/>
-    <circle cx="325" cy="145" r="12" fill="#ffffff" opacity="0.25"/>
-    <circle cx="340" cy="145" r="12" fill="#ffffff" opacity="0.2"/>
-  </g>
-
-  <!-- Front Credit Card (Emerald) -->
-  <g filter="url(#softShadow)" transform="rotate(5 270 170)">
-    <rect x="155" y="125" width="230" height="135" rx="18" fill="url(#cardGrad)"/>
-    <!-- Card Chip -->
-    <rect x="180" y="155" width="38" height="28" rx="6" fill="url(#goldGrad)"/>
-    <!-- Card Stripes -->
-    <rect x="180" y="210" width="110" height="10" rx="5" fill="#ffffff" opacity="0.35"/>
-    <circle cx="345" cy="205" r="16" fill="url(#goldGrad)" opacity="0.9"/>
-  </g>
-
-  <!-- Gold Coins Peeking Out -->
-  <g filter="url(#softShadow)">
-    <circle cx="150" cy="215" r="32" fill="url(#goldGrad)"/>
-    <circle cx="150" cy="215" r="24" fill="none" stroke="#78350f" stroke-width="2" stroke-opacity="0.4"/>
-    <text x="150" y="223" font-family="Arial, sans-serif" font-weight="900" font-size="22" fill="#78350f" text-anchor="middle">$</text>
-  </g>
-
-  <!-- Main Wallet Body -->
-  <rect x="96" y="210" width="320" height="210" rx="36" fill="url(#walletGrad)" filter="url(#softShadow)"/>
-  <rect x="96" y="210" width="320" height="210" rx="36" fill="none" stroke="#475569" stroke-width="2.5" stroke-opacity="0.6"/>
-
-  <!-- Wallet Seams / Stitching -->
-  <rect x="106" y="220" width="300" height="190" rx="28" fill="none" stroke="#64748b" stroke-width="2" stroke-dasharray="6 6" stroke-opacity="0.45"/>
-
-  <!-- Flap / Pocket Divider Layer -->
-  <path d="M96 295 C180 325 332 325 416 295 L416 400 C416 410 406 420 396 420 L116 420 C106 420 96 410 96 400 Z" fill="url(#flapGrad)"/>
-  <path d="M96 295 C180 325 332 325 416 295" stroke="#475569" stroke-width="2" fill="none"/>
-
-  <!-- Leather Clasp / Buckle -->
-  <g filter="url(#softShadow)">
-    <path d="M320 280 H395 C415 280 415 350 395 350 H320 C312 350 306 344 306 336 V294 C306 286 312 280 320 280 Z" fill="#1e293b"/>
-    <path d="M320 280 H395 C415 280 415 350 395 350 H320 C312 350 306 344 306 336 V294 C306 286 312 280 320 280 Z" fill="none" stroke="#64748b" stroke-width="2"/>
-    <path d="M322 288 H390 C405 288 405 342 390 342 H322" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4" stroke-opacity="0.5"/>
+  <g filter="url(#softGlow)">
+    <!-- Credit Card emerging from wallet -->
+    <rect x="140" y="128" width="232" height="130" rx="20" fill="url(#cardGrad)" transform="rotate(-6 256 193)"/>
+    <rect x="156" y="148" width="44" height="32" rx="8" fill="#ffffff" fill-opacity="0.3" transform="rotate(-6 256 193)"/>
     
-    <!-- Golden Snap Button / Emblem -->
-    <circle cx="380" cy="315" r="16" fill="url(#goldGrad)" filter="url(#softShadow)"/>
-    <circle cx="380" cy="315" r="12" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.6"/>
-    <circle cx="380" cy="315" r="5" fill="#78350f" opacity="0.6"/>
-  </g>
+    <!-- Main Wallet Body -->
+    <rect x="96" y="180" width="320" height="230" rx="36" fill="url(#walletBodyGrad)"/>
+    
+    <!-- Inner Top Fold Shade -->
+    <path d="M96 216 C96 196.1 112.1 180 132 180 L380 180 C399.9 180 416 196.1 416 216 L416 240 L96 240 Z" fill="#1e3a8a" fill-opacity="0.4"/>
 
-  <!-- Dynamic Financial Growth Badge (Top Right) -->
-  <g filter="url(#softShadow)">
-    <circle cx="395" cy="110" r="45" fill="url(#goldGrad)"/>
-    <circle cx="395" cy="110" r="41" fill="none" stroke="#ffffff" stroke-width="2" stroke-opacity="0.6"/>
-    <path d="M380 125 L410 95 M410 95 H390 M410 95 V115" stroke="#78350f" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Subtle Wallet Rim Light -->
+    <rect x="98" y="182" width="316" height="226" rx="34" fill="none" stroke="#60a5fa" stroke-width="2.5" stroke-opacity="0.5"/>
+
+    <!-- Horizontal Stitching line -->
+    <line x1="120" y1="204" x2="392" y2="204" stroke="#93c5fd" stroke-width="2" stroke-dasharray="6 6" stroke-opacity="0.5"/>
+
+    <!-- Wallet Clasp / Flap -->
+    <path d="M280 255 L396 255 C410 255 420 266 420 280 L420 310 C420 324 410 335 396 335 L280 335 C270 335 262 327 262 317 L262 273 C262 263 270 255 280 255 Z" fill="url(#walletFlapGrad)"/>
+    <path d="M280 255 L396 255 C410 255 420 266 420 280 L420 310 C420 324 410 335 396 335 L280 335 C270 335 262 327 262 317 L262 273 C262 263 270 255 280 255 Z" fill="none" stroke="#93c5fd" stroke-width="2" stroke-opacity="0.6"/>
+
+    <!-- Metallic Lock / Sensor Button -->
+    <circle cx="310" cy="295" r="15" fill="url(#claspGrad)"/>
+    <circle cx="310" cy="295" r="6" fill="#1e3a8a"/>
   </g>
 </svg>

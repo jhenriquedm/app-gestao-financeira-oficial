@@ -299,40 +299,42 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm">
       <div 
         id="category-manager-modal" 
-        className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+        className="bg-[#152238] dark:bg-[#0f172a] border border-slate-700/80 rounded-3xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-white"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3.5 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/80">
-          <div className="flex items-center gap-2">
-            <Tag className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700/60 bg-[#111c2e]/70">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-slate-800 text-sky-400 flex items-center justify-center shrink-0">
+              <Tag className="w-4 h-4" />
+            </div>
             <div>
-              <h3 className="text-sm sm:text-base font-bold text-neutral-900 dark:text-white">
+              <h3 className="text-sm sm:text-base font-bold text-white">
                 Gerenciar Categorias
               </h3>
-              <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+              <p className="text-[11px] text-slate-400">
                 Organizadas em ordem alfabética • Crie, edite e personalize
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-full transition-colors cursor-pointer"
+            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tab Selection */}
-        <div className="flex border-b border-neutral-200 dark:border-neutral-800 px-4 pt-2 gap-2 bg-neutral-100/50 dark:bg-neutral-950/40">
+        <div className="flex border-b border-slate-700/60 px-4 pt-2.5 gap-2 bg-[#0e1726]/60">
           <button
             onClick={() => { setActiveTab('fixed'); setIsAdding(false); setEditingId(null); }}
-            className={`flex items-center gap-1.5 pb-2.5 px-3 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
+            className={`flex items-center gap-1.5 pb-2.5 px-3 text-xs font-bold border-b-2 transition-all cursor-pointer ${
               activeTab === 'fixed'
-                ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 dark:border-emerald-400'
-                : 'border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
+                ? 'border-sky-400 text-sky-400 font-bold'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
@@ -341,10 +343,10 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 
           <button
             onClick={() => { setActiveTab('parcelas'); setIsAdding(false); setEditingId(null); }}
-            className={`flex items-center gap-1.5 pb-2.5 px-3 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
+            className={`flex items-center gap-1.5 pb-2.5 px-3 text-xs font-bold border-b-2 transition-all cursor-pointer ${
               activeTab === 'parcelas'
-                ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 dark:border-emerald-400'
-                : 'border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
+                ? 'border-sky-400 text-sky-400 font-bold'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             <CreditCard className="w-3.5 h-3.5" />
@@ -353,10 +355,10 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 
           <button
             onClick={() => { setActiveTab('income'); setIsAdding(false); setEditingId(null); }}
-            className={`flex items-center gap-1.5 pb-2.5 px-3 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
+            className={`flex items-center gap-1.5 pb-2.5 px-3 text-xs font-bold border-b-2 transition-all cursor-pointer ${
               activeTab === 'income'
-                ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 dark:border-emerald-400'
-                : 'border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
+                ? 'border-sky-400 text-sky-400 font-bold'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             <TrendingUp className="w-3.5 h-3.5" />
@@ -370,9 +372,9 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
           {successFeedback && (
             <div
               id="category-modal-success-feedback"
-              className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700/60 text-emerald-800 dark:text-emerald-200 text-xs font-semibold flex items-center gap-2 shadow-xs animate-in fade-in duration-200"
+              className="p-3 rounded-2xl bg-sky-950/60 border border-sky-700/60 text-sky-200 text-xs font-semibold flex items-center gap-2 shadow-xs animate-in fade-in duration-200"
             >
-              <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <Check className="w-4 h-4 text-sky-400 shrink-0" />
               <span>{successFeedback}</span>
             </div>
           )}
@@ -381,28 +383,28 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
           {!isAdding ? (
             <button
               onClick={handleStartAdd}
-              className="w-full flex items-center justify-center gap-2 py-2 px-3 border-2 border-dashed border-emerald-500/40 hover:border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 border-2 border-dashed border-slate-600 hover:border-sky-400 bg-white/10 hover:bg-white/15 text-slate-100 hover:text-white rounded-2xl text-xs font-bold transition-all cursor-pointer hover:scale-[1.01]"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>Nova Categoria de {activeTab === 'fixed' ? 'Despesa' : activeTab === 'parcelas' ? 'Parcela' : 'Receita'}</span>
             </button>
           ) : (
-            <form onSubmit={handleSaveNew} className="p-3.5 rounded-xl border border-emerald-300 dark:border-emerald-700/60 bg-emerald-50/50 dark:bg-emerald-950/30 space-y-3">
+            <form onSubmit={handleSaveNew} className="p-4 rounded-2xl border border-slate-200/90 bg-white dark:bg-white text-slate-800 space-y-3 shadow-md">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                <span className="text-xs font-bold text-slate-900">
                   Criar Nova Categoria
                 </span>
                 <button
                   type="button"
                   onClick={() => setIsAdding(false)}
-                  className="text-neutral-400 hover:text-neutral-700 dark:hover:text-white"
+                  className="text-slate-400 hover:text-slate-700 p-1 rounded-lg"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
               {addError && (
-                <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-[11px] font-medium flex items-center gap-1.5">
+                <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-medium flex items-center gap-1.5">
                   <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                   <span>{addError}</span>
                 </div>
@@ -410,11 +412,11 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300">
+                  <label className="text-[11px] font-bold text-slate-700">
                     Nome da Categoria *
                   </label>
                   <span className={`text-[10px] font-medium ${
-                    newName.length >= MAX_CATEGORY_NAME_LENGTH ? 'text-rose-500 font-bold' : 'text-neutral-400'
+                    newName.length >= MAX_CATEGORY_NAME_LENGTH ? 'text-rose-500 font-bold' : 'text-slate-500'
                   }`}>
                     {newName.length}/{MAX_CATEGORY_NAME_LENGTH}
                   </span>
@@ -429,10 +431,10 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                     setNewName(sanitizeNameInput(e.target.value));
                     setAddError('');
                   }}
-                  className="w-full px-3 py-1.5 text-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-300 dark:border-neutral-700 rounded-lg focus:outline-hidden"
+                  className="w-full px-3 py-2 text-xs bg-slate-50 text-slate-900 border border-slate-300 rounded-xl focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 placeholder:text-slate-400 transition-colors"
                   autoFocus
                 />
-                <p className="text-[10px] text-neutral-400 mt-1">
+                <p className="text-[10px] text-slate-500 mt-1">
                   Máximo de 25 caracteres. Apenas letras, números e espaços (sem caracteres especiais).
                 </p>
               </div>
@@ -440,7 +442,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
               {activeTab !== 'parcelas' && (
                 <>
                   <div>
-                    <label className="block text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
                       Cor Identificadora
                     </label>
                     <div className="flex flex-wrap gap-1.5">
@@ -449,7 +451,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                           key={c}
                           type="button"
                           onClick={() => setNewColor(c)}
-                          className={`w-6 h-6 rounded-full transition-transform cursor-pointer ${newColor === c ? 'scale-110 ring-2 ring-emerald-500 ring-offset-1' : 'opacity-80 hover:opacity-100'}`}
+                          className={`w-6 h-6 rounded-full transition-transform cursor-pointer ${newColor === c ? 'scale-110 ring-2 ring-blue-500 ring-offset-1 ring-offset-white' : 'opacity-80 hover:opacity-100'}`}
                           style={{ backgroundColor: c }}
                         />
                       ))}
@@ -457,16 +459,16 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
                       Ícone
                     </label>
-                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1 bg-white/60 dark:bg-neutral-900/60 rounded-lg border border-neutral-200 dark:border-neutral-800">
+                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1.5 bg-slate-50 rounded-xl border border-slate-200">
                       {PRESET_ICONS.map((icon) => (
                         <button
                           key={icon}
                           type="button"
                           onClick={() => setNewIcon(icon)}
-                          className={`p-1.5 rounded-md transition-colors cursor-pointer ${newIcon === icon ? 'bg-emerald-600 text-white' : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800'}`}
+                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${newIcon === icon ? 'bg-[#2563eb] text-white shadow-xs' : 'text-slate-600 hover:bg-slate-200'}`}
                         >
                           <CategoryIcon name={icon} className="w-4 h-4" />
                         </button>
@@ -480,13 +482,13 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsAdding(false)}
-                  className="px-3 py-1 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white cursor-pointer"
+                  className="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-3 py-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors cursor-pointer"
+                  className="px-4 py-1.5 text-xs font-bold bg-[#2563eb] hover:bg-[#1d4ed8] text-white rounded-xl transition-all cursor-pointer shadow-sm shadow-blue-900/20"
                 >
                   Salvar
                 </button>
@@ -498,12 +500,12 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
           <div className="space-y-2">
             {activeTab === 'parcelas' ? (
               sortedParcelCategories.length === 0 ? (
-                <div className="text-center py-6 px-4 bg-neutral-50/50 dark:bg-neutral-800/30 rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-500">
-                  <CreditCard className="w-7 h-7 mx-auto text-neutral-400 mb-2 opacity-60" />
-                  <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                <div className="text-center py-8 px-4 bg-white dark:bg-white rounded-2xl border border-dashed border-slate-300 text-slate-600 shadow-sm">
+                  <CreditCard className="w-8 h-8 mx-auto text-slate-400 mb-2 opacity-80" />
+                  <p className="text-xs font-bold text-slate-800">
                     Nenhuma categoria de parcelas
                   </p>
-                  <p className="text-[11px] text-neutral-400 mt-0.5">
+                  <p className="text-[11px] text-slate-500 mt-0.5">
                     Clique em "+ Nova Categoria" acima para criar.
                   </p>
                 </div>
@@ -516,7 +518,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                   return (
                     <div
                       key={name}
-                      className="flex items-center justify-between p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-800/40 hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60 transition-colors"
+                      className="flex items-center justify-between p-3 rounded-2xl border border-slate-200/90 bg-white dark:bg-white shadow-2xs hover:border-blue-300 hover:shadow-xs transition-all"
                     >
                       {isEditing ? (
                         <div className="flex flex-col gap-1.5 flex-1 mr-2">
@@ -529,22 +531,22 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                                 setEditParcelInput(sanitizeNameInput(e.target.value));
                                 setEditParcelError('');
                               }}
-                              className="flex-1 px-2.5 py-1 text-xs bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white border border-emerald-500 rounded-lg focus:outline-hidden"
+                              className="flex-1 px-3 py-1 text-xs bg-slate-50 text-slate-900 border border-blue-500 rounded-xl focus:outline-hidden"
                               autoFocus
                             />
-                            <span className="text-[10px] text-neutral-400 font-medium">
+                            <span className="text-[10px] text-slate-500 font-medium">
                               {editParcelInput.length}/{MAX_CATEGORY_NAME_LENGTH}
                             </span>
                             <button
                               onClick={() => handleSaveEditParcel(name)}
-                              className="p-1 bg-emerald-600 text-white rounded-md cursor-pointer hover:bg-emerald-700"
+                              className="p-1.5 bg-[#2563eb] hover:bg-[#1d4ed8] text-white rounded-lg cursor-pointer"
                               title="Salvar alteração"
                             >
                               <Check className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => setEditingParcelName(null)}
-                              className="p-1 text-neutral-500 hover:text-neutral-700 dark:hover:text-white cursor-pointer"
+                              className="p-1.5 text-slate-400 hover:text-slate-700 cursor-pointer"
                               title="Cancelar"
                             >
                               <X className="w-3.5 h-3.5" />
@@ -558,16 +560,16 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                         </div>
                       ) : (
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                            <CreditCard className="w-3.5 h-3.5" />
+                          <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100">
+                            <CreditCard className="w-4 h-4" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 truncate">
+                              <span className="text-xs font-bold text-slate-800 truncate">
                                 {name}
                               </span>
                               {isLinked && (
-                                <span className="inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.2 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60">
+                                <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
                                   <Lock className="w-2.5 h-2.5" /> {usage.total} registro(s)
                                 </span>
                               )}
@@ -581,7 +583,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                           <button
                             onClick={() => handleStartEditParcel(name)}
                             title="Editar categoria"
-                            className="p-1.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
@@ -590,8 +592,8 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                             title={isLinked ? `Bloqueada: vinculada a ${usage.detailsText}` : "Excluir categoria"}
                             className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                               isLinked 
-                                ? 'text-neutral-300 dark:text-neutral-600 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30' 
-                                : 'text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30'
+                                ? 'text-slate-400 hover:text-amber-600 hover:bg-amber-50' 
+                                : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'
                             }`}
                           >
                             {isLinked ? <Lock className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
@@ -603,12 +605,12 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                 })
               )
             ) : (activeTab === 'fixed' ? sortedExpenseCategories : sortedIncomeCategories).length === 0 ? (
-              <div className="text-center py-6 px-4 bg-neutral-50/50 dark:bg-neutral-800/30 rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-500">
-                <Tag className="w-7 h-7 mx-auto text-neutral-400 mb-2 opacity-60" />
-                <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+              <div className="text-center py-8 px-4 bg-white dark:bg-white rounded-2xl border border-dashed border-slate-300 text-slate-600 shadow-sm">
+                <Tag className="w-8 h-8 mx-auto text-slate-400 mb-2 opacity-80" />
+                <p className="text-xs font-bold text-slate-800">
                   Nenhuma categoria de {activeTab === 'fixed' ? 'despesa' : 'receita'}
                 </p>
-                <p className="text-[11px] text-neutral-400 mt-0.5">
+                <p className="text-[11px] text-slate-500 mt-0.5">
                   Clique em "+ Nova Categoria" acima para criar.
                 </p>
               </div>
@@ -621,10 +623,10 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                 return (
                   <div
                     key={cat.id}
-                    className="p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-800/40 hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60 transition-colors"
+                    className="p-3 rounded-2xl border border-slate-200/90 bg-white dark:bg-white shadow-2xs hover:border-blue-300 hover:shadow-xs transition-all"
                   >
                     {isEditing ? (
-                      <div className="space-y-2.5">
+                      <div className="space-y-3">
                         <div className="flex items-center gap-2">
                           <input
                             type="text"
@@ -634,22 +636,22 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                               setEditName(sanitizeNameInput(e.target.value));
                               setEditError('');
                             }}
-                            className="flex-1 px-2.5 py-1 text-xs bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white border border-emerald-500 rounded-lg focus:outline-hidden"
+                            className="flex-1 px-3 py-1 text-xs bg-slate-50 text-slate-900 border border-blue-500 rounded-xl focus:outline-hidden"
                             autoFocus
                           />
-                          <span className="text-[10px] text-neutral-400 font-medium">
+                          <span className="text-[10px] text-slate-500 font-medium">
                             {editName.length}/{MAX_CATEGORY_NAME_LENGTH}
                           </span>
                           <button
                             onClick={() => handleSaveEdit(cat.id)}
-                            className="px-2 py-1 bg-emerald-600 text-white rounded-md text-xs font-semibold cursor-pointer hover:bg-emerald-700 flex items-center gap-1"
+                            className="px-2.5 py-1 bg-[#2563eb] hover:bg-[#1d4ed8] text-white rounded-lg text-xs font-bold cursor-pointer flex items-center gap-1 shadow-xs"
                           >
                             <Check className="w-3.5 h-3.5" />
                             <span>Salvar</span>
                           </button>
                           <button
                             onClick={() => setEditingId(null)}
-                            className="p-1 text-neutral-500 hover:text-neutral-700 dark:hover:text-white cursor-pointer"
+                            className="p-1 text-slate-400 hover:text-slate-700 cursor-pointer"
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -668,20 +670,20 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                               key={c}
                               type="button"
                               onClick={() => setEditColor(c)}
-                              className={`w-5 h-5 rounded-full transition-transform cursor-pointer ${editColor === c ? 'scale-110 ring-2 ring-emerald-500 ring-offset-1' : 'opacity-80'}`}
+                              className={`w-5 h-5 rounded-full transition-transform cursor-pointer ${editColor === c ? 'scale-110 ring-2 ring-blue-500 ring-offset-1 ring-offset-white' : 'opacity-80'}`}
                               style={{ backgroundColor: c }}
                             />
                           ))}
                         </div>
 
                         {/* Icon Selector */}
-                        <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto p-1 bg-white/60 dark:bg-neutral-900/60 rounded-lg border border-neutral-200 dark:border-neutral-800">
+                        <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto p-1.5 bg-slate-50 rounded-xl border border-slate-200">
                           {PRESET_ICONS.map((icon) => (
                             <button
                               key={icon}
                               type="button"
                               onClick={() => setEditIcon(icon)}
-                              className={`p-1 rounded-md transition-colors cursor-pointer ${editIcon === icon ? 'bg-emerald-600 text-white' : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800'}`}
+                              className={`p-1 rounded-lg transition-colors cursor-pointer ${editIcon === icon ? 'bg-[#2563eb] text-white' : 'text-slate-600 hover:bg-slate-200'}`}
                             >
                               <CategoryIcon name={icon} className="w-3.5 h-3.5" />
                             </button>
@@ -692,21 +694,21 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <div
-                            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-2xs"
                             style={{
-                              backgroundColor: `${cat.color}22`,
+                              backgroundColor: `${cat.color}20`,
                               color: cat.color,
                             }}
                           >
-                            <CategoryIcon name={cat.iconName} className="w-3.5 h-3.5" />
+                            <CategoryIcon name={cat.iconName} className="w-4 h-4" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 truncate">
+                              <span className="text-xs font-bold text-slate-800 truncate">
                                 {cat.name}
                               </span>
                               {isLinked && (
-                                <span className="inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.2 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60">
+                                <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
                                   <Lock className="w-2.5 h-2.5" /> {usage.total} registro(s)
                                 </span>
                               )}
@@ -718,7 +720,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                           <button
                             onClick={() => handleStartEdit(cat)}
                             title="Editar categoria"
-                            className="p-1.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
@@ -727,8 +729,8 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                             title={isLinked ? `Bloqueada: vinculada a ${usage.detailsText}` : "Excluir categoria"}
                             className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                               isLinked 
-                                ? 'text-neutral-300 dark:text-neutral-600 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30' 
-                                : 'text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30'
+                                ? 'text-slate-400 hover:text-amber-600 hover:bg-amber-50' 
+                                : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'
                             }`}
                           >
                             {isLinked ? <Lock className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
@@ -745,21 +747,21 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 
         {/* Blocked Deletion Notice Modal */}
         {blockedDeleteMessage && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
-            <div className="bg-white dark:bg-neutral-900 border border-amber-300 dark:border-amber-700 rounded-2xl w-full max-w-sm p-4 shadow-2xl space-y-3">
-              <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <div className="bg-[#152238] border border-amber-700/80 rounded-3xl w-full max-w-sm p-5 shadow-2xl space-y-3 text-white">
+              <div className="flex items-center gap-2 text-amber-400">
                 <Lock className="w-5 h-5 shrink-0" />
-                <h4 className="text-sm font-bold text-neutral-900 dark:text-white">
+                <h4 className="text-sm font-bold text-white">
                   Exclusão Bloqueada
                 </h4>
               </div>
-              <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">
+              <p className="text-xs text-slate-300 leading-relaxed">
                 {blockedDeleteMessage}
               </p>
               <div className="flex justify-end pt-1">
                 <button
                   onClick={() => setBlockedDeleteMessage(null)}
-                  className="px-4 py-1.5 text-xs font-semibold bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-xl transition-colors cursor-pointer"
+                  className="px-4 py-2 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition-colors cursor-pointer"
                 >
                   Entendido
                 </button>
@@ -770,24 +772,24 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 
         {/* Delete Confirmation Modal (only for unlinked categories) */}
         {confirmDeleteTarget && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
-            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl w-full max-w-sm p-4 shadow-2xl space-y-3">
-              <h4 className="text-sm font-bold text-neutral-900 dark:text-white">
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <div className="bg-[#152238] border border-slate-700/80 rounded-3xl w-full max-w-sm p-5 shadow-2xl space-y-3 text-white">
+              <h4 className="text-sm font-bold text-white">
                 Excluir Categoria?
               </h4>
-              <p className="text-xs text-neutral-600 dark:text-neutral-400">
+              <p className="text-xs text-slate-300">
                 Deseja realmente excluir a categoria <strong>"{confirmDeleteTarget.title}"</strong>?
               </p>
               <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   onClick={() => setConfirmDeleteTarget(null)}
-                  className="px-3 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white cursor-pointer"
+                  className="px-3.5 py-2 text-xs font-semibold text-slate-400 hover:text-white cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={confirmDelete}
-                  className="px-3.5 py-1.5 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-xl cursor-pointer"
+                  className="px-4 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl cursor-pointer shadow-sm shadow-rose-900/30"
                 >
                   Sim, Excluir
                 </button>
