@@ -4,6 +4,7 @@ import {
   formatDate, 
   formatMonthYear, 
   formatMonthYearShort,
+  formatMonthYearSlash,
   getCurrentYearMonth 
 } from '../utils/formatters';
 
@@ -40,6 +41,13 @@ describe('formatters utilities', () => {
     it('formats YYYY-MM to short month and year format', () => {
       expect(formatMonthYearShort('2026-09')).toBe('Set/26');
       expect(formatMonthYearShort('2027-12')).toBe('Dez/27');
+    });
+
+    it('formats YYYY-MM to full month slash year format (e.g. Agosto/2026)', () => {
+      expect(formatMonthYearSlash('2026-08')).toBe('Agosto/2026');
+      expect(formatMonthYearSlash('2026-09')).toBe('Setembro/2026');
+      expect(formatMonthYearSlash('2026-10')).toBe('Outubro/2026');
+      expect(formatMonthYearSlash('2027-01')).toBe('Janeiro/2027');
     });
   });
 

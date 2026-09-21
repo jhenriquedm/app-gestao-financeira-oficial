@@ -42,6 +42,13 @@ export const formatMonthYearShort = (yearMonthStr: string): string => {
   return `${shortNames[monthIdx] || month}/${year.slice(2)}`;
 };
 
+export const formatMonthYearSlash = (yearMonthStr: string): string => {
+  if (!yearMonthStr) return '';
+  const [year, month] = yearMonthStr.split('-');
+  const monthIdx = parseInt(month, 10) - 1;
+  return `${MONTH_NAMES[monthIdx] || month}/${year}`;
+};
+
 export const formatMonthYearUppercase = (yearMonthStr: string): string => {
   if (!yearMonthStr) return '';
   const [year, month] = yearMonthStr.split('-');

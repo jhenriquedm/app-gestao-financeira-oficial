@@ -13,7 +13,7 @@ import {
   X
 } from 'lucide-react';
 import { DebtInstallment, TransactionStatus } from '../types';
-import { formatCurrency, formatMonthYearUppercase } from '../utils/formatters';
+import { formatCurrency, formatMonthYearUppercase, formatMonthYearSlash } from '../utils/formatters';
 import { getComputedInstallment, ComputedInstallment } from '../utils/installmentHelpers';
 
 interface InstallmentsSectionProps {
@@ -275,7 +275,7 @@ export const InstallmentsSection: React.FC<InstallmentsSectionProps> = ({
             </div>
             <div>
               <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                Nenhuma parcela ativa em {currentYearMonth}
+                Nenhuma parcela ativa em {formatMonthYearSlash(currentYearMonth)}
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto mt-1">
                 Todas as parcelas foram finalizadas ou não há contratos ativos nesta competência.

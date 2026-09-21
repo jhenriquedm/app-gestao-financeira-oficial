@@ -14,7 +14,7 @@ import {
   X
 } from 'lucide-react';
 import { Transaction, Category } from '../types';
-import { formatCurrency } from '../utils/formatters';
+import { formatCurrency, formatMonthYearSlash } from '../utils/formatters';
 import { CategoryIcon } from './CategoryIcon';
 
 interface FixedExpensesSectionProps {
@@ -268,7 +268,7 @@ export const FixedExpensesSection: React.FC<FixedExpensesSectionProps> = ({
             </div>
             <div>
               <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                Nenhuma despesa fixa em {currentYearMonth}
+                Nenhuma despesa fixa em {formatMonthYearSlash(currentYearMonth)}
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto mt-1">
                 Cadastre o aluguel, condomínio, luz, internet, feira e assinaturas para manter o controle mensal.
