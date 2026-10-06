@@ -174,20 +174,29 @@ export const InstallmentModal: React.FC<InstallmentModalProps> = ({
     }
 
     // Protection against duplicate records
-    const isDuplicate = (!initialData && existingInstallments && existingInstallments.some((inst) => {
-      const sameDesc = inst.description.trim().toLowerCase() === cleanDesc.toLowerCase();
-      const sameOrigin = inst.origin.trim().toLowerCase() === cleanOrigin.toLowerCase();
-      const sameAmount = Math.abs(inst.monthlyAmount - parsedAmount) < 0.01;
-      const sameInstallment = inst.currentInstallment === parsedCurrent && inst.totalInstallments === parsedTotal;
-      return sameDesc && (sameOrigin || sameAmount || sameInstallment);
-    })) || (
-      lastSaved &&
-      lastSaved.description.toLowerCase() === cleanDesc.toLowerCase() &&
-      lastSaved.origin.toLowerCase() === cleanOrigin.toLowerCase() &&
-      lastSaved.monthlyAmount === parsedAmount &&
-      lastSaved.currentInstallment === parsedCurrent &&
-      lastSaved.totalInstallments === parsedTotal
-    );
+    const isDuplicate = initialData
+      ? (existingInstallments && existingInstallments.some((inst) => {
+          if (inst.id === initialData.id) return false;
+          const sameDesc = inst.description.trim().toLowerCase() === cleanDesc.toLowerCase();
+          const sameOrigin = inst.origin.trim().toLowerCase() === cleanOrigin.toLowerCase();
+          const sameAmount = Math.abs(inst.monthlyAmount - parsedAmount) < 0.01;
+          const sameInstallment = inst.currentInstallment === parsedCurrent && inst.totalInstallments === parsedTotal;
+          return sameDesc && sameOrigin && sameAmount && sameInstallment;
+        }))
+      : ((existingInstallments && existingInstallments.some((inst) => {
+          const sameDesc = inst.description.trim().toLowerCase() === cleanDesc.toLowerCase();
+          const sameOrigin = inst.origin.trim().toLowerCase() === cleanOrigin.toLowerCase();
+          const sameAmount = Math.abs(inst.monthlyAmount - parsedAmount) < 0.01;
+          const sameInstallment = inst.currentInstallment === parsedCurrent && inst.totalInstallments === parsedTotal;
+          return sameDesc && sameOrigin && sameAmount && sameInstallment;
+        })) || (
+          lastSaved &&
+          lastSaved.description.toLowerCase() === cleanDesc.toLowerCase() &&
+          lastSaved.origin.toLowerCase() === cleanOrigin.toLowerCase() &&
+          lastSaved.monthlyAmount === parsedAmount &&
+          lastSaved.currentInstallment === parsedCurrent &&
+          lastSaved.totalInstallments === parsedTotal
+        ));
 
     if (isDuplicate) {
       triggerError('Este registro já existe no sistema.');

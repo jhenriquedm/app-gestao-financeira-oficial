@@ -192,8 +192,16 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 
     const trimmed = newName.trim();
     if (activeTab === 'parcelas') {
+      if (parcelCategories.some((p) => p.trim().toLowerCase() === trimmed.toLowerCase())) {
+        setAddError('Esta categoria de parcelas já existe.');
+        return;
+      }
       onAddParcelCategory(trimmed);
     } else {
+      if (categories.some((c) => c.type === (activeTab === 'income' ? 'income' : 'expense') && c.name.trim().toLowerCase() === trimmed.toLowerCase())) {
+        setAddError('Esta categoria já existe.');
+        return;
+      }
       onAddCategory({
         name: trimmed,
         type: activeTab === 'income' ? 'income' : 'expense',
@@ -227,8 +235,15 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
       return;
     }
 
+    const trimmed = editName.trim();
+    const currentCat = categories.find((c) => c.id === id);
+    if (currentCat && categories.some((c) => c.id !== id && c.type === currentCat.type && c.name.trim().toLowerCase() === trimmed.toLowerCase())) {
+      setEditError('Já existe outra categoria com este nome.');
+      return;
+    }
+
     onEditCategory(id, {
-      name: editName.trim(),
+      name: trimmed,
       color: editColor,
       iconName: editIcon,
     });
@@ -252,7 +267,13 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
       return;
     }
 
-    onEditParcelCategory(oldName, editParcelInput.trim());
+    const trimmed = editParcelInput.trim();
+    if (trimmed.toLowerCase() !== oldName.toLowerCase() && parcelCategories.some((p) => p.trim().toLowerCase() === trimmed.toLowerCase())) {
+      setEditParcelError('Já existe outra categoria com este nome.');
+      return;
+    }
+
+    onEditParcelCategory(oldName, trimmed);
     setEditingParcelName(null);
     setEditParcelError('');
     triggerSuccess('Registro salvo com sucesso');

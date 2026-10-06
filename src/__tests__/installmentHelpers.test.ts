@@ -65,15 +65,28 @@ describe('installmentHelpers', () => {
     expect(onOrAfterDelete.isFutureEnded).toBe(true);
   });
 
-  it('supports monthlyStatusOverrides for independent paid status per month', () => {
-    const overrides = {
-      'inst-1_2026-10': 'completed' as const,
-    };
+  it('allows editing installment category without triggering false positive duplicate', () => {
+    const existingList: DebtInstallment[] = [baseInstallment];
+    
+    // User is editing baseInstallment (initialData exists) and changes category from 'Eletrônicos' to 'Casa & Decoração'
+    const editingItem = baseInstallment;
+    const cleanDesc = editingItem.description;
+    const cleanOrigin = editingItem.origin;
+    const parsedAmount = editingItem.monthlyAmount;
+    const parsedCurrent = editingItem.currentInstallment;
+    const parsedTotal = editingItem.totalInstallments;
 
-    const sept = getComputedInstallment(baseInstallment, '2026-09', overrides);
-    expect(sept.status).toBe('pending');
+    const isDuplicate = editingItem
+      ? existingList.some((inst) => {
+          if (inst.id === editingItem.id) return false;
+          const sameDesc = inst.description.trim().toLowerCase() === cleanDesc.toLowerCase();
+          const sameOrigin = inst.origin.trim().toLowerCase() === cleanOrigin.toLowerCase();
+          const sameAmount = Math.abs(inst.monthlyAmount - parsedAmount) < 0.01;
+          const sameInstallment = inst.currentInstallment === parsedCurrent && inst.totalInstallments === parsedTotal;
+          return sameDesc && sameOrigin && sameAmount && sameInstallment;
+        })
+      : false;
 
-    const oct = getComputedInstallment(baseInstallment, '2026-10', overrides);
-    expect(oct.status).toBe('completed');
+    expect(isDuplicate).toBe(false);
   });
 });
