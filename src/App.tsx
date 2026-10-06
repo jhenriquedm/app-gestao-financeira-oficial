@@ -478,17 +478,33 @@ export const App: React.FC = () => {
     txData: Omit<Transaction, 'id' | 'createdAt'>,
     existingId?: string
   ) => {
+    const now = Date.now();
     if (existingId) {
       setTransactions((prev) =>
-        prev.map((t) => (t.id === existingId ? { ...t, ...txData } : t))
+        prev.map((t) => {
+          if (t.id === existingId) {
+            const updated: Transaction = {
+              ...t,
+              ...txData,
+              syncStatus: 'pendingUpload',
+              updatedAt: now,
+            };
+            if (currentUser) dbOperations.saveTransaction(updated, currentUser.id).catch(console.error);
+            return updated;
+          }
+          return t;
+        })
       );
     } else {
       const newTx: Transaction = {
         ...txData,
         id: `tx-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         startMonthYear: txData.isFixed ? (txData.startMonthYear || currentYearMonth) : undefined,
-        createdAt: Date.now(),
+        createdAt: now,
+        updatedAt: now,
+        syncStatus: 'pendingUpload',
       };
+      if (currentUser) dbOperations.saveTransaction(newTx, currentUser.id).catch(console.error);
       setTransactions((prev) => [newTx, ...prev]);
     }
   };
@@ -599,6 +615,7 @@ export const App: React.FC = () => {
   };
 
   const handleToggleStatus = (id: string) => {
+    const now = Date.now();
     setTransactions((prev) =>
       prev.map((t) => {
         if (t.id !== id) return t;
@@ -613,19 +630,24 @@ export const App: React.FC = () => {
           ? Array.from(new Set([...(t.paidMonths || []), currentYearMonth]))
           : (t.paidMonths || []).filter((m) => m !== currentYearMonth);
 
-        return {
+        const updated: Transaction = {
           ...t,
           status: currentYearMonth === (t.startMonthYear || t.date.slice(0, 7)) ? newStatus : t.status,
           paidMonths: updatedPaidMonths,
+          syncStatus: 'pendingUpload',
+          updatedAt: now,
         };
+        if (currentUser) dbOperations.saveTransaction(updated, currentUser.id).catch(console.error);
+        return updated;
       })
     );
   };
 
   // Fixed Expenses bulk toggles
   const handleMarkAllFixedPaid = () => {
-    setTransactions((prev) =>
-      prev.map((t) => {
+    const now = Date.now();
+    setTransactions((prev) => {
+      const updatedList = prev.map((t) => {
         if (!t.isFixed || (t.deletedFromMonthYear && currentYearMonth >= t.deletedFromMonthYear)) return t;
         const baseMonth = t.startMonthYear || t.date.slice(0, 7);
         if (currentYearMonth < baseMonth) return t;
@@ -633,23 +655,32 @@ export const App: React.FC = () => {
           ...t,
           status: currentYearMonth === baseMonth ? 'completed' : t.status,
           paidMonths: Array.from(new Set([...(t.paidMonths || []), currentYearMonth])),
+          syncStatus: 'pendingUpload' as const,
+          updatedAt: now,
         };
-      })
-    );
+      });
+      if (currentUser) dbOperations.saveTransactions(updatedList, currentUser.id).catch(console.error);
+      return updatedList;
+    });
   };
 
   const handleMarkAllFixedPending = () => {
-    setTransactions((prev) =>
-      prev.map((t) => {
+    const now = Date.now();
+    setTransactions((prev) => {
+      const updatedList = prev.map((t) => {
         if (!t.isFixed) return t;
         const baseMonth = t.startMonthYear || t.date.slice(0, 7);
         return {
           ...t,
           status: currentYearMonth === baseMonth ? 'pending' : t.status,
           paidMonths: (t.paidMonths || []).filter((m) => m !== currentYearMonth),
+          syncStatus: 'pendingUpload' as const,
+          updatedAt: now,
         };
-      })
-    );
+      });
+      if (currentUser) dbOperations.saveTransactions(updatedList, currentUser.id).catch(console.error);
+      return updatedList;
+    });
   };
 
   // Handlers for Debt Installments
@@ -667,22 +698,39 @@ export const App: React.FC = () => {
     data: Omit<DebtInstallment, 'id' | 'createdAt'>,
     existingId?: string
   ) => {
+    const now = Date.now();
     if (existingId) {
       setInstallments((prev) =>
-        prev.map((item) => (item.id === existingId ? { ...item, ...data } : item))
+        prev.map((item) => {
+          if (item.id === existingId) {
+            const updated: DebtInstallment = {
+              ...item,
+              ...data,
+              syncStatus: 'pendingUpload',
+              updatedAt: now,
+            };
+            if (currentUser) dbOperations.saveInstallment(updated, currentUser.id).catch(console.error);
+            return updated;
+          }
+          return item;
+        })
       );
     } else {
       const newItem: DebtInstallment = {
         ...data,
         id: `inst-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         competence: currentYearMonth,
-        createdAt: Date.now(),
+        createdAt: now,
+        updatedAt: now,
+        syncStatus: 'pendingUpload',
       };
+      if (currentUser) dbOperations.saveInstallment(newItem, currentUser.id).catch(console.error);
       setInstallments((prev) => [newItem, ...prev]);
     }
   };
 
   const handleToggleInstallmentStatus = (id: string) => {
+    const now = Date.now();
     setInstallments((prev) =>
       prev.map((inst) => {
         if (inst.id !== id) return inst;
@@ -692,25 +740,34 @@ export const App: React.FC = () => {
           ? Array.from(new Set([...(inst.paidMonths || []), currentYearMonth]))
           : (inst.paidMonths || []).filter((m) => m !== currentYearMonth);
 
-        return {
+        const updated: DebtInstallment = {
           ...inst,
           status: currentYearMonth === inst.competence ? nextStatus : inst.status,
           paidMonths: updatedPaidMonths,
+          syncStatus: 'pendingUpload',
+          updatedAt: now,
         };
+        if (currentUser) dbOperations.saveInstallment(updated, currentUser.id).catch(console.error);
+        return updated;
       })
     );
   };
 
   const handleAdvanceInstallment = (id: string) => {
+    const now = Date.now();
     setInstallments((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item;
         const nextInstallment = Math.min(item.totalInstallments, item.currentInstallment + 1);
-        return {
+        const updated: DebtInstallment = {
           ...item,
           currentInstallment: nextInstallment,
           status: 'completed',
+          syncStatus: 'pendingUpload',
+          updatedAt: now,
         };
+        if (currentUser) dbOperations.saveInstallment(updated, currentUser.id).catch(console.error);
+        return updated;
       })
     );
   };
@@ -735,50 +792,90 @@ export const App: React.FC = () => {
 
   // Handlers for Budgets (Teto)
   const handleSaveBudget = (budget: Budget) => {
+    const now = Date.now();
+    const updated: Budget = {
+      ...budget,
+      syncStatus: 'pendingUpload',
+      updatedAt: now,
+    };
+    if (currentUser) dbOperations.saveBudget(updated, currentUser.id).catch(console.error);
     setBudgets((prev) => {
       const exists = prev.some((b) => b.id === budget.id);
       if (exists) {
-        return prev.map((b) => (b.id === budget.id ? budget : b));
+        return prev.map((b) => (b.id === budget.id ? updated : b));
       }
-      return [...prev, budget];
+      return [...prev, updated];
     });
   };
 
   // Handlers for Savings Goals (Metas)
   const handleAddGoal = (goalData: Omit<SavingsGoal, 'id'>) => {
+    const now = Date.now();
     const newGoal: SavingsGoal = {
       ...goalData,
       id: `goal-${Date.now()}`,
+      syncStatus: 'pendingUpload',
+      updatedAt: now,
     };
+    if (currentUser) dbOperations.saveGoal(newGoal, currentUser.id).catch(console.error);
     setGoals((prev) => [...prev, newGoal]);
   };
 
   const handleEditGoal = (updatedGoal: SavingsGoal) => {
-    setGoals((prev) => prev.map((g) => (g.id === updatedGoal.id ? updatedGoal : g)));
+    const now = Date.now();
+    const updated: SavingsGoal = {
+      ...updatedGoal,
+      syncStatus: 'pendingUpload',
+      updatedAt: now,
+    };
+    if (currentUser) dbOperations.saveGoal(updated, currentUser.id).catch(console.error);
+    setGoals((prev) => prev.map((g) => (g.id === updatedGoal.id ? updated : g)));
   };
 
   const handleUpdateGoalAmount = (goalId: string, addedAmount: number) => {
+    const now = Date.now();
     setGoals((prev) =>
-      prev.map((g) =>
-        g.id === goalId
-          ? { ...g, currentAmount: Math.max(0, g.currentAmount + addedAmount) }
-          : g
-      )
+      prev.map((g) => {
+        if (g.id !== goalId) return g;
+        const updated: SavingsGoal = {
+          ...g,
+          currentAmount: Math.max(0, g.currentAmount + addedAmount),
+          syncStatus: 'pendingUpload',
+          updatedAt: now,
+        };
+        if (currentUser) dbOperations.saveGoal(updated, currentUser.id).catch(console.error);
+        return updated;
+      })
     );
   };
 
   // Category Manager Handlers (Despesas, Parcelas, Receitas)
   const handleAddCategory = (cat: Omit<Category, 'id'>) => {
+    const now = Date.now();
     const newCat: Category = {
       ...cat,
       id: `cat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      syncStatus: 'pendingUpload',
+      updatedAt: now,
     };
+    if (currentUser) dbOperations.saveCategory(newCat, currentUser.id).catch(console.error);
     setCategories((prev) => [...prev, newCat]);
   };
 
   const handleEditCategory = (id: string, updated: Partial<Category>) => {
+    const now = Date.now();
     setCategories((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...updated } : c))
+      prev.map((c) => {
+        if (c.id !== id) return c;
+        const updatedCat: Category = {
+          ...c,
+          ...updated,
+          syncStatus: 'pendingUpload',
+          updatedAt: now,
+        };
+        if (currentUser) dbOperations.saveCategory(updatedCat, currentUser.id).catch(console.error);
+        return updatedCat;
+      })
     );
   };
 

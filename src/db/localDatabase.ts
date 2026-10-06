@@ -880,19 +880,35 @@ export const dbOperations = {
       ...transaction,
       userId,
       syncStatus: 'pendingUpload',
-      updatedAt: Date.now(),
+      updatedAt: transaction.updatedAt || Date.now(),
       isDeleted: false,
     };
     await localDb.transactions.put(item);
     FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
   },
   async saveTransactions(transactions: Transaction[], userId: string): Promise<void> {
-    const tagged = transactions.map((t) => ({
-      ...t,
-      userId,
-      syncStatus: t.syncStatus || ('pendingUpload' as const),
-      isDeleted: false,
-    }));
+    const existing = await localDb.transactions.where('userId').equals(userId).toArray().catch(() => []);
+    const existingMap = new Map<string, Transaction>();
+    existing.forEach((t) => existingMap.set(t.id, t));
+
+    const tagged = transactions.map((t) => {
+      const prev = existingMap.get(t.id);
+      const isModified = t.syncStatus === 'pendingUpload' || !prev ||
+        prev.status !== t.status ||
+        prev.amount !== t.amount ||
+        prev.description !== t.description ||
+        prev.date !== t.date ||
+        JSON.stringify(prev.paidMonths || []) !== JSON.stringify(t.paidMonths || []) ||
+        prev.deletedFromMonthYear !== t.deletedFromMonthYear;
+
+      return {
+        ...t,
+        userId,
+        syncStatus: (isModified ? 'pendingUpload' : (t.syncStatus || 'synced')) as 'pendingUpload' | 'synced' | 'pendingDelete',
+        updatedAt: isModified ? (t.updatedAt || Date.now()) : (t.updatedAt || Date.now()),
+        isDeleted: false,
+      };
+    });
     await localDb.transactions.bulkPut(tagged);
     if (tagged.some((t) => t.syncStatus === 'pendingUpload')) {
       FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
@@ -911,19 +927,38 @@ export const dbOperations = {
       ...installment,
       userId,
       syncStatus: 'pendingUpload',
-      updatedAt: Date.now(),
+      updatedAt: installment.updatedAt || Date.now(),
       isDeleted: false,
     };
     await localDb.installments.put(item);
     FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
   },
   async saveInstallments(installments: DebtInstallment[], userId: string): Promise<void> {
-    const tagged = installments.map((i) => ({
-      ...i,
-      userId,
-      syncStatus: i.syncStatus || ('pendingUpload' as const),
-      isDeleted: false,
-    }));
+    const existing = await localDb.installments.where('userId').equals(userId).toArray().catch(() => []);
+    const existingMap = new Map<string, DebtInstallment>();
+    existing.forEach((i) => existingMap.set(i.id, i));
+
+    const tagged = installments.map((i) => {
+      const prev = existingMap.get(i.id);
+      const isModified = i.syncStatus === 'pendingUpload' || !prev ||
+        prev.status !== i.status ||
+        prev.monthlyAmount !== i.monthlyAmount ||
+        prev.currentInstallment !== i.currentInstallment ||
+        prev.totalInstallments !== i.totalInstallments ||
+        prev.description !== i.description ||
+        prev.category !== i.category ||
+        prev.dueDay !== i.dueDay ||
+        JSON.stringify(prev.paidMonths || []) !== JSON.stringify(i.paidMonths || []) ||
+        prev.deletedFromMonthYear !== i.deletedFromMonthYear;
+
+      return {
+        ...i,
+        userId,
+        syncStatus: (isModified ? 'pendingUpload' : (i.syncStatus || 'synced')) as 'pendingUpload' | 'synced' | 'pendingDelete',
+        updatedAt: isModified ? (i.updatedAt || Date.now()) : (i.updatedAt || Date.now()),
+        isDeleted: false,
+      };
+    });
     await localDb.installments.bulkPut(tagged);
     if (tagged.some((i) => i.syncStatus === 'pendingUpload')) {
       FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
@@ -942,19 +977,34 @@ export const dbOperations = {
       ...category,
       userId,
       syncStatus: 'pendingUpload',
-      updatedAt: Date.now(),
+      updatedAt: category.updatedAt || Date.now(),
       isDeleted: false,
     };
     await localDb.categories.put(item);
     FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
   },
   async saveCategories(categories: Category[], userId: string): Promise<void> {
-    const tagged = categories.map((c) => ({
-      ...c,
-      userId,
-      syncStatus: c.syncStatus || ('pendingUpload' as const),
-      isDeleted: false,
-    }));
+    const existing = await localDb.categories.where('userId').equals(userId).toArray().catch(() => []);
+    const existingMap = new Map<string, Category>();
+    existing.forEach((c) => existingMap.set(c.id, c));
+
+    const tagged = categories.map((c) => {
+      const prev = existingMap.get(c.id);
+      const isModified = c.syncStatus === 'pendingUpload' || !prev ||
+        prev.name !== c.name ||
+        prev.iconName !== c.iconName ||
+        prev.color !== c.color ||
+        prev.type !== c.type ||
+        prev.target !== c.target;
+
+      return {
+        ...c,
+        userId,
+        syncStatus: (isModified ? 'pendingUpload' : (c.syncStatus || 'synced')) as 'pendingUpload' | 'synced' | 'pendingDelete',
+        updatedAt: isModified ? (c.updatedAt || Date.now()) : (c.updatedAt || Date.now()),
+        isDeleted: false,
+      };
+    });
     await localDb.categories.bulkPut(tagged);
     if (tagged.some((c) => c.syncStatus === 'pendingUpload')) {
       FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
@@ -973,19 +1023,32 @@ export const dbOperations = {
       ...budget,
       userId,
       syncStatus: 'pendingUpload',
-      updatedAt: Date.now(),
+      updatedAt: budget.updatedAt || Date.now(),
       isDeleted: false,
     };
     await localDb.budgets.put(item);
     FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
   },
   async saveBudgets(budgets: Budget[], userId: string): Promise<void> {
-    const tagged = budgets.map((b) => ({
-      ...b,
-      userId,
-      syncStatus: b.syncStatus || ('pendingUpload' as const),
-      isDeleted: false,
-    }));
+    const existing = await localDb.budgets.where('userId').equals(userId).toArray().catch(() => []);
+    const existingMap = new Map<string, Budget>();
+    existing.forEach((b) => existingMap.set(b.id, b));
+
+    const tagged = budgets.map((b) => {
+      const prev = existingMap.get(b.id);
+      const isModified = b.syncStatus === 'pendingUpload' || !prev ||
+        prev.monthlyLimit !== b.monthlyLimit ||
+        prev.categoryId !== b.categoryId ||
+        prev.name !== b.name;
+
+      return {
+        ...b,
+        userId,
+        syncStatus: (isModified ? 'pendingUpload' : (b.syncStatus || 'synced')) as 'pendingUpload' | 'synced' | 'pendingDelete',
+        updatedAt: isModified ? (b.updatedAt || Date.now()) : (b.updatedAt || Date.now()),
+        isDeleted: false,
+      };
+    });
     await localDb.budgets.bulkPut(tagged);
     if (tagged.some((b) => b.syncStatus === 'pendingUpload')) {
       FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
@@ -1004,19 +1067,32 @@ export const dbOperations = {
       ...goal,
       userId,
       syncStatus: 'pendingUpload',
-      updatedAt: Date.now(),
+      updatedAt: goal.updatedAt || Date.now(),
       isDeleted: false,
     };
     await localDb.savingsGoals.put(item);
     FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});
   },
   async saveGoals(goals: SavingsGoal[], userId: string): Promise<void> {
-    const tagged = goals.map((g) => ({
-      ...g,
-      userId,
-      syncStatus: g.syncStatus || ('pendingUpload' as const),
-      isDeleted: false,
-    }));
+    const existing = await localDb.savingsGoals.where('userId').equals(userId).toArray().catch(() => []);
+    const existingMap = new Map<string, SavingsGoal>();
+    existing.forEach((g) => existingMap.set(g.id, g));
+
+    const tagged = goals.map((g) => {
+      const prev = existingMap.get(g.id);
+      const isModified = g.syncStatus === 'pendingUpload' || !prev ||
+        prev.currentAmount !== g.currentAmount ||
+        prev.targetAmount !== g.targetAmount ||
+        prev.title !== g.title;
+
+      return {
+        ...g,
+        userId,
+        syncStatus: (isModified ? 'pendingUpload' : (g.syncStatus || 'synced')) as 'pendingUpload' | 'synced' | 'pendingDelete',
+        updatedAt: isModified ? (g.updatedAt || Date.now()) : (g.updatedAt || Date.now()),
+        isDeleted: false,
+      };
+    });
     await localDb.savingsGoals.bulkPut(tagged);
     if (tagged.some((g) => g.syncStatus === 'pendingUpload')) {
       FirestoreSyncService.uploadPendingChanges(userId).catch(() => {});

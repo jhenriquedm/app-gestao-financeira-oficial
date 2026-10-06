@@ -357,7 +357,7 @@ export class FirestoreSyncService {
           let syncedTx: Transaction = {
             ...tx,
             syncStatus: 'synced',
-            updatedAt: now,
+            updatedAt: tx.updatedAt || now,
             isDeleted: false,
           };
 
@@ -419,7 +419,7 @@ export class FirestoreSyncService {
           let syncedInst: DebtInstallment = {
             ...inst,
             syncStatus: 'synced',
-            updatedAt: now,
+            updatedAt: inst.updatedAt || now,
             isDeleted: false,
           };
 
@@ -479,7 +479,7 @@ export class FirestoreSyncService {
           const syncedCat: Category = {
             ...cat,
             syncStatus: 'synced',
-            updatedAt: now,
+            updatedAt: cat.updatedAt || now,
             isDeleted: false,
           };
           await setDoc(docRef, sanitizeForFirestore(syncedCat), { merge: true });
@@ -507,7 +507,7 @@ export class FirestoreSyncService {
           const syncedBudget: Budget = {
             ...b,
             syncStatus: 'synced',
-            updatedAt: now,
+            updatedAt: b.updatedAt || now,
             isDeleted: false,
           };
           await setDoc(docRef, sanitizeForFirestore(syncedBudget), { merge: true });
@@ -535,7 +535,7 @@ export class FirestoreSyncService {
           const syncedGoal: SavingsGoal = {
             ...g,
             syncStatus: 'synced',
-            updatedAt: now,
+            updatedAt: g.updatedAt || now,
             isDeleted: false,
           };
           await setDoc(docRef, sanitizeForFirestore(syncedGoal), { merge: true });
@@ -605,13 +605,22 @@ export class FirestoreSyncService {
     const tombstoneSet = new Set<string>(Array.isArray(tombstoneSetting?.value) ? tombstoneSetting.value : []);
 
     // 1. Download categories
+    const localCatExisting = await localDb.categories.where('userId').equals(userId).toArray().catch(() => []);
+    const localCatMap = new Map<string, Category>();
+    localCatExisting.forEach((c) => localCatMap.set(c.id, c));
+
     const catSnapshot = await getDocs(this.collectionRef(userId, 'categories'));
     const remoteCategories: Category[] = [];
     catSnapshot.forEach((d) => {
       const item = d.data() as Category;
       const isDeletedRecord = item.isDeleted || (item as any).status === 'inactive' || tombstoneSet.has(d.id);
       if (!isDeletedRecord) {
-        remoteCategories.push({ ...item, id: d.id, userId, syncStatus: 'synced' });
+        const localDoc = localCatMap.get(d.id);
+        if (localDoc && (localDoc.syncStatus === 'pendingUpload' || (localDoc.updatedAt && item.updatedAt && localDoc.updatedAt > item.updatedAt))) {
+          remoteCategories.push(localDoc);
+        } else {
+          remoteCategories.push({ ...item, id: d.id, userId, syncStatus: 'synced' });
+        }
         downloadedCount++;
       } else {
         localDb.categories.delete(d.id).catch(() => {});
@@ -619,11 +628,19 @@ export class FirestoreSyncService {
       }
     });
 
+    localCatExisting.forEach((c) => {
+      if (c.syncStatus === 'pendingUpload' && !remoteCategories.some((r) => r.id === c.id) && !tombstoneSet.has(c.id)) {
+        remoteCategories.push(c);
+      }
+    });
+
     // 2. Download transactions
     const localTxExisting = await localDb.transactions.where('userId').equals(userId).toArray().catch(() => []);
     const localTxAttachmentMap = new Map<string, any>();
     const localTxAttachmentsMap = new Map<string, any[]>();
+    const localTxMap = new Map<string, Transaction>();
     localTxExisting.forEach((t) => {
+      localTxMap.set(t.id, t);
       if (t.attachment?.dataUrl) localTxAttachmentMap.set(t.id, t.attachment);
       if (t.attachments && t.attachments.length > 0) localTxAttachmentsMap.set(t.id, t.attachments);
     });
@@ -634,6 +651,13 @@ export class FirestoreSyncService {
       const item = d.data() as Transaction;
       const isDeletedRecord = item.isDeleted || (item as any).status === 'inactive' || tombstoneSet.has(d.id);
       if (!isDeletedRecord) {
+        const localDoc = localTxMap.get(d.id);
+        if (localDoc && (localDoc.syncStatus === 'pendingUpload' || (localDoc.updatedAt && item.updatedAt && localDoc.updatedAt > item.updatedAt))) {
+          remoteTx.push(localDoc);
+          downloadedCount++;
+          return;
+        }
+
         // Preserva dataUrl local se o remoto veio apenas com metadados
         if (item.attachments && Array.isArray(item.attachments)) {
           const localList = localTxAttachmentsMap.get(d.id) || [];
@@ -661,11 +685,19 @@ export class FirestoreSyncService {
       }
     });
 
+    localTxExisting.forEach((t) => {
+      if (t.syncStatus === 'pendingUpload' && !remoteTx.some((r) => r.id === t.id) && !tombstoneSet.has(t.id)) {
+        remoteTx.push(t);
+      }
+    });
+
     // 3. Download installments
     const localInstExisting = await localDb.installments.where('userId').equals(userId).toArray().catch(() => []);
     const localInstAttachmentMap = new Map<string, any>();
     const localInstAttachmentsMap = new Map<string, any[]>();
+    const localInstMap = new Map<string, DebtInstallment>();
     localInstExisting.forEach((i) => {
+      localInstMap.set(i.id, i);
       if (i.attachment?.dataUrl) localInstAttachmentMap.set(i.id, i.attachment);
       if (i.attachments && i.attachments.length > 0) localInstAttachmentsMap.set(i.id, i.attachments);
     });
@@ -676,6 +708,13 @@ export class FirestoreSyncService {
       const item = d.data() as DebtInstallment;
       const isDeletedRecord = item.isDeleted || (item as any).status === 'inactive' || tombstoneSet.has(d.id);
       if (!isDeletedRecord) {
+        const localDoc = localInstMap.get(d.id);
+        if (localDoc && (localDoc.syncStatus === 'pendingUpload' || (localDoc.updatedAt && item.updatedAt && localDoc.updatedAt > item.updatedAt))) {
+          remoteInst.push(localDoc);
+          downloadedCount++;
+          return;
+        }
+
         if (item.attachments && Array.isArray(item.attachments)) {
           const localList = localInstAttachmentsMap.get(d.id) || [];
           item.attachments = item.attachments.map((att, idx) => {
@@ -702,14 +741,29 @@ export class FirestoreSyncService {
       }
     });
 
+    localInstExisting.forEach((i) => {
+      if (i.syncStatus === 'pendingUpload' && !remoteInst.some((r) => r.id === i.id) && !tombstoneSet.has(i.id)) {
+        remoteInst.push(i);
+      }
+    });
+
     // 4. Download budgets
+    const localBudgetsExisting = await localDb.budgets.where('userId').equals(userId).toArray().catch(() => []);
+    const localBudgetsMap = new Map<string, Budget>();
+    localBudgetsExisting.forEach((b) => localBudgetsMap.set(b.id, b));
+
     const budgetSnapshot = await getDocs(this.collectionRef(userId, 'budgets'));
     const remoteBudgets: Budget[] = [];
     budgetSnapshot.forEach((d) => {
       const item = d.data() as Budget;
       const isDeletedRecord = item.isDeleted || (item as any).status === 'inactive' || tombstoneSet.has(d.id);
       if (!isDeletedRecord) {
-        remoteBudgets.push({ ...item, id: d.id, userId, syncStatus: 'synced' });
+        const localDoc = localBudgetsMap.get(d.id);
+        if (localDoc && (localDoc.syncStatus === 'pendingUpload' || (localDoc.updatedAt && item.updatedAt && localDoc.updatedAt > item.updatedAt))) {
+          remoteBudgets.push(localDoc);
+        } else {
+          remoteBudgets.push({ ...item, id: d.id, userId, syncStatus: 'synced' });
+        }
         downloadedCount++;
       } else {
         localDb.budgets.delete(d.id).catch(() => {});
@@ -717,18 +771,39 @@ export class FirestoreSyncService {
       }
     });
 
+    localBudgetsExisting.forEach((b) => {
+      if (b.syncStatus === 'pendingUpload' && !remoteBudgets.some((r) => r.id === b.id) && !tombstoneSet.has(b.id)) {
+        remoteBudgets.push(b);
+      }
+    });
+
     // 5. Download savings goals
+    const localGoalsExisting = await localDb.savingsGoals.where('userId').equals(userId).toArray().catch(() => []);
+    const localGoalsMap = new Map<string, SavingsGoal>();
+    localGoalsExisting.forEach((g) => localGoalsMap.set(g.id, g));
+
     const goalsSnapshot = await getDocs(this.collectionRef(userId, 'savingsGoals'));
     const remoteGoals: SavingsGoal[] = [];
     goalsSnapshot.forEach((d) => {
       const item = d.data() as SavingsGoal;
       const isDeletedRecord = item.isDeleted || (item as any).status === 'inactive' || tombstoneSet.has(d.id);
       if (!isDeletedRecord) {
-        remoteGoals.push({ ...item, id: d.id, userId, syncStatus: 'synced' });
+        const localDoc = localGoalsMap.get(d.id);
+        if (localDoc && (localDoc.syncStatus === 'pendingUpload' || (localDoc.updatedAt && item.updatedAt && localDoc.updatedAt > item.updatedAt))) {
+          remoteGoals.push(localDoc);
+        } else {
+          remoteGoals.push({ ...item, id: d.id, userId, syncStatus: 'synced' });
+        }
         downloadedCount++;
       } else {
         localDb.savingsGoals.delete(d.id).catch(() => {});
         deleteDoc(d.ref).catch(() => {});
+      }
+    });
+
+    localGoalsExisting.forEach((g) => {
+      if (g.syncStatus === 'pendingUpload' && !remoteGoals.some((r) => r.id === g.id) && !tombstoneSet.has(g.id)) {
+        remoteGoals.push(g);
       }
     });
 
